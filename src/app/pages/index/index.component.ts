@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header.component';
+import { VideoBannerComponent } from '../../components/video-banner/video-banner.component';
 import { NewsTickerComponent } from '../../components/news-ticker/news-ticker.component';
 import { HeroSectionComponent } from '../../components/hero-section/hero-section.component';
 import { NewsGridComponent } from '../../components/news-grid/news-grid.component';
@@ -14,6 +15,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
   imports: [
     CommonModule,
     HeaderComponent,
+    VideoBannerComponent,
     NewsTickerComponent,
     HeroSectionComponent,
     NewsGridComponent,
@@ -24,6 +26,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
+      <app-video-banner />
       <app-news-ticker />
       
       <main>
