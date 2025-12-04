@@ -46,18 +46,19 @@ interface NavLink {
             <!-- Logo -->
             <a href="#" class="flex items-center gap-3 group">
               <div class="relative">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center font-display font-bold text-xl text-primary-foreground group-hover:glow-primary transition-all duration-300">
-                  N
-                </div>
+                <img 
+                  src="assets/videos/logo.png" 
+                  alt="NewsAddaIndia Logo" 
+                  class="w-12 h-12 rounded-xl object-cover group-hover:glow-primary transition-all duration-300" />
                 <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-accent animate-pulse"></div>
               </div>
-              <div class="hidden sm:block">
-                <h1 class="font-display text-xl font-bold tracking-tight">
-                  <span class="text-primary">News</span>
-                  <span class="text-foreground">Adda</span>
-                  <span class="text-accent">India</span>
+              <div>
+                <h1 class="font-display text-base sm:text-xl font-bold tracking-tight">
+                  <span style="color: #FF9933;">News</span>
+                  <span style="color: #FFFFFF;">Adda</span>
+                  <span style="color: #138808;">India</span>
                 </h1>
-                <p class="text-xs text-muted-foreground -mt-0.5">Your Daily News Companion</p>
+                <p class="text-[10px] sm:text-xs text-muted-foreground -mt-0.5">Your Daily News Companion</p>
               </div>
             </a>
 

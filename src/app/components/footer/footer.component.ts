@@ -23,14 +23,15 @@ interface SocialLink {
           <!-- Brand -->
           <div class="lg:col-span-1">
             <a href="#" class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center font-display font-bold text-lg text-primary-foreground">
-                N
-              </div>
+              <img 
+                src="assets/videos/logo.png" 
+                alt="NewsAddaIndia Logo" 
+                class="w-10 h-10 rounded-xl object-cover" />
               <div>
                 <h3 class="font-display text-lg font-bold">
-                  <span class="text-primary">News</span>
-                  <span class="text-foreground">Adda</span>
-                  <span class="text-accent">India</span>
+                  <span style="color: #FF9933;">News</span>
+                  <span style="color: #FFFFFF;">Adda</span>
+                  <span style="color: #138808;">India</span>
                 </h3>
               </div>
             </a>
