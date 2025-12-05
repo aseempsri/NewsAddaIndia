@@ -130,7 +130,7 @@ export class CategorySectionComponent {
       articles: [
         {
           title: 'India Wins Thrilling 3-2 T20 Series Victory Against New Zealand',
-          image: '/assets/videos/indianz.avif',
+          image: 'assets/videos/indianz.avif',
           time: '3 hours ago',
           hasVideo: true,
         },

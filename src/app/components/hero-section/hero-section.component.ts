@@ -115,14 +115,14 @@ export class HeroSectionComponent {
     excerpt: 'Russian President Vladimir Putin arrives in New Delhi for a two-day state visit, marking his first trip to India since the Ukraine conflict. Discussions focus on strengthening trade, economic ties, and finalizing a five-year partnership plan.',
     author: 'News Adda India',
     date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
-    image: '/assets/videos/Putin_in_India_.webp',
+    image: 'assets/videos/Putin_in_India_.webp',
   };
 
   sideNews: SideNews[] = [
     {
       category: 'Sports',
       title: 'India Wins Thrilling T20 Series 3-2 Against New Zealand',
-      image: '/assets/videos/indianz.avif',
+      image: 'assets/videos/indianz.avif',
     },
     {
       category: 'Business',

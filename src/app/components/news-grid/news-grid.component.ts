@@ -99,7 +99,7 @@ export class NewsGridComponent {
       category: 'National',
       title: 'Putin\'s India Visit: Five-Year Partnership Plan Finalized',
       excerpt: 'Russian President Vladimir Putin and PM Modi discuss strengthening trade and economic ties, finalizing a comprehensive five-year partnership plan during the state visit.',
-      image: '/assets/videos/Putin_in_India_.webp',
+      image: 'assets/videos/Putin_in_India_.webp',
       time: '2 hours ago',
     },
     {
@@ -107,7 +107,7 @@ export class NewsGridComponent {
       category: 'Sports',
       title: 'India Secures 3-2 T20 Series Victory Against New Zealand',
       excerpt: 'Thrilling cricket action as India wins the T20 series with standout performances from emerging players in the final match.',
-      image: '/assets/videos/indianz.avif',
+      image: 'assets/videos/indianz.avif',
       time: '3 hours ago',
     },
     {
