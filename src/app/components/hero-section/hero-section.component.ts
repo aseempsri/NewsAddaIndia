@@ -110,24 +110,24 @@ interface SideNews {
 export class HeroSectionComponent {
   featuredNews = {
     category: 'National',
-    title: 'संचार साथी ऐप पर कांग्रेस का हमला: निजता बनाम निगरानी की जंग',
-    titleEn: 'Congress Attacks Communication Partner App: Privacy vs Surveillance Battle',
-    excerpt: 'A major political controversy erupts as opposition raises concerns about digital surveillance and citizen privacy rights in the ongoing debate about government monitoring tools.',
-    author: 'Anita Choudhary',
-    date: 'December 4, 2025',
-    image: 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1200&q=80',
+    title: 'Putin Visits India: Strengthening Bilateral Ties and Trade Relations',
+    titleEn: 'Putin Visits India: Strengthening Bilateral Ties and Trade Relations',
+    excerpt: 'Russian President Vladimir Putin arrives in New Delhi for a two-day state visit, marking his first trip to India since the Ukraine conflict. Discussions focus on strengthening trade, economic ties, and finalizing a five-year partnership plan.',
+    author: 'News Adda India',
+    date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+    image: '/assets/videos/Putin_in_India_.webp',
   };
 
   sideNews: SideNews[] = [
     {
-      category: 'Politics',
-      title: 'भू-भौ विवाद: रेणुका चौधरी की अजीबोगरीब प्रतीक्रिया',
-      image: 'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=600&q=80',
+      category: 'Sports',
+      title: 'India Wins Thrilling T20 Series 3-2 Against New Zealand',
+      image: '/assets/videos/indianz.avif',
     },
     {
-      category: 'National',
-      title: 'विवाद के बाद सरकार ने बदला फैसला: संचार साथी ऐप अब वैकल्पिक',
-      image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80',
+      category: 'Business',
+      title: 'RBI Cuts Repo Rate by 25 Basis Points to 5.25%',
+      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80',
     },
   ];
 }

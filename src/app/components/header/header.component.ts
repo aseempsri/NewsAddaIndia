@@ -1,16 +1,17 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonComponent } from '../../ui/button/button.component';
 
 interface NavLink {
   name: string;
-  href: string;
+  route: string;
 }
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, ButtonComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, ButtonComponent],
   template: `
     <header class="sticky top-0 z-50">
       <!-- Top Bar -->
@@ -44,13 +45,16 @@ interface NavLink {
         <div class="container mx-auto px-4 py-4">
           <div class="flex items-center justify-between">
             <!-- Logo -->
-            <a href="#" class="flex items-center gap-3 group">
-              <div class="relative">
+            <a [routerLink]="'/'" class="flex items-center gap-3 group">
+              <div class="relative w-12 h-12 shrink-0">
                 <img 
-                  src="assets/videos/slogo.png" 
+                  src="/assets/videos/slogo.png" 
                   alt="NewsAddaIndia Logo" 
-                  class="w-12 h-12 rounded-xl object-cover transition-all duration-300"
-                  style="box-shadow: 0 0 15px rgba(37, 99, 235, 0.6), 0 0 30px rgba(37, 99, 235, 0.4);" />
+                  class="w-full h-full rounded-xl object-cover transition-all duration-300"
+                  style="box-shadow: 0 0 15px rgba(37, 99, 235, 0.6), 0 0 30px rgba(37, 99, 235, 0.4);"
+                  loading="eager"
+                  width="48"
+                  height="48" />
                 <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-accent animate-pulse"></div>
               </div>
               <div>
@@ -67,8 +71,10 @@ interface NavLink {
             <nav class="hidden lg:flex items-center gap-1">
               @for (link of navLinks; track link.name) {
                 <a
-                  [href]="link.href"
-                  class="nav-link text-muted-foreground hover:text-foreground">
+                  [routerLink]="link.route"
+                  routerLinkActive="text-primary font-semibold bg-primary/10"
+                  [routerLinkActiveOptions]="{exact: link.route === '/'}"
+                  class="nav-link px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
                   {{ link.name }}
                 </a>
               }
@@ -109,8 +115,10 @@ interface NavLink {
             <nav class="container mx-auto px-4 py-4 flex flex-col gap-2">
               @for (link of navLinks; track link.name; let i = $index) {
                 <a
-                  [href]="link.href"
-                  class="px-4 py-3 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                  [routerLink]="link.route"
+                  routerLinkActive="text-primary font-semibold bg-primary/10 border-l-4 border-primary"
+                  [routerLinkActiveOptions]="{exact: link.route === '/'}"
+                  class="px-4 py-3 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all"
                   [style.animation-delay]="i * 50 + 'ms'"
                   (click)="closeMenu()">
                   {{ link.name }}
@@ -128,14 +136,14 @@ export class HeaderComponent {
   isMenuOpen = false;
 
   navLinks: NavLink[] = [
-    { name: 'Home', href: '#' },
-    { name: 'National', href: '#national' },
-    { name: 'International', href: '#international' },
-    { name: 'Politics', href: '#politics' },
-    { name: 'Health', href: '#health' },
-    { name: 'Entertainment', href: '#entertainment' },
-    { name: 'Sports', href: '#sports' },
-    { name: 'Business', href: '#business' },
+    { name: 'Home', route: '/' },
+    { name: 'National', route: '/category/national' },
+    { name: 'International', route: '/category/international' },
+    { name: 'Politics', route: '/category/politics' },
+    { name: 'Health', route: '/category/health' },
+    { name: 'Entertainment', route: '/category/entertainment' },
+    { name: 'Sports', route: '/category/sports' },
+    { name: 'Business', route: '/category/business' },
   ];
 
   currentDate = new Date().toLocaleDateString('en-IN', {
