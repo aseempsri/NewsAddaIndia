@@ -48,6 +48,37 @@ import { InstagramService } from '../../services/instagram.service';
         <!-- Subtle shimmer effect -->
         <div class="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)] pointer-events-none"></div>
         
+        <!-- Social Media Links Modal (shown if pop-ups are blocked) -->
+        @if (showSocialModal) {
+          <div class="absolute inset-0 bg-background/95 backdrop-blur-md z-30 flex items-center justify-center p-4" (click)="closeModal($event)">
+            <div class="bg-background border border-border rounded-xl p-6 max-w-md w-full shadow-2xl" (click)="$event.stopPropagation()">
+              <h3 class="text-xl font-bold mb-4 text-center">Follow Us on Social Media</h3>
+              <div class="space-y-3">
+                <a [href]="instagramUrl" target="_blank" rel="noopener noreferrer" 
+                   class="block w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:opacity-90 transition-opacity text-center font-medium">
+                  Instagram
+                </a>
+                <a [href]="youtubeUrl" target="_blank" rel="noopener noreferrer"
+                   class="block w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity text-center font-medium">
+                  YouTube
+                </a>
+                <a [href]="twitterUrl" target="_blank" rel="noopener noreferrer"
+                   class="block w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity text-center font-medium">
+                  Twitter
+                </a>
+                <a [href]="facebookUrl" target="_blank" rel="noopener noreferrer"
+                   class="block w-full px-4 py-3 bg-blue-700 text-white rounded-lg hover:opacity-90 transition-opacity text-center font-medium">
+                  Facebook
+                </a>
+              </div>
+              <button (click)="closeModal($event)" 
+                      class="mt-4 w-full px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors">
+                Close
+              </button>
+            </div>
+          </div>
+        }
+        
         <!-- Audio Toggle Button -->
         <button
           (click)="toggleAudio($event)"
@@ -84,6 +115,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
   // Loading state
   isLoading = true;
 
+  // Social media modal state
+  showSocialModal = false;
+
   // Video segment control
   // First play: 4:19 (259s) to 4:28 (268s)
   // Then loop: 0:00 (0s) to 4:28 (268s)
@@ -94,8 +128,11 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
   private isSegment1 = true; // Start with segment 1 (4:19 to 4:28)
   private hasPlayedFirstSegment = false; // Track if first segment has been played
 
-  // Instagram URL
+  // Social Media URLs
   instagramUrl = 'https://www.instagram.com/newsaddaindialive/';
+  youtubeUrl = 'https://www.youtube.com/@newsaddaindialive';
+  twitterUrl = 'https://twitter.com/NewsAddaIndia1';
+  facebookUrl = 'https://facebook.com/InfoNewsaddaindia';
 
   constructor(private instagramService: InstagramService) { }
 
@@ -139,8 +176,53 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
     }
   }
 
+  closeModal(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.showSocialModal = false;
+  }
+
   redirectToInstagram() {
-    window.open(this.instagramUrl, '_blank');
+    // Try to open all social media pages in separate tabs
+    const urls = [
+      this.instagramUrl,
+      this.youtubeUrl,
+      this.twitterUrl,
+      this.facebookUrl
+    ];
+
+    // Open tabs after 1 second delay
+    // Note: This delay may cause pop-up blockers to activate, as browsers require
+    // window.open() to be directly triggered by a user gesture
+    setTimeout(() => {
+      const windows: (Window | null)[] = [];
+
+      // Open all tabs synchronously in the same call stack
+      urls.forEach((url) => {
+        const win = window.open(url, '_blank', 'noopener,noreferrer');
+        windows.push(win);
+      });
+
+      // Check if pop-ups were blocked
+      // Blocked windows will be null, but some browsers return a window object that's immediately closed
+      const openedCount = windows.filter(w => {
+        if (w === null) return false;
+        try {
+          // Check if window is still accessible (not blocked)
+          return !w.closed;
+        } catch (e) {
+          // Cross-origin or blocked window will throw
+          return false;
+        }
+      }).length;
+
+      // If less than 2 tabs opened successfully, show modal as fallback
+      // This ensures users can still access all social media links
+      if (openedCount < 2) {
+        this.showSocialModal = true;
+      }
+    }, 1000); // 1 second delay
   }
 
   onVideoLoadedData() {
