@@ -48,26 +48,29 @@ export const environment = {
 - For production, use environment variables or a secure backend service
 - OpenAI API usage is billed per request - monitor your usage
 
-## Optional: Image API Keys (for better images)
+## Image Generation
 
-The service uses OpenAI to generate intelligent image search queries and fetches images from web-based sources:
+The service uses **OpenAI DALL-E 3** to generate images directly based on news headlines. This ensures high-quality, relevant images for each news article.
 
-### Pixabay (Default - No Key Needed)
-- Works automatically without any setup
-- Free stock photos
+### How It Works
 
-### Bing Image Search (Optional - For News Images)
-1. Get Azure Cognitive Services API key from https://azure.microsoft.com/en-us/services/cognitive-services/bing-image-search-api/
-2. Set via browser console:
-```javascript
-localStorage.setItem('bing_api_key', 'YOUR_BING_API_KEY');
-```
+1. **Primary Method**: OpenAI DALL-E 3 generates images directly from headlines
+   - Uses the same OpenAI API key you set above
+   - Creates professional news-style photographs
+   - High quality, realistic images
 
-### Pexels (Optional - High Quality Photos)
+2. **Fallback Methods** (if DALL-E fails):
+   - **Pixabay** (free, no API key needed) - Free stock photos
+   - **Pexels** (optional) - High-quality stock photos (requires API key)
+
+### Optional: Pexels API Key (for fallback images)
+
+If you want better fallback images when DALL-E is unavailable:
+
 1. Get API key from https://www.pexels.com/api/
 2. Set via browser console:
 ```javascript
 localStorage.setItem('pexels_api_key', 'YOUR_PEXELS_API_KEY');
 ```
 
-Without these keys, the service will use Pixabay (free) and placeholder images as fallback.
+**Note**: The service primarily uses DALL-E for image generation. Pixabay and Pexels are only used as fallbacks if DALL-E generation fails.
