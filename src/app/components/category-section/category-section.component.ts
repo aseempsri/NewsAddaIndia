@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NewsService } from '../../services/news.service';
 
 interface Article {
   title: string;
@@ -100,52 +101,60 @@ interface Category {
   `,
   styles: []
 })
-export class CategorySectionComponent {
+export class CategorySectionComponent implements OnInit {
   categories: Category[] = [
     {
       title: 'Entertainment',
       accentColor: 'from-pink-500 to-rose-500',
-      articles: [
-        {
-          title: 'Real Kashmir Football Club Series Premieres on SonyLIV December 9',
-          image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&q=80',
-          time: '5 hours ago',
-          hasVideo: true,
-        },
-        {
-          title: 'Netflix Releases India vs Pakistan Cricket Documentary Series',
-          image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&q=80',
-          time: '7 hours ago',
-        },
-        {
-          title: 'Bollywood Stars Attend Major Film Festival in Mumbai',
-          image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&q=80',
-          time: '9 hours ago',
-        },
-      ],
+      articles: [],
     },
     {
       title: 'Sports',
       accentColor: 'from-orange-500 to-amber-500',
-      articles: [
-        {
-          title: 'India Wins Thrilling 3-2 T20 Series Victory Against New Zealand',
-          image: 'assets/videos/indianz.avif',
-          time: '3 hours ago',
-          hasVideo: true,
-        },
-        {
-          title: 'Formula One: Abu Dhabi Grand Prix Set for Three-Way Title Showdown',
-          image: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=400&q=80',
-          time: '6 hours ago',
-        },
-        {
-          title: 'Indian Hockey Team Prepares for Upcoming International Tournament',
-          image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&q=80',
-          time: '8 hours ago',
-        },
-      ],
+      articles: [],
     },
   ];
+
+  isLoading = true;
+
+  constructor(private newsService: NewsService) { }
+
+  ngOnInit() {
+    this.loadCategoryNews();
+  }
+
+  loadCategoryNews() {
+    // Load Entertainment news
+    this.newsService.fetchNewsByCategory('Entertainment', 4).subscribe({
+      next: (news) => {
+        this.categories[0].articles = news.map((n, index) => ({
+          title: n.title,
+          image: n.image,
+          time: n.time,
+          hasVideo: index === 0
+        }));
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading Entertainment news:', error);
+        this.isLoading = false;
+      }
+    });
+
+    // Load Sports news
+    this.newsService.fetchNewsByCategory('Sports', 4).subscribe({
+      next: (news) => {
+        this.categories[1].articles = news.map((n, index) => ({
+          title: n.title,
+          image: n.image,
+          time: n.time,
+          hasVideo: index === 0
+        }));
+      },
+      error: (error) => {
+        console.error('Error loading Sports news:', error);
+      }
+    });
+  }
 }
 

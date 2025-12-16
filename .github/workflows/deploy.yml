@@ -30,8 +30,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Inject OpenAI API Key
+        run: |
+          # Use Node.js to safely replace the placeholder (handles all special characters)
+          node -e "const fs = require('fs'); const content = fs.readFileSync('src/environments/environment.prod.ts', 'utf8'); const replaced = content.replace('OPENAI_API_KEY_PLACEHOLDER', process.env.OPENAI_KEY); fs.writeFileSync('src/environments/environment.prod.ts', replaced);"
+        env:
+          OPENAI_KEY: ${{ secrets.OPENCHAT_KEY }}
+
       - name: Build
-        run: npm run build -- --base-href /NewsAddaIndia/
+        run: npm run build -- --base-href /NewsAddaIndia/ --configuration production
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

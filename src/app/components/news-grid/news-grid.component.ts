@@ -1,14 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NewsService, NewsArticle } from '../../services/news.service';
 
-interface NewsItem {
-  id: number;
-  category: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  time: string;
-}
+// Using NewsArticle from service
 
 @Component({
   selector: 'app-news-grid',
@@ -35,18 +29,53 @@ interface NewsItem {
           </a>
         </div>
 
-        <!-- News Grid -->
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          @for (news of newsItems; track news.id; let i = $index) {
-            <article
-              class="news-card group opacity-0 animate-fade-in"
-              [style.animation-delay]="i * 100 + 'ms'">
-              <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl">
-                <img
-                  [src]="news.image"
-                  [alt]="news.title"
-                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div class="absolute top-4 left-4">
+        <!-- Loading State - Show while fetching news and images -->
+        @if (isLoading) {
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (item of [1,2,3,4,5,6]; track $index) {
+              <article class="news-card group">
+                <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                  <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
+                    <div class="flex flex-col items-center gap-2">
+                      <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span class="text-xs text-muted-foreground">Loading image...</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-5">
+                  <div class="h-4 bg-secondary/50 rounded mb-2 animate-pulse"></div>
+                  <div class="h-3 bg-secondary/30 rounded mb-4 animate-pulse"></div>
+                </div>
+              </article>
+            }
+          </div>
+        }
+
+        <!-- News Grid - Only show when all images are loaded -->
+        @if (!isLoading) {
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (news of newsItems; track news.id; let i = $index) {
+              <article
+                class="news-card group opacity-0 animate-fade-in"
+                [style.animation-delay]="i * 100 + 'ms'">
+              <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                <!-- Loading Animation - Show while image is loading -->
+                @if (news.imageLoading || !news.image) {
+                  <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                    <div class="flex flex-col items-center gap-2">
+                      <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span class="text-xs text-muted-foreground">Loading image...</span>
+                    </div>
+                  </div>
+                }
+                <!-- Image - Only show when loaded -->
+                @if (news.image && !news.imageLoading) {
+                  <img
+                    [src]="news.image"
+                    [alt]="news.title"
+                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in" />
+                }
+                <div class="absolute top-4 left-4 z-20">
                   <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
                     {{ news.category }}
                   </span>
@@ -75,6 +104,7 @@ interface NewsItem {
             </article>
           }
         </div>
+        }
 
         <!-- Mobile View All -->
         <div class="sm:hidden mt-8 text-center">
@@ -92,57 +122,114 @@ interface NewsItem {
   `,
   styles: []
 })
-export class NewsGridComponent {
-  newsItems: NewsItem[] = [
-    {
-      id: 1,
-      category: 'National',
-      title: 'Putin\'s India Visit: Five-Year Partnership Plan Finalized',
-      excerpt: 'Russian President Vladimir Putin and PM Modi discuss strengthening trade and economic ties, finalizing a comprehensive five-year partnership plan during the state visit.',
-      image: 'assets/videos/Putin_in_India_.webp',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      category: 'Sports',
-      title: 'India Secures 3-2 T20 Series Victory Against New Zealand',
-      excerpt: 'Thrilling cricket action as India wins the T20 series with standout performances from emerging players in the final match.',
-      image: 'assets/videos/indianz.avif',
-      time: '3 hours ago',
-    },
-    {
-      id: 3,
-      category: 'Business',
-      title: 'RBI Reduces Repo Rate to 5.25% Citing Low Inflation',
-      excerpt: 'Reserve Bank of India cuts repo rate by 25 basis points, citing low inflation and strong economic growth indicators.',
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80',
-      time: '4 hours ago',
-    },
-    {
-      id: 4,
-      category: 'Entertainment',
-      title: 'Real Kashmir Football Club Series Premieres on SonyLIV',
-      excerpt: 'New sports drama series inspired by the real-life story of the football club from Jammu and Kashmir set to premiere on December 9.',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80',
-      time: '5 hours ago',
-    },
-    {
-      id: 5,
-      category: 'National',
-      title: 'IndiGo Cancels Over 170 Flights Due to Pilot Rest Regulations',
-      excerpt: 'Major flight disruptions across India as IndiGo Airlines cancels flights nationwide due to stricter pilot-rest regulations.',
-      image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=80',
-      time: '6 hours ago',
-    },
-    {
-      id: 6,
-      category: 'Entertainment',
-      title: 'Netflix Releases India vs Pakistan Cricket Documentary',
-      excerpt: 'Three-part documentary series exploring the cricketing rivalry between India and Pakistan, featuring archived match footage and player interviews.',
-      image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&q=80',
-      time: '7 hours ago',
-    },
-  ];
+export class NewsGridComponent implements OnInit {
+  @Output() imagesLoaded = new EventEmitter<boolean>();
+  newsItems: NewsArticle[] = [];
+  isLoading = true;
+
+  constructor(private newsService: NewsService) { }
+
+  ngOnInit() {
+    this.loadNews();
+  }
+
+  loadNews() {
+    // Load news from multiple categories - mix of different categories
+    const categoryCounts = [
+      { category: 'National', count: 2 },
+      { category: 'Sports', count: 1 },
+      { category: 'Business', count: 1 },
+      { category: 'Entertainment', count: 1 },
+      { category: 'International', count: 1 }
+    ];
+
+    // Fetch news from all categories and combine
+    const observables = categoryCounts.map(({ category, count }) =>
+      this.newsService.fetchNewsByCategory(category, count)
+    );
+
+    // Use forkJoin to fetch all at once, then combine
+    this.newsService.fetchNewsByCategory('National', 6).subscribe({
+      next: (news) => {
+        // Ensure we have enough news items
+        if (news.length < 6) {
+          // Fetch more from other categories
+          this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
+            next: (sportsNews) => {
+              this.newsItems = [...news, ...sportsNews].slice(0, 6);
+              // Wait for all images to load before showing page
+              this.fetchImagesForAllItemsAndWait();
+            }
+          });
+        } else {
+          this.newsItems = news.slice(0, 6);
+          // Wait for all images to load before showing page
+          this.fetchImagesForAllItemsAndWait();
+        }
+      },
+      error: (error) => {
+        console.error('Error loading news:', error);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  fetchImagesForAllItemsAndWait() {
+    // Fetch all images first, then show page only when all are loaded
+    const imagePromises: Promise<void>[] = [];
+    
+    this.newsItems.forEach((item, index) => {
+      // Fetch image based on headline using OpenAI if loading
+      if (item.imageLoading && !item.image) {
+        const imagePromise = new Promise<void>((resolve) => {
+          this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
+            next: (imageUrl) => {
+              // Only update if we got a valid image URL
+              if (imageUrl && imageUrl.trim() !== '') {
+                // Preload image to ensure it's ready before showing
+                const img = new Image();
+                img.onload = () => {
+                  item.image = imageUrl;
+                  item.imageLoading = false;
+                  resolve();
+                };
+                img.onerror = () => {
+                  // If image fails to load, try placeholder as last resort
+                  item.image = this.newsService['getPlaceholderImage'](item.title);
+                  item.imageLoading = false;
+                  resolve();
+                };
+                img.src = imageUrl;
+              } else {
+                // Fallback to placeholder if no image found
+                item.image = this.newsService['getPlaceholderImage'](item.title);
+                item.imageLoading = false;
+                resolve();
+              }
+            },
+            error: (error) => {
+              console.error(`Error fetching image for "${item.title}":`, error);
+              // Fallback to placeholder on error
+              item.image = this.newsService['getPlaceholderImage'](item.title);
+              item.imageLoading = false;
+              resolve();
+            }
+          });
+        });
+        imagePromises.push(imagePromise);
+      } else if (!item.imageLoading && item.image) {
+        // Image already loaded, create resolved promise
+        imagePromises.push(Promise.resolve());
+      }
+    });
+
+    // Wait for all images to load before showing the page
+    Promise.all(imagePromises).then(() => {
+      this.isLoading = false;
+      this.imagesLoaded.emit(true);
+      console.log('All news grid images loaded');
+    });
+  }
 
   categoryColors: Record<string, string> = {
     Health: 'bg-green-500/20 text-green-400',

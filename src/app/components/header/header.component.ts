@@ -48,7 +48,7 @@ interface NavLink {
             <a [routerLink]="'/'" class="flex items-center gap-3 group">
               <div class="relative w-12 h-12 shrink-0">
                 <img 
-                  src="assets/videos/slogo.png" 
+                  src="/assets/videos/slogo.png" 
                   alt="NewsAddaIndia Logo" 
                   class="w-full h-full rounded-xl object-cover transition-all duration-300"
                   style="box-shadow: 0 0 15px rgba(37, 99, 235, 0.6), 0 0 30px rgba(37, 99, 235, 0.4);"

@@ -1,6 +1,7 @@
 import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstagramService } from '../../services/instagram.service';
+import { YouTubeService } from '../../services/youtube.service';
 
 @Component({
   selector: 'app-video-banner',
@@ -19,11 +20,14 @@ import { InstagramService } from '../../services/instagram.service';
           autoplay
           muted
           playsinline
+          [attr.loop]="false"
+          [attr.autoplay]="true"
           (canplay)="onVideoCanPlay()"
           (playing)="onVideoPlaying()"
           (timeupdate)="onTimeUpdate()"
           (error)="onVideoError()"
-          (loadeddata)="onVideoLoadedData()">
+          (loadeddata)="onVideoLoadedData()"
+          (ended)="onVideoEnded()">
           <source [src]="videoUrl" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
@@ -57,14 +61,14 @@ import { InstagramService } from '../../services/instagram.service';
             <!-- Modal Content -->
             <div class="relative z-40 bg-background border-2 border-primary rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
               <div class="text-center">
-                <h3 class="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                  Click to view more on this
-                </h3>
-                <p class="text-muted-foreground mb-6">
-                  Continue watching on YouTube
-                </p>
+              <h3 class="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                Watch latest news on youtube
+              </h3>
+              <p class="text-muted-foreground mb-6">
+                Continue watching on YouTube
+              </p>
                 <button 
-                  (click)="closeModalAndRedirect()" 
+                  (click)="closeModalAndRedirect($event)" 
                   class="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold">
                   Watch on YouTube
                 </button>
@@ -147,20 +151,23 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
 
 
   // Video segment control
-  // Show 20 seconds: 4:19 (259s) to 4:39 (279s)
+  // Play from 4:19 (259s) to 4:28 (268s)
   private readonly VIDEO_START = 259; // 4:19 in seconds
-  private readonly VIDEO_END = 279; // 4:39 in seconds (20 seconds total)
+  private readonly VIDEO_END = 268; // 4:28 in seconds
   showBlurOverlay = false; // Track if we should show blur overlay (public for template access)
   private modalTimer: any = null; // Timer to show modal as fallback
+  private youtubeWindow: Window | null = null; // Track opened YouTube window to prevent duplicates
 
   // Social Media URLs
   instagramUrl = 'https://www.instagram.com/newsaddaindialive/';
   youtubeUrl = 'https://www.youtube.com/@newsaddaindialive';
+  youtubeLatestVideoUrl: string | null = null; // Latest video URL (will be fetched)
   twitterUrl = 'https://twitter.com/NewsAddaIndia1';
   facebookUrl = 'https://facebook.com/InfoNewsaddaindia';
 
   constructor(
     private instagramService: InstagramService,
+    private youtubeService: YouTubeService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -178,6 +185,20 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
           console.log('Using latest Instagram reel:', reelVideoUrl);
         } else {
           console.log('Using fallback video:', this.videoUrl);
+        }
+      }
+    );
+
+    // Fetch the latest YouTube video URL
+    this.youtubeService.getLatestVideoUrl().subscribe(
+      (latestVideoUrl) => {
+        if (latestVideoUrl) {
+          this.youtubeLatestVideoUrl = latestVideoUrl;
+          console.log('Latest YouTube video URL:', latestVideoUrl);
+        } else {
+          // Fallback to channel URL if we can't fetch latest video
+          this.youtubeLatestVideoUrl = this.youtubeUrl;
+          console.log('Using channel URL as fallback:', this.youtubeUrl);
         }
       }
     );
@@ -204,10 +225,13 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
   }
 
   redirectToYouTube() {
-    // Redirect to YouTube after 1 second delay
-    setTimeout(() => {
-      window.open(this.youtubeUrl, '_blank', 'noopener,noreferrer');
-    }, 1000);
+    // Use latest video URL if available, otherwise fallback to channel URL
+    const urlToOpen = this.youtubeLatestVideoUrl || this.youtubeUrl;
+    
+    // Open YouTube link in a new tab (only if not already opened)
+    if (!this.youtubeWindow || this.youtubeWindow.closed) {
+      this.youtubeWindow = window.open(urlToOpen, '_blank', 'noopener,noreferrer');
+    }
   }
 
   onVideoLoadedData() {
@@ -217,6 +241,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       // Ensure video is muted for autoplay
       video.muted = true;
       this.isMuted = true;
+
+      // Explicitly disable looping
+      video.loop = false;
 
       // Reset blur overlay
       this.showBlurOverlay = false;
@@ -229,7 +256,7 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
 
       // Set initial time to video start (4:19)
       video.currentTime = this.VIDEO_START;
-      console.log('Video loaded, set to start time:', this.VIDEO_START);
+      console.log('Video loaded, set to start time (4:19):', this.VIDEO_START);
     }
   }
 
@@ -242,6 +269,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       // Ensure video is muted for autoplay
       video.muted = true;
       this.isMuted = true;
+
+      // Explicitly disable looping
+      video.loop = false;
 
       // Set video start time (4:19)
       if (video.currentTime < this.VIDEO_START || video.currentTime > this.VIDEO_END) {
@@ -257,16 +287,17 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
         this.modalTimer = null;
       }
 
-      // Set a fallback timer to show modal after 20 seconds
+      // Set a fallback timer to show modal after 9 seconds
       this.modalTimer = setTimeout(() => {
         if (!this.showBlurOverlay && this.videoPlayer?.nativeElement) {
-          console.log('Fallback timer: Showing modal after 20 seconds');
+          console.log('Fallback timer: Showing modal after 9 seconds');
           const video = this.videoPlayer.nativeElement;
           video.pause();
+          video.loop = false;
           this.showBlurOverlay = true;
           this.cdr.detectChanges();
         }
-      }, 20000); // 20 seconds
+      }, 9000); // 9 seconds (4:19 to 4:28)
 
       // Try to play the video
       const playPromise = video.play();
@@ -274,7 +305,7 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log('Video playing');
+            console.log('Video playing from 4:19');
             this.isLoading = false;
           })
           .catch((error) => {
@@ -310,10 +341,11 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       console.log(`Video time: ${currentTime.toFixed(1)}s (target: ${this.VIDEO_END}s)`);
     }
 
-    // Stop video and show blur overlay after 20 seconds (4:19 to 4:39)
+    // Check if we've reached the end (4:28)
     if (currentTime >= this.VIDEO_END && !this.showBlurOverlay) {
-      console.log('Video reached end time, showing modal');
+      console.log('Video ended (4:28), pausing and showing modal');
       video.pause();
+      video.loop = false; // Ensure no looping
       this.showBlurOverlay = true;
 
       // Clear the fallback timer since we're showing it now
@@ -326,7 +358,19 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       console.log('Modal should be visible now, showBlurOverlay:', this.showBlurOverlay);
     } else if (currentTime < this.VIDEO_START) {
       // If video somehow goes before start time, reset to start
+      console.log('Video went before start time, resetting to 4:19');
       video.currentTime = this.VIDEO_START;
+    }
+  }
+
+  onVideoEnded() {
+    // Prevent default looping behavior and show modal
+    if (this.videoPlayer?.nativeElement && !this.showBlurOverlay) {
+      const video = this.videoPlayer.nativeElement;
+      video.loop = false;
+      console.log('Video ended, showing modal');
+      this.showBlurOverlay = true;
+      this.cdr.detectChanges();
     }
   }
 
@@ -340,7 +384,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
     }
   }
 
-  closeModalAndRedirect() {
+  closeModalAndRedirect(event: Event) {
+    event.stopPropagation(); // Prevent event bubbling
     this.closeModal();
     this.redirectToYouTube();
   }

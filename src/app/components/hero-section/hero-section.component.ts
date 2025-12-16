@@ -1,11 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonComponent } from '../../ui/button/button.component';
+import { NewsService, NewsArticle } from '../../services/news.service';
 
 interface SideNews {
   category: string;
   title: string;
   image: string;
+  imageLoading?: boolean;
 }
 
 @Component({
@@ -23,11 +25,23 @@ interface SideNews {
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
             <article class="news-card group h-full">
-              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden rounded-t-xl">
-                <img
-                  [src]="featuredNews.image"
-                  [alt]="featuredNews.title"
-                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden rounded-t-xl bg-secondary/20">
+                <!-- Loading Animation - Show while image is loading -->
+                @if (featuredNews.imageLoading || !featuredNews.image) {
+                  <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                    <div class="flex flex-col items-center gap-3">
+                      <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span class="text-sm text-muted-foreground">Loading image...</span>
+                    </div>
+                  </div>
+                }
+                <!-- Image - Only show when loaded -->
+                @if (featuredNews.image && !featuredNews.imageLoading) {
+                  <img
+                    [src]="featuredNews.image"
+                    [alt]="featuredNews.title"
+                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in" />
+                }
                 <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
                 
                 <!-- Content Overlay -->
@@ -75,11 +89,20 @@ interface SideNews {
               <article
                 class="news-card group flex-1"
                 [style.animation-delay]="i * 100 + 'ms'">
-                <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl">
-                  <img
-                    [src]="news.image"
-                    [alt]="news.title"
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                  <!-- Loading Animation - Show while image is loading -->
+                  @if (news.imageLoading || !news.image) {
+                    <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                      <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  }
+                  <!-- Image - Only show when loaded -->
+                  @if (news.image && !news.imageLoading) {
+                    <img
+                      [src]="news.image"
+                      [alt]="news.title"
+                      class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in" />
+                  }
                   <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
                   
                   <div class="absolute bottom-0 left-0 right-0 p-4">
@@ -107,28 +130,152 @@ interface SideNews {
   `,
   styles: []
 })
-export class HeroSectionComponent {
-  featuredNews = {
+export class HeroSectionComponent implements OnInit {
+  @Output() imagesLoaded = new EventEmitter<boolean>();
+  featuredNews: NewsArticle = {
     category: 'National',
-    title: 'Putin Visits India: Strengthening Bilateral Ties and Trade Relations',
-    titleEn: 'Putin Visits India: Strengthening Bilateral Ties and Trade Relations',
-    excerpt: 'Russian President Vladimir Putin arrives in New Delhi for a two-day state visit, marking his first trip to India since the Ukraine conflict. Discussions focus on strengthening trade, economic ties, and finalizing a five-year partnership plan.',
+    title: 'Loading latest news...',
+    titleEn: 'Loading latest news...',
+    excerpt: 'Please wait while we fetch the latest news.',
     author: 'News Adda India',
     date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
     image: 'assets/videos/Putin_in_India_.webp',
+    time: 'Just now'
   };
 
   sideNews: SideNews[] = [
     {
       category: 'Sports',
-      title: 'India Wins Thrilling T20 Series 3-2 Against New Zealand',
+      title: 'Loading...',
       image: 'assets/videos/indianz.avif',
     },
     {
       category: 'Business',
-      title: 'RBI Cuts Repo Rate by 25 Basis Points to 5.25%',
+      title: 'Loading...',
       image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80',
     },
   ];
+
+  isLoading = true;
+
+  constructor(private newsService: NewsService) { }
+
+  ngOnInit() {
+    this.loadNews();
+  }
+
+  loadNews() {
+    const imagePromises: Promise<void>[] = [];
+
+    // Load featured news
+    this.newsService.fetchFeaturedNews('National').subscribe({
+      next: (news) => {
+        this.featuredNews = news;
+        // Fetch image based on headline if loading
+        if (news.imageLoading || !news.image) {
+          this.featuredNews.imageLoading = true;
+          this.featuredNews.image = ''; // Clear any placeholder
+          
+          const featuredImagePromise = new Promise<void>((resolve) => {
+            this.newsService.fetchImageForHeadline(news.title, news.category).subscribe({
+              next: (imageUrl) => {
+                if (imageUrl && imageUrl.trim() !== '') {
+                  // Preload image
+                  const img = new Image();
+                  img.onload = () => {
+                    this.featuredNews.image = imageUrl;
+                    this.featuredNews.imageLoading = false;
+                    resolve();
+                  };
+                  img.onerror = () => {
+                    this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                    this.featuredNews.imageLoading = false;
+                    resolve();
+                  };
+                  img.src = imageUrl;
+                } else {
+                  this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                  this.featuredNews.imageLoading = false;
+                  resolve();
+                }
+              },
+              error: () => {
+                this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                this.featuredNews.imageLoading = false;
+                resolve();
+              }
+            });
+          });
+          imagePromises.push(featuredImagePromise);
+        } else {
+          imagePromises.push(Promise.resolve());
+        }
+      },
+      error: (error) => {
+        console.error('Error loading featured news:', error);
+        imagePromises.push(Promise.resolve());
+      }
+    });
+
+    // Load side news
+    this.newsService.fetchSideNews(['Sports', 'Business']).subscribe({
+      next: (news) => {
+        this.sideNews = news.map((n, index) => {
+          const sideNewsItem = {
+            category: n.category,
+            title: n.title,
+            image: '',
+            imageLoading: true
+          };
+          
+          // Fetch image based on headline
+          const sideImagePromise = new Promise<void>((resolve) => {
+            this.newsService.fetchImageForHeadline(n.title, n.category).subscribe({
+              next: (imageUrl) => {
+                if (imageUrl && imageUrl.trim() !== '') {
+                  // Preload image
+                  const img = new Image();
+                  img.onload = () => {
+                    sideNewsItem.image = imageUrl;
+                    sideNewsItem.imageLoading = false;
+                    resolve();
+                  };
+                  img.onerror = () => {
+                    sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                    sideNewsItem.imageLoading = false;
+                    resolve();
+                  };
+                  img.src = imageUrl;
+                } else {
+                  sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                  sideNewsItem.imageLoading = false;
+                  resolve();
+                }
+              },
+              error: () => {
+                sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                sideNewsItem.imageLoading = false;
+                resolve();
+              }
+            });
+          });
+          imagePromises.push(sideImagePromise);
+          
+          return sideNewsItem;
+        });
+
+        // Wait for all images to load before showing page
+        Promise.all(imagePromises).then(() => {
+          this.isLoading = false;
+          this.imagesLoaded.emit(true);
+          console.log('All hero section images loaded');
+        });
+      },
+      error: (error) => {
+        console.error('Error loading side news:', error);
+        this.isLoading = false;
+      }
+    });
+  }
 }
 

@@ -31,7 +31,7 @@ interface SocialLink {
             <a [routerLink]="'/'" class="flex items-center gap-3 mb-4">
               <div class="relative w-10 h-10 shrink-0">
                 <img 
-                  src="assets/videos/slogo.png" 
+                  src="/assets/videos/slogo.png" 
                   alt="NewsAddaIndia Logo" 
                   class="w-full h-full rounded-xl object-cover"
                   style="box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 0 24px rgba(37, 99, 235, 0.4);"

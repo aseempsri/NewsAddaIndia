@@ -3,15 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
 import { FooterComponent } from '../../components/footer/footer.component';
-
-interface NewsItem {
-  id: number;
-  category: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  time: string;
-}
+import { NewsService, NewsArticle } from '../../services/news.service';
 
 @Component({
   selector: 'app-category',
@@ -39,7 +31,12 @@ interface NewsItem {
 
             <!-- News Grid -->
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              @for (news of filteredNews; track news.id; let i = $index) {
+              @if (isLoading) {
+                <div class="col-span-full text-center py-16">
+                  <p class="text-muted-foreground">Loading news...</p>
+                </div>
+              }
+              @for (news of filteredNews; track news.id || $index; let i = $index) {
                 <article
                   class="news-card group opacity-0 animate-fade-in"
                   [style.animation-delay]="i * 100 + 'ms'">
@@ -94,10 +91,40 @@ interface NewsItem {
 })
 export class CategoryComponent implements OnInit {
   categoryName: string = '';
-  filteredNews: NewsItem[] = [];
+  filteredNews: NewsArticle[] = [];
+  isLoading = true;
 
-  // All news data - in a real app, this would come from a service
-  private allNews: NewsItem[] = [
+  constructor(
+    private route: ActivatedRoute,
+    private newsService: NewsService
+  ) { }
+
+  ngOnInit() {
+    this.route.params.subscribe(params => {
+      const categoryParam = params['category'];
+      // Capitalize first letter
+      this.categoryName = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+      this.loadNews();
+    });
+  }
+
+  loadNews() {
+    this.isLoading = true;
+    this.newsService.fetchNewsByCategory(this.categoryName, 12).subscribe({
+      next: (news) => {
+        this.filteredNews = news;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading news:', error);
+        this.filteredNews = [];
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // Legacy code - keeping for reference but not used
+  private allNews: NewsArticle[] = [
     // National
     {
       id: 1,
@@ -319,23 +346,6 @@ export class CategoryComponent implements OnInit {
     Business: 'from-blue-500 to-blue-600',
     Entertainment: 'from-pink-500 to-rose-500',
   };
-
-  constructor(private route: ActivatedRoute) { }
-
-  ngOnInit() {
-    this.route.params.subscribe(params => {
-      const categoryParam = params['category'];
-      // Capitalize first letter
-      this.categoryName = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
-      this.filterNews();
-    });
-  }
-
-  filterNews() {
-    this.filteredNews = this.allNews.filter(
-      news => news.category.toLowerCase() === this.categoryName.toLowerCase()
-    );
-  }
 
   getCategoryColor(category: string): string {
     return this.categoryColors[category] || 'bg-primary/20 text-primary';
