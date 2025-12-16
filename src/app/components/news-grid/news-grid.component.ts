@@ -179,7 +179,7 @@ export class NewsGridComponent implements OnInit {
     const imagePromises: Promise<void>[] = [];
     
     this.newsItems.forEach((item, index) => {
-      // Fetch image based on headline using OpenAI if loading
+      // Fetch image based on headline using Pixabay/Pexels if loading
       if (item.imageLoading && !item.image) {
         const imagePromise = new Promise<void>((resolve) => {
           this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({

@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  openaiApiKey: '' // Set your OpenAI API key here or use localStorage
+  newsApiKey: '' // Set your NewsAPI key here or use localStorage
 };

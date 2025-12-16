@@ -30,12 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Inject OpenAI API Key
+      - name: Inject NewsAPI Key
         run: |
           # Use Node.js to safely replace the placeholder (handles all special characters)
-          node -e "const fs = require('fs'); const content = fs.readFileSync('src/environments/environment.prod.ts', 'utf8'); const replaced = content.replace('OPENAI_API_KEY_PLACEHOLDER', process.env.OPENAI_KEY); fs.writeFileSync('src/environments/environment.prod.ts', replaced);"
+          node -e "const fs = require('fs'); const content = fs.readFileSync('src/environments/environment.prod.ts', 'utf8'); const replaced = content.replace('NEWSAPI_KEY_PLACEHOLDER', process.env.NEWSAPI_KEY || ''); fs.writeFileSync('src/environments/environment.prod.ts', replaced);"
         env:
-          OPENAI_KEY: ${{ secrets.OPENCHAT_KEY }}
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
 
       - name: Build
         run: npm run build -- --base-href /NewsAddaIndia/ --configuration production

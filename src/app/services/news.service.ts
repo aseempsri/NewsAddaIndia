@@ -21,10 +21,7 @@ export interface NewsArticle {
   providedIn: 'root'
 })
 export class NewsService {
-  private apiKey: string = '';
   private newsApiKey: string = ''; // NewsAPI.org key
-  private openaiUrl = 'https://api.openai.com/v1/chat/completions';
-  private openaiImageUrl = 'https://api.openai.com/v1/images/generations';
   private newsApiUrl = 'https://newsapi.org/v2/top-headlines';
   private pexelsUrl = 'https://api.pexels.com/v1/search';
   private pexelsApiKey = ''; // Optional: Get from pexels.com/api
@@ -46,14 +43,8 @@ export class NewsService {
   constructor(private http: HttpClient) {
     // Get API keys from environment (for production builds) or localStorage (for development)
     // Priority: environment variable > localStorage
-    this.apiKey = environment.openaiApiKey || localStorage.getItem('openai_api_key') || '';
-    this.newsApiKey = localStorage.getItem('newsapi_key') || '';
+    this.newsApiKey = environment.newsApiKey || localStorage.getItem('newsapi_key') || '';
     this.pexelsApiKey = localStorage.getItem('pexels_api_key') || '';
-  }
-
-  setApiKey(key: string): void {
-    this.apiKey = key;
-    localStorage.setItem('openai_api_key', key);
   }
 
   setNewsApiKey(key: string): void {
@@ -441,9 +432,9 @@ export class NewsService {
   }
 
   /**
-   * Fetch image using OpenAI/ChatGPT based on headline only
-   * This method uses the headline to generate perfect image search queries
-   * Returns empty string if no image found (to show loading instead of placeholder)
+   * Fetch image based on headline using Pixabay and Pexels
+   * This method uses the headline to generate image search queries
+   * Returns placeholder image if no image found
    */
   fetchImageForHeadline(headline: string, category: string): Observable<string> {
     console.log(`Fetching image for headline: "${headline}"`);
@@ -461,57 +452,35 @@ export class NewsService {
       return of(cachedImage);
     }
 
-    // Step 1: Use OpenAI to generate intelligent search query
-    // Step 2: Search for images on web (Pixabay, Pexels) - real published images from web
-    // Step 3: Only if web sources fail, use DALL-E to generate image
-    return this.generateImageSearchQueryWithOpenAI(headline, category, '').pipe(
-      switchMap(searchQuery => {
-        console.log(`Generated search query: "${searchQuery}"`);
-        // Step 2: Try web-based image sources (Pixabay, Pexels) - these are real images from the web
-        return this.fetchFromPixabay(searchQuery).pipe(
-          catchError(() => {
-            console.log(`Pixabay search failed, trying Pexels...`);
-            // Step 2: If Pixabay fails, try Pexels
-            return this.fetchFromPexels(searchQuery);
-          }),
-          catchError(() => {
-            console.log(`All web image sources failed, trying alternative query...`);
-            // Try alternative query
-            const alternativeQuery = this.createIntelligentImageQuery(headline, category, '');
-            return this.fetchFromPixabay(alternativeQuery).pipe(
-              catchError(() => this.fetchFromPexels(alternativeQuery)),
-              catchError(() => {
-                console.log(`All web image sources failed, generating with DALL-E...`);
-                // Step 3: Only if all web sources fail, use DALL-E to generate
-                return this.generateImageWithDALLE(headline, category);
-              })
-            );
-          }),
-          catchError(() => {
-            console.log(`All web image sources failed, generating with DALL-E...`);
-            // Step 3: Only if all web sources fail, use DALL-E to generate
-            return this.generateImageWithDALLE(headline, category);
-          })
-        );
+    // Generate search query from headline and search for images on Pixabay and Pexels
+    const searchQuery = this.createIntelligentImageQuery(headline, category, '');
+    console.log(`Generated search query: "${searchQuery}"`);
+
+    // Try Pixabay first, then Pexels, then alternative query, then placeholder
+    return this.fetchFromPixabay(searchQuery).pipe(
+      catchError(() => {
+        console.log(`Pixabay search failed, trying Pexels...`);
+        return this.fetchFromPexels(searchQuery);
       }),
       catchError(() => {
-        console.log(`OpenAI query generation failed, using basic query...`);
-        // Fallback to basic query if OpenAI fails
-        const basicQuery = this.createIntelligentImageQuery(headline, category, '');
-        return this.fetchFromPixabay(basicQuery).pipe(
-          catchError(() => this.fetchFromPexels(basicQuery)),
-          catchError(() => {
-            console.log(`Web search with basic query failed, generating with DALL-E...`);
-            // Only if all web sources fail, use DALL-E
-            return this.generateImageWithDALLE(headline, category);
-          }),
+        console.log(`All image sources failed, trying alternative query...`);
+        // Try alternative query
+        const alternativeQuery = this.createIntelligentImageQuery(headline, category, '');
+        return this.fetchFromPixabay(alternativeQuery).pipe(
+          catchError(() => this.fetchFromPexels(alternativeQuery)),
           catchError(() => {
             // Last resort: placeholder image
-            const placeholder = this.getPlaceholderImage(basicQuery);
+            const placeholder = this.getPlaceholderImage(alternativeQuery);
             return of(placeholder);
           })
         );
       }),
+      catchError(() => {
+        // Last resort: placeholder image
+        const placeholder = this.getPlaceholderImage(searchQuery);
+        return of(placeholder);
+      })
+    ).pipe(
       tap(imageUrl => {
         // Cache successful images (but not placeholders)
         if (imageUrl && imageUrl.trim() !== '' && !imageUrl.includes('picsum.photos')) {
@@ -533,200 +502,37 @@ export class NewsService {
       return of(cachedImage);
     }
 
-    // Step 1: Use OpenAI to generate intelligent search query
-    // Step 2: Search for images on web (Pixabay, Pexels) - real published images from web
-    // Step 3: Only if web sources fail, use DALL-E to generate image
-    return this.generateImageSearchQueryWithOpenAI(title, category, content).pipe(
-      switchMap(searchQuery => {
-        // Generate alternative queries for better matching
-        const alternativeQuery = this.createIntelligentImageQuery(title, category, content);
+    // Generate search query from title and search for images on Pixabay and Pexels
+    const searchQuery = this.createIntelligentImageQuery(title, category, content);
+    // Generate alternative queries for better matching
+    const alternativeQuery = this.createIntelligentImageQuery(title, category, content);
 
-        // Step 2: Try web-based image sources (Pixabay, Pexels) - these are real images from the web
-        // Priority: Pixabay > Pexels > Alternative query > DALL-E > Placeholder
-        return this.fetchFromPixabay(searchQuery).pipe(
-          catchError(() => {
-            console.log(`Pixabay search failed, trying Pexels...`);
-            // Step 2: If Pixabay fails, try Pexels
-            return this.fetchFromPexels(searchQuery);
-          }),
-          catchError(() => {
-            console.log(`Trying alternative query...`);
-            // Try alternative query
-            return this.fetchFromPixabay(alternativeQuery).pipe(
-              catchError(() => this.fetchFromPexels(alternativeQuery)),
-              catchError(() => {
-                console.log(`All web image sources failed, generating with DALL-E...`);
-                // Step 3: Only if all web sources fail, use DALL-E to generate
-                return this.generateImageWithDALLE(title, category);
-              })
-            );
-          }),
+    // Try Pixabay first, then Pexels, then alternative query, then placeholder
+    return this.fetchFromPixabay(searchQuery).pipe(
+      catchError(() => {
+        console.log(`Pixabay search failed, trying Pexels...`);
+        return this.fetchFromPexels(searchQuery);
+      }),
+      catchError(() => {
+        console.log(`Trying alternative query...`);
+        // Try alternative query
+        return this.fetchFromPixabay(alternativeQuery).pipe(
+          catchError(() => this.fetchFromPexels(alternativeQuery)),
           catchError(() => {
             // Last resort: placeholder image
-            return of(this.getPlaceholderImage(searchQuery));
-          }),
-          tap(imageUrl => {
-            // Cache the image URL
-            if (imageUrl && imageUrl !== this.getPlaceholderImage(searchQuery) && !imageUrl.includes('picsum.photos')) {
-              localStorage.setItem(cacheKey, imageUrl);
-            }
+            return of(this.getPlaceholderImage(alternativeQuery));
           })
         );
       }),
       catchError(() => {
-        // Fallback to basic query if OpenAI fails
-        const basicQuery = this.createIntelligentImageQuery(title, category, content);
-        return this.fetchFromPixabay(basicQuery).pipe(
-          catchError(() => this.fetchFromPexels(basicQuery)),
-          catchError(() => {
-            console.log(`Web search with basic query failed, generating with DALL-E...`);
-            // Only if all web sources fail, use DALL-E
-            return this.generateImageWithDALLE(title, category);
-          }),
-          catchError(() => {
-            // Last resort: placeholder image
-            return of(this.getPlaceholderImage(basicQuery));
-          })
-        );
+        // Last resort: placeholder image
+        return of(this.getPlaceholderImage(searchQuery));
       }),
       tap(imageUrl => {
         // Cache the image URL
         if (imageUrl && imageUrl !== this.getPlaceholderImage(title) && !imageUrl.includes('picsum.photos')) {
           localStorage.setItem(cacheKey, imageUrl);
         }
-      })
-    );
-  }
-
-  /**
-   * Use OpenAI to generate intelligent image search query from news article
-   * Enhanced to find perfect news-related images
-   */
-  private generateImageSearchQueryWithOpenAI(title: string, category: string, content: string): Observable<string> {
-    if (!this.apiKey) {
-      // Fallback to basic query generation if OpenAI key not available
-      return of(this.createIntelligentImageQuery(title, category, content));
-    }
-
-    // If content is empty, focus only on headline
-    const isHeadlineOnly = !content || content.trim().length === 0;
-
-    const prompt = isHeadlineOnly
-      ? `You are analyzing a news headline to find the perfect related image. Be VERY SPECIFIC and extract key visual elements.
-
-News Headline: "${title}"
-Category: ${category}
-
-Your task: Generate 3 different image search queries (one per line) that would find the most relevant, high-quality news images for this EXACT headline. 
-
-CRITICAL: Extract the MAIN SUBJECT, KEY ENTITIES, and VISUAL ELEMENTS directly from the headline. Be specific about:
-- People mentioned (names, titles, roles)
-- Places mentioned (cities, countries, buildings, landmarks)
-- Events mentioned (what happened, where, when)
-- Organizations mentioned (companies, institutions, teams)
-
-Each query should:
-1. Extract the MAIN SUBJECT/ENTITY from the headline (person, place, event, organization)
-2. Include SPECIFIC VISUAL ELEMENTS that would represent this EXACT news story
-3. Be NEWS-SPECIFIC (prefer actual news photos over generic stock photos)
-4. Include relevant context (location, event type, key people/organizations)
-
-Priority order:
-- Query 1: Most specific - main subject + key visual element + location/context (EXACT match to headline)
-- Query 2: Alternative - different angle but still related to headline
-- Query 3: Broader - category + main subject from headline
-
-Examples:
-Headline: "Supreme Court upholds women's reservation bill"
-Queries:
-Supreme Court of India building Delhi
-Supreme Court judges India
-women reservation India parliament
-
-Headline: "India wins cricket World Cup final"
-Queries:
-India cricket team celebration World Cup
-cricket stadium India match
-Indian cricket players trophy
-
-Headline: "PM Modi inaugurates new metro line in Mumbai"
-Queries:
-PM Modi Mumbai metro inauguration
-Mumbai metro station opening
-Narendra Modi metro launch India
-
-Return ONLY the 3 queries, one per line, nothing else. No numbering, no explanations.`
-      : `You are analyzing a news article to find the perfect related image. 
-
-News Article Details:
-Title: ${title}
-Category: ${category}
-Content: ${content.substring(0, 500)}
-
-Your task: Generate 3 different image search queries (one per line) that would find the most relevant, high-quality news images for this article. Each query should:
-1. Focus on the MAIN SUBJECT/ENTITY (person, place, event, organization)
-2. Include SPECIFIC VISUAL ELEMENTS (buildings, people, locations, objects)
-3. Be NEWS-SPECIFIC (prefer actual news photos over generic stock photos)
-4. Include relevant context (location, event type, key people/organizations)
-
-Priority order:
-- Query 1: Most specific - main subject + key visual element + location/context
-- Query 2: Alternative - different angle or related visual
-- Query 3: Broader - category + main subject
-
-Examples:
-Article: "Supreme Court upholds women's reservation bill"
-Queries:
-Supreme Court of India building Delhi
-Supreme Court judges India
-women reservation India parliament
-
-Article: "India wins cricket World Cup final"
-Queries:
-India cricket team celebration World Cup
-cricket stadium India match
-Indian cricket players trophy
-
-Return ONLY the 3 queries, one per line, nothing else. No numbering, no explanations.`;
-
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`
-    });
-
-    const body = {
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at analyzing news articles and generating precise image search queries. You return only search queries, one per line, nothing else.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 150,
-      temperature: 0.5
-    };
-
-    return this.http.post<any>(this.openaiUrl, body, { headers }).pipe(
-      map(response => {
-        const queriesText = response.choices?.[0]?.message?.content?.trim() || '';
-        // Extract queries (one per line)
-        const queries = queriesText
-          .split('\n')
-          .map(q => q.replace(/^\d+[\.\)]\s*/, '').replace(/["']/g, '').trim())
-          .filter(q => q.length > 0)
-          .slice(0, 3);
-
-        // Return the first (most specific) query, or fallback
-        return queries.length > 0 ? queries[0] : this.createIntelligentImageQuery(title, category, content);
-      }),
-      catchError(error => {
-        console.error('OpenAI image query generation error:', error);
-        // Fallback to basic query
-        return of(this.createIntelligentImageQuery(title, category, content));
       })
     );
   }
@@ -805,70 +611,6 @@ Return ONLY the 3 queries, one per line, nothing else. No numbering, no explanat
         throw new Error('No Pexels results');
       })
     );
-  }
-
-  /**
-   * Generate image using OpenAI DALL-E API based on headline
-   */
-  private generateImageWithDALLE(headline: string, category: string): Observable<string> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key not available');
-    }
-
-    // Create a descriptive prompt for DALL-E based on the headline
-    const prompt = this.createDALLEPrompt(headline, category);
-
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`
-    });
-
-    const body = {
-      model: 'dall-e-3',
-      prompt: prompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-      response_format: 'url'
-    };
-
-    return this.http.post<any>(this.openaiImageUrl, body, { headers }).pipe(
-      map(response => {
-        if (response.data && response.data.length > 0 && response.data[0].url) {
-          return response.data[0].url;
-        }
-        throw new Error('No image generated by DALL-E');
-      }),
-      catchError(error => {
-        console.error('DALL-E image generation error:', error);
-        throw error;
-      })
-    );
-  }
-
-  /**
-   * Create a descriptive prompt for DALL-E based on headline and category
-   */
-  private createDALLEPrompt(headline: string, category: string): string {
-    // Create a news-style image prompt
-    const categoryContext: Record<string, string> = {
-      'Sports': 'sports news photography, action shot',
-      'Business': 'business news photography, professional setting',
-      'Entertainment': 'entertainment news photography, celebrity event',
-      'National': 'Indian news photography, current events',
-      'International': 'world news photography, global events',
-      'Health': 'health news photography, medical setting',
-      'Politics': 'political news photography, government setting'
-    };
-
-    const context = categoryContext[category] || 'news photography';
-
-    // Extract key visual elements from headline
-    const prompt = `A professional news photograph representing: "${headline}". 
-Style: ${context}, photojournalism style, high quality, realistic, news photography.
-The image should visually represent the main subject and context of this news story.`;
-
-    return prompt;
   }
 
   /**
