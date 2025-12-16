@@ -43,8 +43,16 @@ export class NewsService {
   constructor(private http: HttpClient) {
     // Get API keys from environment (for production builds) or localStorage (for development)
     // Priority: environment variable > localStorage
-    this.newsApiKey = environment.newsApiKey || localStorage.getItem('newsapi_key') || '';
+    this.newsApiKey = (environment.newsApiKey || localStorage.getItem('newsapi_key') || '').trim();
     this.pexelsApiKey = localStorage.getItem('pexels_api_key') || '';
+
+    // Debug: Log if API key is available (without exposing the full key)
+    if (this.newsApiKey && this.newsApiKey !== 'NEWSAPI_KEY_PLACEHOLDER') {
+      console.log('NewsData.io API key loaded:', this.newsApiKey.substring(0, 10) + '...');
+    } else {
+      console.warn('NewsData.io API key not found or is placeholder. Will fallback to Google News RSS.');
+      console.warn('Environment key:', environment.newsApiKey ? 'Present' : 'Missing');
+    }
   }
 
   setNewsApiKey(key: string): void {
@@ -98,9 +106,13 @@ export class NewsService {
     const newsApiCategory = this.categoryMap[category] || 'top';
 
     // Try NewsData.io first if key is available
-    if (this.newsApiKey) {
+    if (this.newsApiKey && this.newsApiKey.trim() !== '') {
       // NewsData.io API format: apikey, country, category
-      const url = `${this.newsApiUrl}?apikey=${this.newsApiKey}&country=in&category=${newsApiCategory}&language=en&size=${count}`;
+      // URL encode the API key to handle special characters
+      const encodedKey = encodeURIComponent(this.newsApiKey.trim());
+      const url = `${this.newsApiUrl}?apikey=${encodedKey}&country=in&category=${newsApiCategory}&language=en&size=${count}`;
+
+      console.log('Fetching news from NewsData.io for category:', category);
 
       return this.http.get<any>(url).pipe(
         switchMap(response => {
@@ -147,6 +159,10 @@ export class NewsService {
         }),
         catchError(error => {
           console.error('NewsData.io API error:', error);
+          if (error.status === 401) {
+            console.error('401 Unauthorized - API key may be invalid or missing. Check GitHub secrets (NEWSAPI_KEY).');
+            console.error('Current API key (first 10 chars):', this.newsApiKey ? this.newsApiKey.substring(0, 10) + '...' : 'EMPTY');
+          }
           // Fallback to Google News RSS
           return this.fetchFromGoogleNewsRSS(category, count);
         })
