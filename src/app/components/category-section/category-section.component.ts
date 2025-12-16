@@ -7,6 +7,7 @@ interface Article {
   image: string;
   time: string;
   hasVideo?: boolean;
+  imageLoading?: boolean;
 }
 
 interface Category {
@@ -46,41 +47,64 @@ interface Category {
               <!-- Articles -->
               <div class="space-y-4">
                 <!-- Featured Article -->
-                <article class="news-card group">
-                  <div class="relative aspect-video overflow-hidden rounded-t-xl">
-                    <img
-                      [src]="category.articles[0].image"
-                      [alt]="category.articles[0].title"
-                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                    @if (category.articles[0].hasVideo) {
-                      <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform cursor-pointer">
-                          <svg class="w-6 h-6 text-primary-foreground ml-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
+                @if (category.articles && category.articles.length > 0) {
+                  <article class="news-card group">
+                    <div class="relative aspect-video overflow-hidden rounded-t-xl bg-secondary/20">
+                      <!-- Loading Animation - Show while image is loading -->
+                      @if (category.articles[0]?.imageLoading || !category.articles[0]?.image) {
+                        <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                          <div class="flex flex-col items-center gap-2">
+                            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-xs text-muted-foreground">Loading image...</span>
+                          </div>
                         </div>
-                      </div>
-                    }
-                    <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
-                  </div>
-                  <div class="p-4">
-                    <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
-                      {{ category.articles[0].title }}
-                    </h3>
-                    <span class="text-xs text-muted-foreground mt-2 inline-block">
-                      {{ category.articles[0].time }}
-                    </span>
-                  </div>
-                </article>
+                      }
+                      <!-- Image - Only show when loaded -->
+                      @if (category.articles[0]?.image && !category.articles[0]?.imageLoading) {
+                        <img
+                          [src]="category.articles[0].image"
+                          [alt]="category.articles[0].title"
+                          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      }
+                      @if (category.articles[0]?.hasVideo && category.articles[0]?.image && !category.articles[0]?.imageLoading) {
+                        <div class="absolute inset-0 flex items-center justify-center z-20">
+                          <div class="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform cursor-pointer">
+                            <svg class="w-6 h-6 text-primary-foreground ml-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      }
+                      <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+                    </div>
+                    <div class="p-4">
+                      <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
+                        {{ category.articles[0].title }}
+                      </h3>
+                      <span class="text-xs text-muted-foreground mt-2 inline-block">
+                        {{ category.articles[0].time }}
+                      </span>
+                    </div>
+                  </article>
+                }
 
                 <!-- List Articles -->
                 @for (article of category.articles.slice(1); track $index) {
                   <article class="group flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <div class="relative w-24 h-20 rounded-lg overflow-hidden shrink-0">
-                      <img
-                        [src]="article.image"
-                        [alt]="article.title"
-                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div class="relative w-24 h-20 rounded-lg overflow-hidden shrink-0 bg-secondary/20">
+                      <!-- Loading Animation - Show while image is loading -->
+                      @if (article.imageLoading || !article.image) {
+                        <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                          <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      }
+                      <!-- Image - Only show when loaded -->
+                      @if (article.image && !article.imageLoading) {
+                        <img
+                          [src]="article.image"
+                          [alt]="article.title"
+                          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      }
                     </div>
                     <div class="flex-1 min-w-0">
                       <h4 class="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
@@ -116,6 +140,7 @@ export class CategorySectionComponent implements OnInit {
   ];
 
   isLoading = true;
+  private originalNewsItems: { [key: string]: any[] } = {};
 
   constructor(private newsService: NewsService) { }
 
@@ -127,13 +152,17 @@ export class CategorySectionComponent implements OnInit {
     // Load Entertainment news
     this.newsService.fetchNewsByCategory('Entertainment', 4).subscribe({
       next: (news) => {
+        this.originalNewsItems['Entertainment'] = news;
         this.categories[0].articles = news.map((n, index) => ({
           title: n.title,
-          image: n.image,
+          image: n.image || '',
           time: n.time,
-          hasVideo: index === 0
+          hasVideo: index === 0,
+          imageLoading: !n.image || n.image.trim() === ''
         }));
         this.isLoading = false;
+        // Fetch images for Entertainment articles
+        this.fetchImagesForCategory(0, news);
       },
       error: (error) => {
         console.error('Error loading Entertainment news:', error);
@@ -144,15 +173,66 @@ export class CategorySectionComponent implements OnInit {
     // Load Sports news
     this.newsService.fetchNewsByCategory('Sports', 4).subscribe({
       next: (news) => {
+        this.originalNewsItems['Sports'] = news;
         this.categories[1].articles = news.map((n, index) => ({
           title: n.title,
-          image: n.image,
+          image: n.image || '',
           time: n.time,
-          hasVideo: index === 0
+          hasVideo: index === 0,
+          imageLoading: !n.image || n.image.trim() === ''
         }));
+        // Fetch images for Sports articles
+        this.fetchImagesForCategory(1, news);
       },
       error: (error) => {
         console.error('Error loading Sports news:', error);
+      }
+    });
+  }
+
+  fetchImagesForCategory(categoryIndex: number, newsItems: any[]) {
+    const category = this.categories[categoryIndex];
+    if (!category || !category.articles || category.articles.length === 0 || !newsItems) {
+      return;
+    }
+
+    category.articles.forEach((article, index) => {
+      // Fetch image based on headline if loading or empty
+      if (article.imageLoading || !article.image || article.image.trim() === '') {
+        const newsItem = newsItems[index];
+        if (newsItem) {
+          this.newsService.fetchImageForHeadline(newsItem.title, category.title).subscribe({
+            next: (imageUrl) => {
+              if (imageUrl && imageUrl.trim() !== '') {
+                // Preload image to ensure it's ready before showing
+                const img = new Image();
+                img.onload = () => {
+                  article.image = imageUrl;
+                  article.imageLoading = false;
+                };
+                img.onerror = () => {
+                  // If image fails to load, try placeholder as last resort
+                  article.image = this.newsService.getPlaceholderImage(newsItem.title);
+                  article.imageLoading = false;
+                };
+                img.src = imageUrl;
+              } else {
+                // Fallback to placeholder if no image found
+                article.image = this.newsService.getPlaceholderImage(newsItem.title);
+                article.imageLoading = false;
+              }
+            },
+            error: (error) => {
+              console.error(`Error fetching image for "${newsItem.title}":`, error);
+              // Fallback to placeholder on error
+              article.image = this.newsService.getPlaceholderImage(newsItem.title);
+              article.imageLoading = false;
+            }
+          });
+        }
+      } else {
+        // If image already exists, ensure it's not in loading state
+        article.imageLoading = false;
       }
     });
   }

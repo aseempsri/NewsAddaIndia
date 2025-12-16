@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Location } from '@angular/common';
 
 interface FooterLink {
   name: string;
@@ -31,7 +32,7 @@ interface SocialLink {
             <a [routerLink]="'/'" class="flex items-center gap-3 mb-4">
               <div class="relative w-10 h-10 shrink-0">
                 <img 
-                  src="assets/videos/slogo.png" 
+                  [src]="logoPath" 
                   alt="NewsAddaIndia Logo" 
                   class="w-full h-full rounded-xl object-cover"
                   style="box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 0 24px rgba(37, 99, 235, 0.4);"
@@ -163,6 +164,14 @@ interface SocialLink {
   `]
 })
 export class FooterComponent {
+  logoPath: string;
+
+  constructor(private location: Location) {
+    // Get the base href and construct the logo path
+    const baseHref = this.location.prepareExternalUrl('/');
+    this.logoPath = baseHref + 'assets/videos/slogo.png';
+  }
+
   footerLinks = {
     categories: [
       { name: 'National', route: '/category/national' },

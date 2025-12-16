@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Location } from '@angular/common';
 import { ButtonComponent } from '../../ui/button/button.component';
 
 interface NavLink {
@@ -48,7 +49,7 @@ interface NavLink {
             <a [routerLink]="'/'" class="flex items-center gap-3 group">
               <div class="relative w-12 h-12 shrink-0">
                 <img 
-                  src="assets/videos/slogo.png" 
+                  [src]="logoPath" 
                   alt="NewsAddaIndia Logo" 
                   class="w-full h-full rounded-xl object-cover transition-all duration-300"
                   style="box-shadow: 0 0 15px rgba(37, 99, 235, 0.6), 0 0 30px rgba(37, 99, 235, 0.4);"
@@ -134,6 +135,13 @@ interface NavLink {
 })
 export class HeaderComponent {
   isMenuOpen = false;
+  logoPath: string;
+
+  constructor(private location: Location) {
+    // Get the base href and construct the logo path
+    const baseHref = this.location.prepareExternalUrl('/');
+    this.logoPath = baseHref + 'assets/videos/slogo.png';
+  }
 
   navLinks: NavLink[] = [
     { name: 'Home', route: '/' },
