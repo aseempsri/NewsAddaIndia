@@ -40,12 +40,24 @@ import { NewsService, NewsArticle } from '../../services/news.service';
                 <article
                   class="news-card group opacity-0 animate-fade-in"
                   [style.animation-delay]="i * 100 + 'ms'">
-                  <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl">
-                    <img
-                      [src]="news.image"
-                      [alt]="news.title"
-                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    <div class="absolute top-4 left-4">
+                  <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                    <!-- Loading Animation - Show while image is loading -->
+                    @if (news.imageLoading || !news.image) {
+                      <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                        <div class="flex flex-col items-center gap-2">
+                          <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          <span class="text-xs text-muted-foreground">Loading image...</span>
+                        </div>
+                      </div>
+                    }
+                    <!-- Image - Only show when loaded -->
+                    @if (news.image && !news.imageLoading) {
+                      <img
+                        [src]="news.image"
+                        [alt]="news.title"
+                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    }
+                    <div class="absolute top-4 left-4 z-20">
                       <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
                         {{ news.category }}
                       </span>
@@ -114,11 +126,50 @@ export class CategoryComponent implements OnInit {
       next: (news) => {
         this.filteredNews = news;
         this.isLoading = false;
+        // Fetch images for all news items
+        this.fetchImagesForAllItems();
       },
       error: (error) => {
         console.error('Error loading news:', error);
         this.filteredNews = [];
         this.isLoading = false;
+      }
+    });
+  }
+
+  fetchImagesForAllItems() {
+    this.filteredNews.forEach((item) => {
+      // Fetch image based on headline if loading
+      if (item.imageLoading && !item.image) {
+        this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
+          next: (imageUrl) => {
+            // Only update if we got a valid image URL
+            if (imageUrl && imageUrl.trim() !== '') {
+              // Preload image to ensure it's ready before showing
+              const img = new Image();
+              img.onload = () => {
+                item.image = imageUrl;
+                item.imageLoading = false;
+              };
+              img.onerror = () => {
+                // If image fails to load, try placeholder as last resort
+                item.image = this.newsService.getPlaceholderImage(item.title);
+                item.imageLoading = false;
+              };
+              img.src = imageUrl;
+            } else {
+              // Fallback to placeholder if no image found
+              item.image = this.newsService.getPlaceholderImage(item.title);
+              item.imageLoading = false;
+            }
+          },
+          error: (error) => {
+            console.error(`Error fetching image for "${item.title}":`, error);
+            // Fallback to placeholder on error
+            item.image = this.newsService.getPlaceholderImage(item.title);
+            item.imageLoading = false;
+          }
+        });
       }
     });
   }

@@ -280,7 +280,7 @@ export class HeroSectionComponent implements OnInit {
                 }
               },
               error: () => {
-                sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
                 sideNewsItem.imageLoading = false;
                 resolve();
               }
