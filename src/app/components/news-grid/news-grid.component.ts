@@ -195,14 +195,14 @@ export class NewsGridComponent implements OnInit {
                 };
                 img.onerror = () => {
                   // If image fails to load, try placeholder as last resort
-                  item.image = this.newsService['getPlaceholderImage'](item.title);
+                  item.image = this.newsService.getPlaceholderImage(item.title);
                   item.imageLoading = false;
                   resolve();
                 };
                 img.src = imageUrl;
               } else {
                 // Fallback to placeholder if no image found
-                item.image = this.newsService['getPlaceholderImage'](item.title);
+                item.image = this.newsService.getPlaceholderImage(item.title);
                 item.imageLoading = false;
                 resolve();
               }
@@ -210,7 +210,7 @@ export class NewsGridComponent implements OnInit {
             error: (error) => {
               console.error(`Error fetching image for "${item.title}":`, error);
               // Fallback to placeholder on error
-              item.image = this.newsService['getPlaceholderImage'](item.title);
+              item.image = this.newsService.getPlaceholderImage(item.title);
               item.imageLoading = false;
               resolve();
             }

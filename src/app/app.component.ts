@@ -15,13 +15,8 @@ export class AppComponent implements OnInit {
   constructor(private newsService: NewsService) { }
 
   ngOnInit() {
-    // Check if it's a new day (after midnight) and clear cache if needed
-    this.newsService.checkAndRefreshAtMidnight();
-
-    // Set up interval to check for midnight (check every hour)
-    setInterval(() => {
-      this.newsService.checkAndRefreshAtMidnight();
-    }, 3600000); // Check every hour
+    // News now updates on each refresh/page load
+    // No need for midnight checks or intervals
   }
 }
 

@@ -42,13 +42,18 @@ interface SideNews {
                     [alt]="featuredNews.title"
                     class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in" />
                 }
-                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
+                <!-- Desktop: Gradient overlay for text readability -->
+                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent hidden lg:block"></div>
                 
-                <!-- Content Overlay -->
-                <div class="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
-                  <span class="category-badge text-primary-foreground mb-4 inline-block">
+                <!-- Category Badge - Top Left -->
+                <div class="absolute top-4 left-4 z-20">
+                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-foreground">
                     {{ featuredNews.category }}
                   </span>
+                </div>
+                
+                <!-- Desktop: Content Overlay (hidden on mobile) -->
+                <div class="absolute bottom-0 left-0 right-0 p-6 lg:p-8 hidden lg:block">
                   <h2 class="font-display text-2xl lg:text-4xl font-bold leading-tight mb-3 text-foreground">
                     {{ featuredNews.titleEn }}
                   </h2>
@@ -72,7 +77,29 @@ interface SideNews {
                 </div>
               </div>
 
-              <div class="p-4 lg:p-6 border-t border-border/30">
+              <!-- Mobile: Content below image (shown on mobile, hidden on desktop) -->
+              <div class="p-5 lg:hidden">
+                <h2 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                  {{ featuredNews.titleEn }}
+                </h2>
+                <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
+                  {{ featuredNews.excerpt }}
+                </p>
+                <div class="flex items-center justify-between">
+                  <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ featuredNews.time }}
+                  </span>
+                  <svg class="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Desktop: Read Full Story button (hidden on mobile) -->
+              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block">
                 <app-button variant="ghost" class="group/btn text-primary hover:text-primary">
                   Read Full Story
                   <svg class="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,19 +215,19 @@ export class HeroSectionComponent implements OnInit {
                     resolve();
                   };
                   img.onerror = () => {
-                    this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
                     this.featuredNews.imageLoading = false;
                     resolve();
                   };
                   img.src = imageUrl;
                 } else {
-                  this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
                   this.featuredNews.imageLoading = false;
                   resolve();
                 }
               },
               error: () => {
-                this.featuredNews.image = this.newsService['getPlaceholderImage'](news.title);
+                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
                 this.featuredNews.imageLoading = false;
                 resolve();
               }
@@ -241,13 +268,13 @@ export class HeroSectionComponent implements OnInit {
                     resolve();
                   };
                   img.onerror = () => {
-                    sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                    sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
                     sideNewsItem.imageLoading = false;
                     resolve();
                   };
                   img.src = imageUrl;
                 } else {
-                  sideNewsItem.image = this.newsService['getPlaceholderImage'](n.title);
+                  sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
                   sideNewsItem.imageLoading = false;
                   resolve();
                 }

@@ -74,21 +74,11 @@ export class NewsService {
   }
 
   /**
-   * Check if we need to fetch new news (only at midnight or if cache is empty)
+   * Check if we need to fetch new news (always fetch on refresh)
    */
   private shouldFetchNewNews(): boolean {
-    const lastFetchTime = localStorage.getItem('last_news_fetch_time');
-    if (!lastFetchTime) {
-      return true; // No cache, fetch news
-    }
-
-    const lastFetch = new Date(lastFetchTime);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const lastFetchDay = new Date(lastFetch.getFullYear(), lastFetch.getMonth(), lastFetch.getDate());
-
-    // Fetch if it's a new day (after midnight)
-    return today.getTime() > lastFetchDay.getTime();
+    // Always fetch new news on each refresh/page load
+    return true;
   }
 
   /**
@@ -365,14 +355,8 @@ export class NewsService {
   fetchNewsByCategory(category: string, count: number = 5): Observable<NewsArticle[]> {
     console.log(`Fetching news for category: ${category}, count: ${count}`);
 
-    // Check cache first - use cached news if available and it's the same day
-    if (!this.shouldFetchNewNews()) {
-      const cachedNews = this.getCachedNews(`${category}_${count}`);
-      if (cachedNews && cachedNews.length > 0) {
-        console.log(`Using cached news for ${category}`);
-        return of(cachedNews);
-      }
-    }
+    // Always fetch fresh news on each refresh (no cache check)
+    // Cache is still used as fallback if API fails
 
     // Fetch REAL news from NewsAPI or Google News RSS
     return this.fetchRealNewsFromAPI(category, count).pipe(
@@ -471,10 +455,15 @@ export class NewsService {
   fetchImageForHeadline(headline: string, category: string): Observable<string> {
     console.log(`Fetching image for headline: "${headline}"`);
 
-    // Check cache first
+    // Check cache first (but skip cache in production to ensure fresh images)
+    // In production, we want fresh images on each load
     const cacheKey = `${this.IMAGE_CACHE_PREFIX}${this.hashString(headline + category)}`;
     const cachedImage = localStorage.getItem(cacheKey);
-    if (cachedImage && cachedImage.trim() !== '' && !cachedImage.includes('picsum.photos')) {
+    // Only use cache if it's a valid external image URL (not placeholder)
+    if (cachedImage && cachedImage.trim() !== '' &&
+      !cachedImage.includes('picsum.photos') &&
+      (cachedImage.startsWith('http://') || cachedImage.startsWith('https://'))) {
+      // Verify cached image is still accessible
       console.log(`Using cached image for: "${headline}"`);
       return of(cachedImage);
     }
@@ -495,8 +484,9 @@ export class NewsService {
           }),
           catchError(() => {
             console.log(`All image sources failed for: "${searchQuery}"`);
-            // Return empty string instead of placeholder - let component handle fallback
-            return of('');
+            // Return placeholder image as last resort to ensure images always show
+            const placeholder = this.getPlaceholderImage(searchQuery);
+            return of(placeholder);
           }),
           tap(imageUrl => {
             // Cache successful images (but not placeholders)
@@ -513,7 +503,11 @@ export class NewsService {
         return this.fetchFromBingImageSearch(basicQuery).pipe(
           catchError(() => this.fetchFromPixabay(basicQuery)),
           catchError(() => this.fetchFromPexels(basicQuery)),
-          catchError(() => of('')) // Return empty instead of placeholder
+          catchError(() => {
+            // Always return a placeholder image as last resort
+            const placeholder = this.getPlaceholderImage(basicQuery);
+            return of(placeholder);
+          })
         );
       })
     );
@@ -901,7 +895,10 @@ Return ONLY the 3 queries, one per line, nothing else. No numbering, no explanat
     return `${titleWords} ${categoryContext}`.trim();
   }
 
-  private getPlaceholderImage(query: string): string {
+  /**
+   * Get placeholder image URL (public method for components to use)
+   */
+  getPlaceholderImage(query: string): string {
     // Use a more reliable image service with better relevance
     const cleanQuery = (query || 'india news').toLowerCase()
       .replace(/latest|news|india|indian|breaking|update|article|the|a|an|is|are|was|were|says|reports/gi, '')

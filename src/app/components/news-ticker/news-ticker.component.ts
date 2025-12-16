@@ -6,9 +6,9 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="bg-gradient-to-r from-primary/20 via-transparent to-accent/20 border-y border-border/30 overflow-hidden">
-      <div class="container mx-auto px-4">
-        <div class="flex items-center py-3">
+    <div class="bg-gradient-to-r from-primary/20 via-transparent to-accent/20 border-y border-border/30 overflow-hidden w-full max-w-full">
+      <div class="container mx-auto px-4 max-w-full overflow-hidden">
+        <div class="flex items-center py-3 overflow-hidden">
           <!-- Label -->
           <div class="flex items-center gap-2 pr-4 border-r border-border/50 shrink-0">
             <svg class="w-4 h-4 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,7 +20,7 @@ import { CommonModule } from '@angular/common';
           </div>
 
           <!-- Scrolling News -->
-          <div class="overflow-hidden flex-1 ml-4">
+          <div class="overflow-hidden flex-1 ml-4 min-w-0">
             <div class="ticker-scroll flex gap-12 whitespace-nowrap">
               @for (news of scrollingNews; track $index) {
                 <a
