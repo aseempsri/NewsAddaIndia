@@ -48,24 +48,33 @@ export const environment = {
 - For production, use environment variables or a secure backend service
 - OpenAI API usage is billed per request - monitor your usage
 
-## Image Generation
+## Image Fetching Flow
 
-The service uses **OpenAI DALL-E 3** to generate images directly based on news headlines. This ensures high-quality, relevant images for each news article.
+The service follows a smart image fetching strategy to find the best images for news headlines:
 
 ### How It Works
 
-1. **Primary Method**: OpenAI DALL-E 3 generates images directly from headlines
+1. **Step 1**: Fetch latest news articles
+2. **Step 2**: Use OpenAI to generate intelligent search queries from headlines
+3. **Step 3**: Search for real published images on the web (general web search from news sources)
+4. **Step 4**: If web search fails, try **Pixabay** and **Pexels**:
+   - **Pixabay** (free, no API key needed) - Free stock photos from the web
+   - **Pexels** (optional) - High-quality stock photos from the web (requires API key)
+5. **Step 5**: Only if all web sources fail, use **OpenAI DALL-E 3** to generate images
    - Uses the same OpenAI API key you set above
    - Creates professional news-style photographs
    - High quality, realistic images
 
-2. **Fallback Methods** (if DALL-E fails):
-   - **Pixabay** (free, no API key needed) - Free stock photos
-   - **Pexels** (optional) - High-quality stock photos (requires API key)
+### Priority Order
 
-### Optional: Pexels API Key (for fallback images)
+1. **Web Images First** (general web search from news sources) - Real published images from the web
+2. **Pixabay/Pexels** - Stock photo libraries if web search fails
+3. **DALL-E Generation** - Only if all web sources fail to find suitable images
+4. **Placeholder** - Last resort if all methods fail
 
-If you want better fallback images when DALL-E is unavailable:
+### Optional: Pexels API Key (for better web images)
+
+If you want access to higher quality web images:
 
 1. Get API key from https://www.pexels.com/api/
 2. Set via browser console:
@@ -73,4 +82,4 @@ If you want better fallback images when DALL-E is unavailable:
 localStorage.setItem('pexels_api_key', 'YOUR_PEXELS_API_KEY');
 ```
 
-**Note**: The service primarily uses DALL-E for image generation. Pixabay and Pexels are only used as fallbacks if DALL-E generation fails.
+**Note**: The service prioritizes finding real published images on the web. DALL-E is only used as a fallback when no suitable web images are available.
