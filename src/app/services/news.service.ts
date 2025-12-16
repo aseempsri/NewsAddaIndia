@@ -462,50 +462,35 @@ export class NewsService {
     }
 
     // Step 1: Use OpenAI to generate intelligent search query
-    // Step 2: Search for images on web (general web search) - real published images from news sources
-    // Step 3: If web search fails, try Pixabay and Pexels
-    // Step 4: Only if all web sources fail, use DALL-E to generate image
+    // Step 2: Search for images on web (Pixabay, Pexels) - real published images from web
+    // Step 3: Only if web sources fail, use DALL-E to generate image
     return this.generateImageSearchQueryWithOpenAI(headline, category, '').pipe(
       switchMap(searchQuery => {
         console.log(`Generated search query: "${searchQuery}"`);
-        // Step 2: Try web image search first (real published images from news sources)
-        return this.fetchFromWebImages(searchQuery).pipe(
+        // Step 2: Try web-based image sources (Pixabay, Pexels) - these are real images from the web
+        return this.fetchFromPixabay(searchQuery).pipe(
           catchError(() => {
-            console.log(`Web image search failed, trying Pixabay...`);
-            // Step 3: If web search fails, try Pixabay
-            return this.fetchFromPixabay(searchQuery).pipe(
+            console.log(`Pixabay search failed, trying Pexels...`);
+            // Step 2: If Pixabay fails, try Pexels
+            return this.fetchFromPexels(searchQuery);
+          }),
+          catchError(() => {
+            console.log(`All web image sources failed, trying alternative query...`);
+            // Try alternative query
+            const alternativeQuery = this.createIntelligentImageQuery(headline, category, '');
+            return this.fetchFromPixabay(alternativeQuery).pipe(
+              catchError(() => this.fetchFromPexels(alternativeQuery)),
               catchError(() => {
-                console.log(`Pixabay search failed, trying Pexels...`);
-                // Step 3: If Pixabay fails, try Pexels
-                return this.fetchFromPexels(searchQuery);
-              }),
-              catchError(() => {
-                console.log(`All web image sources failed, trying alternative query...`);
-                // Try alternative query
-                const alternativeQuery = this.createIntelligentImageQuery(headline, category, '');
-                return this.fetchFromWebImages(alternativeQuery).pipe(
-                  catchError(() => this.fetchFromPixabay(alternativeQuery)),
-                  catchError(() => this.fetchFromPexels(alternativeQuery)),
-                  catchError(() => {
-                    console.log(`All web image sources failed, generating with DALL-E...`);
-                    // Step 4: Only if all web sources fail, use DALL-E to generate
-                    return this.generateImageWithDALLE(headline, category);
-                  })
-                );
+                console.log(`All web image sources failed, generating with DALL-E...`);
+                // Step 3: Only if all web sources fail, use DALL-E to generate
+                return this.generateImageWithDALLE(headline, category);
               })
             );
           }),
           catchError(() => {
-            console.log(`Web image search failed, trying Pixabay and Pexels...`);
-            // Fallback to Pixabay/Pexels if web search fails
-            return this.fetchFromPixabay(searchQuery).pipe(
-              catchError(() => this.fetchFromPexels(searchQuery)),
-              catchError(() => {
-                console.log(`All web image sources failed, generating with DALL-E...`);
-                // Step 4: Only if all web sources fail, use DALL-E to generate
-                return this.generateImageWithDALLE(headline, category);
-              })
-            );
+            console.log(`All web image sources failed, generating with DALL-E...`);
+            // Step 3: Only if all web sources fail, use DALL-E to generate
+            return this.generateImageWithDALLE(headline, category);
           })
         );
       }),
@@ -513,8 +498,7 @@ export class NewsService {
         console.log(`OpenAI query generation failed, using basic query...`);
         // Fallback to basic query if OpenAI fails
         const basicQuery = this.createIntelligentImageQuery(headline, category, '');
-        return this.fetchFromWebImages(basicQuery).pipe(
-          catchError(() => this.fetchFromPixabay(basicQuery)),
+        return this.fetchFromPixabay(basicQuery).pipe(
           catchError(() => this.fetchFromPexels(basicQuery)),
           catchError(() => {
             console.log(`Web search with basic query failed, generating with DALL-E...`);
@@ -550,38 +534,30 @@ export class NewsService {
     }
 
     // Step 1: Use OpenAI to generate intelligent search query
-    // Step 2: Search for images on web (general web search) - real published images from news sources
-    // Step 3: If web search fails, try Pixabay and Pexels
-    // Step 4: Only if all web sources fail, use DALL-E to generate image
+    // Step 2: Search for images on web (Pixabay, Pexels) - real published images from web
+    // Step 3: Only if web sources fail, use DALL-E to generate image
     return this.generateImageSearchQueryWithOpenAI(title, category, content).pipe(
       switchMap(searchQuery => {
         // Generate alternative queries for better matching
         const alternativeQuery = this.createIntelligentImageQuery(title, category, content);
 
-        // Step 2: Try web image search first (real published images from news sources)
-        // Priority: Web Images > Pixabay > Pexels > Alternative query > DALL-E > Placeholder
-        return this.fetchFromWebImages(searchQuery).pipe(
+        // Step 2: Try web-based image sources (Pixabay, Pexels) - these are real images from the web
+        // Priority: Pixabay > Pexels > Alternative query > DALL-E > Placeholder
+        return this.fetchFromPixabay(searchQuery).pipe(
           catchError(() => {
-            console.log(`Web image search failed, trying Pixabay...`);
-            // Step 3: If web search fails, try Pixabay
-            return this.fetchFromPixabay(searchQuery).pipe(
+            console.log(`Pixabay search failed, trying Pexels...`);
+            // Step 2: If Pixabay fails, try Pexels
+            return this.fetchFromPexels(searchQuery);
+          }),
+          catchError(() => {
+            console.log(`Trying alternative query...`);
+            // Try alternative query
+            return this.fetchFromPixabay(alternativeQuery).pipe(
+              catchError(() => this.fetchFromPexels(alternativeQuery)),
               catchError(() => {
-                console.log(`Pixabay search failed, trying Pexels...`);
-                // Step 3: If Pixabay fails, try Pexels
-                return this.fetchFromPexels(searchQuery);
-              }),
-              catchError(() => {
-                console.log(`Trying alternative query...`);
-                // Try alternative query
-                return this.fetchFromWebImages(alternativeQuery).pipe(
-                  catchError(() => this.fetchFromPixabay(alternativeQuery)),
-                  catchError(() => this.fetchFromPexels(alternativeQuery)),
-                  catchError(() => {
-                    console.log(`All web image sources failed, generating with DALL-E...`);
-                    // Step 4: Only if all web sources fail, use DALL-E to generate
-                    return this.generateImageWithDALLE(title, category);
-                  })
-                );
+                console.log(`All web image sources failed, generating with DALL-E...`);
+                // Step 3: Only if all web sources fail, use DALL-E to generate
+                return this.generateImageWithDALLE(title, category);
               })
             );
           }),
@@ -600,8 +576,7 @@ export class NewsService {
       catchError(() => {
         // Fallback to basic query if OpenAI fails
         const basicQuery = this.createIntelligentImageQuery(title, category, content);
-        return this.fetchFromWebImages(basicQuery).pipe(
-          catchError(() => this.fetchFromPixabay(basicQuery)),
+        return this.fetchFromPixabay(basicQuery).pipe(
           catchError(() => this.fetchFromPexels(basicQuery)),
           catchError(() => {
             console.log(`Web search with basic query failed, generating with DALL-E...`);
@@ -809,96 +784,6 @@ Return ONLY the 3 queries, one per line, nothing else. No numbering, no explanat
     const uniqueTerms = [...new Set(allTerms)].slice(0, 8);
 
     return uniqueTerms.join(' ').trim() || category.toLowerCase();
-  }
-
-  /**
-   * Fetch image from web (news sources, general web search)
-   * Uses CORS proxy to search for images from news websites and general web
-   */
-  private fetchFromWebImages(query: string): Observable<string> {
-    // Add "news" context to query for better news-related results
-    const newsQuery = `${query} news`.trim();
-
-    // Use a CORS proxy to search for images from news sources
-    // Try multiple CORS proxies for reliability
-    const proxies = [
-      'https://api.allorigins.win/get?url=',
-      'https://api.codetabs.com/v1/proxy?quest='
-    ];
-
-    // Search for images using Google Images search via CORS proxy
-    // Note: This is a simplified approach - in production, you might want to use a dedicated image search API
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(newsQuery)}&tbm=isch&safe=active`;
-
-    return this.http.get<any>(proxies[0] + encodeURIComponent(searchUrl), {
-      responseType: 'text' as 'json'
-    }).pipe(
-      map((response: any) => {
-        // Parse the response (CORS proxy wraps it)
-        const content = typeof response === 'string' ? response : (response.contents || '');
-
-        // Extract image URLs from the HTML response
-        // Look for image URLs in the response
-        const imageUrlPattern = /"(https?:\/\/[^"]*\.(jpg|jpeg|png|gif|webp)[^"]*)"/gi;
-        const matches = content.match(imageUrlPattern);
-
-        if (matches && matches.length > 0) {
-          // Filter for news-related image sources
-          const newsSources = ['news', 'times', 'indian', 'hindu', 'ndtv', 'bbc', 'reuters', 'ap', 'getty', 'afp', 'cnn', 'aljazeera'];
-          const newsImage = matches.find((match: string) => {
-            const url = match.replace(/"/g, '');
-            return newsSources.some(source => url.toLowerCase().includes(source));
-          });
-
-          if (newsImage) {
-            return newsImage.replace(/"/g, '');
-          }
-
-          // Return first valid image URL
-          const firstImage = matches[0].replace(/"/g, '');
-          if (firstImage.startsWith('http://') || firstImage.startsWith('https://')) {
-            return firstImage;
-          }
-        }
-
-        throw new Error('No web images found');
-      }),
-      catchError(() => {
-        // If first proxy fails, try second proxy
-        return this.http.get<any>(proxies[1] + encodeURIComponent(searchUrl), {
-          responseType: 'text' as 'json'
-        }).pipe(
-          map((response: any) => {
-            const content = typeof response === 'string' ? response : (response.contents || '');
-            const imageUrlPattern = /"(https?:\/\/[^"]*\.(jpg|jpeg|png|gif|webp)[^"]*)"/gi;
-            const matches = content.match(imageUrlPattern);
-
-            if (matches && matches.length > 0) {
-              const newsSources = ['news', 'times', 'indian', 'hindu', 'ndtv', 'bbc', 'reuters', 'ap', 'getty', 'afp'];
-              const newsImage = matches.find((match: string) => {
-                const url = match.replace(/"/g, '');
-                return newsSources.some(source => url.toLowerCase().includes(source));
-              });
-
-              if (newsImage) {
-                return newsImage.replace(/"/g, '');
-              }
-
-              const firstImage = matches[0].replace(/"/g, '');
-              if (firstImage.startsWith('http://') || firstImage.startsWith('https://')) {
-                return firstImage;
-              }
-            }
-
-            throw new Error('No web images found');
-          })
-        );
-      }),
-      timeout(10000), // 10 second timeout
-      catchError(() => {
-        throw new Error('Web image search failed');
-      })
-    );
   }
 
   /**
