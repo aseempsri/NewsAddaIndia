@@ -21,23 +21,23 @@ export interface NewsArticle {
   providedIn: 'root'
 })
 export class NewsService {
-  private newsApiKey: string = ''; // NewsAPI.org key
-  private newsApiUrl = 'https://newsapi.org/v2/top-headlines';
+  private newsApiKey: string = ''; // NewsData.io API key
+  private newsApiUrl = 'https://newsdata.io/api/1/news';
   private pexelsUrl = 'https://api.pexels.com/v1/search';
   private pexelsApiKey = ''; // Optional: Get from pexels.com/api
   private readonly CACHE_PREFIX = 'news_cache_';
   private readonly CACHE_TIMESTAMP_PREFIX = 'news_cache_timestamp_';
   private readonly IMAGE_CACHE_PREFIX = 'image_cache_';
 
-  // Category mapping for NewsAPI
+  // Category mapping for NewsData.io
   private categoryMap: Record<string, string> = {
-    'National': 'general',
-    'International': 'general',
+    'National': 'top',
+    'International': 'world',
     'Sports': 'sports',
     'Business': 'business',
     'Entertainment': 'entertainment',
     'Health': 'health',
-    'Politics': 'general'
+    'Politics': 'politics'
   };
 
   constructor(private http: HttpClient) {
@@ -92,19 +92,21 @@ export class NewsService {
   }
 
   /**
-   * Fetch latest REAL news from NewsAPI.org
+   * Fetch latest REAL news from NewsData.io
    */
   private fetchRealNewsFromAPI(category: string, count: number): Observable<NewsArticle[]> {
-    const newsApiCategory = this.categoryMap[category] || 'general';
+    const newsApiCategory = this.categoryMap[category] || 'top';
 
-    // Try NewsAPI first if key is available
+    // Try NewsData.io first if key is available
     if (this.newsApiKey) {
-      const url = `${this.newsApiUrl}?country=in&category=${newsApiCategory}&pageSize=${count}&apiKey=${this.newsApiKey}`;
+      // NewsData.io API format: apikey, country, category
+      const url = `${this.newsApiUrl}?apikey=${this.newsApiKey}&country=in&category=${newsApiCategory}&language=en&size=${count}`;
 
       return this.http.get<any>(url).pipe(
         switchMap(response => {
-          if (response.articles && response.articles.length > 0) {
-            const articles = response.articles.slice(0, count);
+          // NewsData.io returns results in 'results' array
+          if (response.results && response.results.length > 0) {
+            const articles = response.results.slice(0, count);
             // Process articles - return news immediately, mark images as loading
             const articlesWithImages: NewsArticle[] = articles.map((article: any, index: number) => {
               const baseArticle: NewsArticle = {
@@ -116,8 +118,8 @@ export class NewsService {
                 image: '', // Empty initially - will be set when image loads
                 imageLoading: true, // Always mark as loading initially
                 time: this.getTimeAgo(index),
-                author: article.author || article.source?.name || 'News Adda India',
-                date: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('en-IN', {
+                author: article.creator?.[0] || article.source_id || 'News Adda India',
+                date: article.pubDate ? new Date(article.pubDate).toLocaleDateString('en-IN', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
@@ -125,8 +127,12 @@ export class NewsService {
               };
 
               // Use existing image if valid, otherwise fetch based on headline
-              if (article.urlToImage && this.isValidImageUrl(article.urlToImage)) {
-                baseArticle.image = article.urlToImage;
+              // NewsData.io uses 'image_url' field
+              if (article.image_url && this.isValidImageUrl(article.image_url)) {
+                baseArticle.image = article.image_url;
+                baseArticle.imageLoading = false;
+              } else if (article.image && this.isValidImageUrl(article.image)) {
+                baseArticle.image = article.image;
                 baseArticle.imageLoading = false;
               } else {
                 // Will be fetched based on headline - keep loading state
@@ -140,7 +146,7 @@ export class NewsService {
           return of([]);
         }),
         catchError(error => {
-          console.error('NewsAPI error:', error);
+          console.error('NewsData.io API error:', error);
           // Fallback to Google News RSS
           return this.fetchFromGoogleNewsRSS(category, count);
         })
