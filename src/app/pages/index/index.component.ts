@@ -39,7 +39,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
 
     <div class="min-h-screen bg-background overflow-x-hidden w-full max-w-full" [class.opacity-0]="isPageLoading" [class.opacity-100]="!isPageLoading" [class.transition-opacity]="!isPageLoading" [class.duration-500]="!isPageLoading">
       <app-header />
-      <app-video-banner />
+      <app-video-banner [imagesLoaded]="!isPageLoading" />
       <app-news-ticker />
       
       <main>

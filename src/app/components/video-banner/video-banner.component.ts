@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstagramService } from '../../services/instagram.service';
 import { YouTubeService } from '../../services/youtube.service';
@@ -17,11 +17,10 @@ import { YouTubeService } from '../../services/youtube.service';
           class="w-full h-full object-cover pointer-events-none transition-all duration-500"
           [class.opacity-0]="isLoading"
           [class.blur-xl]="showBlurOverlay"
-          autoplay
+          [attr.autoplay]="canStartVideo"
           muted
           playsinline
           [attr.loop]="false"
-          [attr.autoplay]="true"
           (canplay)="onVideoCanPlay()"
           (playing)="onVideoPlaying()"
           (timeupdate)="onTimeUpdate()"
@@ -136,8 +135,9 @@ import { YouTubeService } from '../../services/youtube.service';
   `,
   styles: []
 })
-export class VideoBannerComponent implements OnInit, AfterViewInit {
+export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
+  @Input() imagesLoaded: boolean = false; // Input to know when images are loaded
 
   // Video URL - Fallback to local video file
   videoUrl = 'assets/videos/Video-279.mp4';
@@ -148,6 +148,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
 
   // Loading state
   isLoading = true;
+  
+  // Control when video can start (only after images are loaded)
+  canStartVideo = false;
 
 
   // Video segment control
@@ -211,8 +214,25 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
       video.muted = true;
       this.isMuted = true;
 
-      // Load the video source
+      // Load the video source but don't autoplay yet
       video.load();
+      // Pause initially - will start when images are loaded
+      video.pause();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // When images are loaded, allow video to start
+    if (changes['imagesLoaded'] && changes['imagesLoaded'].currentValue === true) {
+      this.canStartVideo = true;
+      // Start the video if it's ready
+      if (this.videoPlayer?.nativeElement) {
+        const video = this.videoPlayer.nativeElement;
+        // Check if video is ready to play
+        if (video.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+          this.startVideoPlayback();
+        }
+      }
     }
   }
 
@@ -287,36 +307,53 @@ export class VideoBannerComponent implements OnInit, AfterViewInit {
         this.modalTimer = null;
       }
 
-      // Set a fallback timer to show modal after 9 seconds
-      this.modalTimer = setTimeout(() => {
-        if (!this.showBlurOverlay && this.videoPlayer?.nativeElement) {
-          console.log('Fallback timer: Showing modal after 9 seconds');
-          const video = this.videoPlayer.nativeElement;
-          video.pause();
-          video.loop = false;
-          this.showBlurOverlay = true;
-          this.cdr.detectChanges();
-        }
-      }, 9000); // 9 seconds (4:19 to 4:28)
-
-      // Try to play the video
-      const playPromise = video.play();
-
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('Video playing from 4:19');
-            this.isLoading = false;
-          })
-          .catch((error) => {
-            console.warn('Autoplay prevented:', error);
-            // Hide loading even if autoplay fails
-            this.isLoading = false;
-          });
+      // Only start video if images are loaded
+      if (this.imagesLoaded) {
+        this.startVideoPlayback();
       } else {
-        // Fallback for older browsers
-        this.isLoading = false;
+        // Video is ready but waiting for images - keep it paused
+        video.pause();
+        this.isLoading = true;
       }
+    }
+  }
+
+  private startVideoPlayback() {
+    if (!this.videoPlayer?.nativeElement || !this.imagesLoaded) {
+      return;
+    }
+
+    const video = this.videoPlayer.nativeElement;
+
+    // Set a fallback timer to show modal after 9 seconds
+    this.modalTimer = setTimeout(() => {
+      if (!this.showBlurOverlay && this.videoPlayer?.nativeElement) {
+        console.log('Fallback timer: Showing modal after 9 seconds');
+        const video = this.videoPlayer.nativeElement;
+        video.pause();
+        video.loop = false;
+        this.showBlurOverlay = true;
+        this.cdr.detectChanges();
+      }
+    }, 9000); // 9 seconds (4:19 to 4:28)
+
+    // Try to play the video
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log('Video playing from 4:19 (after images loaded)');
+          this.isLoading = false;
+        })
+        .catch((error) => {
+          console.warn('Autoplay prevented:', error);
+          // Hide loading even if autoplay fails
+          this.isLoading = false;
+        });
+    } else {
+      // Fallback for older browsers
+      this.isLoading = false;
     }
   }
 
