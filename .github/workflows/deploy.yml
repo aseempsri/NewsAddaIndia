@@ -34,7 +34,27 @@ jobs:
         run: |
           # Use Node.js to safely replace the placeholder (handles all special characters)
           # Properly escape the API key for TypeScript string literal
-          node -e "const fs = require('fs'); const key = process.env.NEWSAPI_KEY || ''; if (!key) { console.error('ERROR: NEWSAPI_KEY secret is empty or not set!'); process.exit(1); } if (key === 'NEWSAPI_KEY_PLACEHOLDER') { console.error('ERROR: NEWSAPI_KEY secret still contains placeholder!'); process.exit(1); } const content = fs.readFileSync('src/environments/environment.prod.ts', 'utf8'); const escapedKey = key.replace(/\\/g, '\\\\').replace(/'/g, \"\\'\"); const replaced = content.replace('NEWSAPI_KEY_PLACEHOLDER', escapedKey); fs.writeFileSync('src/environments/environment.prod.ts', replaced); console.log('✓ API key injected successfully'); console.log('  Key length:', key.length, 'characters'); console.log('  Key starts with:', key.substring(0, 10) + '...'); console.log('  Key format check:', key.startsWith('pub_') ? '✓ Valid NewsData.io format' : '⚠ Warning: Key should start with \"pub_\"');"
+          node << 'EOF'
+          const fs = require('fs');
+          const key = process.env.NEWSAPI_KEY || '';
+          if (!key) {
+            console.error('ERROR: NEWSAPI_KEY secret is empty or not set!');
+            process.exit(1);
+          }
+          if (key === 'NEWSAPI_KEY_PLACEHOLDER') {
+            console.error('ERROR: NEWSAPI_KEY secret still contains placeholder!');
+            process.exit(1);
+          }
+          const content = fs.readFileSync('src/environments/environment.prod.ts', 'utf8');
+          // Escape backslashes and single quotes for TypeScript string literal
+          const escapedKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const replaced = content.replace('NEWSAPI_KEY_PLACEHOLDER', escapedKey);
+          fs.writeFileSync('src/environments/environment.prod.ts', replaced);
+          console.log('✓ API key injected successfully');
+          console.log('  Key length:', key.length, 'characters');
+          console.log('  Key starts with:', key.substring(0, 10) + '...');
+          console.log('  Key format check:', key.startsWith('pub_') ? '✓ Valid NewsData.io format' : '⚠ Warning: Key should start with "pub_"');
+          EOF
         env:
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
 
