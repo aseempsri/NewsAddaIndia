@@ -1,15 +1,16 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { ReadMoreTooltipComponent } from '../read-more-tooltip/read-more-tooltip.component';
 
 // Using NewsArticle from service
 
 @Component({
   selector: 'app-news-grid',
   standalone: true,
-  imports: [CommonModule, NewsDetailModalComponent],
+  imports: [CommonModule, NewsDetailModalComponent, ReadMoreTooltipComponent],
   template: `
     <section class="py-12 lg:py-16">
       <div class="container mx-auto px-4">
@@ -100,7 +101,13 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
                     </svg>
                     {{ news.time }}
                   </span>
-                  <svg class="w-5 h-5 text-primary opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" fill="none" stroke="currentColor" viewBox="0 0 24 24" (click)="openNewsModal(news); $event.stopPropagation()" (touchstart)="openNewsModal(news); $event.stopPropagation()">
+                  <svg 
+                    class="w-7 h-7 sm:w-8 sm:h-8 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24" 
+                    (click)="onArrowClick($event, news)" 
+                    (touchend)="onArrowClick($event, news)">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
@@ -109,6 +116,14 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
           }
         </div>
         }
+
+        <!-- Read More Tooltip -->
+        <app-read-more-tooltip
+          [isVisible]="showReadMoreTooltip"
+          [positionX]="tooltipX"
+          [positionY]="tooltipY"
+          (readMoreClick)="onReadMoreClick()">
+        </app-read-more-tooltip>
 
         <!-- News Detail Modal -->
         @if (modalState.isOpen && modalState.news) {
@@ -145,6 +160,10 @@ export class NewsGridComponent implements OnInit {
     news: null,
     isBreaking: false
   };
+  showReadMoreTooltip = false;
+  tooltipX = 0;
+  tooltipY = 0;
+  selectedNews: NewsArticle | null = null;
 
   constructor(
     private newsService: NewsService,
@@ -339,6 +358,49 @@ export class NewsGridComponent implements OnInit {
 
   closeModal() {
     this.modalService.closeModal();
+  }
+
+  onArrowClick(event: Event, news: NewsArticle) {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    // Get arrow element position
+    const arrowElement = event.target as HTMLElement;
+    const rect = arrowElement.getBoundingClientRect();
+    
+    // Position tooltip next to arrow (to the right and slightly above)
+    this.tooltipX = rect.right + 10;
+    this.tooltipY = rect.top - 10;
+    
+    // Ensure tooltip stays within viewport
+    if (this.tooltipX + 150 > window.innerWidth) {
+      this.tooltipX = rect.left - 160; // Show on left side instead
+    }
+    if (this.tooltipY < 10) {
+      this.tooltipY = 10;
+    }
+    
+    this.selectedNews = news;
+    this.showReadMoreTooltip = true;
+  }
+
+  onReadMoreClick() {
+    this.showReadMoreTooltip = false;
+    if (this.selectedNews) {
+      this.openNewsModal(this.selectedNews);
+      this.selectedNews = null;
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  @HostListener('document:touchend', ['$event'])
+  onDocumentClick(event: Event) {
+    // Close tooltip if clicking outside
+    const target = event.target as HTMLElement;
+    if (!target.closest('.read-more-tooltip') && !target.closest('svg')) {
+      this.showReadMoreTooltip = false;
+      this.selectedNews = null;
+    }
   }
 }
 

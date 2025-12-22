@@ -127,7 +127,7 @@ export class NewsService {
                 category: category,
                 title: article.title || 'Untitled',
                 titleEn: article.title || 'Untitled',
-                excerpt: this.stripHtml(article.description || article.content?.substring(0, 150) || 'No description available').trim() || 'No description available',
+                excerpt: this.filterPaidVersionText(this.stripHtml(article.description || article.content?.substring(0, 150) || 'No description available').trim()) || article.title || 'No description available',
                 image: '', // Empty initially - will be set when image loads
                 imageLoading: true, // Always mark as loading initially
                 time: this.getTimeAgo(index),
@@ -195,7 +195,7 @@ export class NewsService {
           const itemsWithImages: NewsArticle[] = items.map((item: any, index: number) => {
             const title = this.cleanTitle(item.title) || 'Untitled';
             // Clean HTML from description/excerpt
-            const cleanExcerpt = this.stripHtml(item.contentSnippet || item.description || 'No description available').trim();
+            const cleanExcerpt = this.filterPaidVersionText(this.stripHtml(item.contentSnippet || item.description || 'No description available').trim());
 
             const existingImage = item.enclosure?.link || item.thumbnail;
             const baseItem: NewsArticle = {
@@ -203,7 +203,7 @@ export class NewsService {
               category: category,
               title: title,
               titleEn: title,
-              excerpt: cleanExcerpt || 'No description available',
+              excerpt: cleanExcerpt || title || 'No description available',
               image: '', // Empty initially - will be set when image loads
               imageLoading: true, // Always mark as loading initially
               time: this.getTimeAgo(index),
@@ -241,14 +241,14 @@ export class NewsService {
               const items = altResponse.items.slice(0, count);
               return items.map((item: any, index: number) => {
                 const title = this.cleanTitle(item.title) || 'Untitled';
-                const cleanExcerpt = this.stripHtml(item.contentSnippet || item.description || 'No description available').trim();
+                const cleanExcerpt = this.filterPaidVersionText(this.stripHtml(item.contentSnippet || item.description || 'No description available').trim());
                 const existingImage = item.enclosure?.link || item.thumbnail;
                 return {
                   id: index + 1,
                   category: category,
                   title: title,
                   titleEn: title,
-                  excerpt: cleanExcerpt || 'No description available',
+                  excerpt: cleanExcerpt || title || 'No description available',
                   image: existingImage && this.isValidImageUrl(existingImage) ? existingImage : '',
                   imageLoading: !existingImage || !this.isValidImageUrl(existingImage),
                   time: this.getTimeAgo(index),
@@ -321,6 +321,31 @@ export class NewsService {
     text = text.replace(/&#39;/g, "'");
     text = text.replace(/&apos;/g, "'");
     return text.trim();
+  }
+
+  /**
+   * Filter out paid/premium version text from excerpt
+   * If excerpt contains paid/premium text, return empty string (will use headline instead)
+   */
+  private filterPaidVersionText(excerpt: string): string {
+    if (!excerpt) return '';
+    const paidKeywords = [
+      'only available in paid version',
+      'paid version',
+      'premium version',
+      'subscription required',
+      'subscribe to read',
+      'premium content',
+      'paid content',
+      'members only'
+    ];
+    const lowerExcerpt = excerpt.toLowerCase();
+    for (const keyword of paidKeywords) {
+      if (lowerExcerpt.includes(keyword.toLowerCase())) {
+        return ''; // Return empty to use headline instead
+      }
+    }
+    return excerpt;
   }
 
   /**
@@ -437,7 +462,7 @@ export class NewsService {
               category: article.category,
               title: article.title,
               titleEn: article.titleEn || article.title,
-              excerpt: article.excerpt,
+              excerpt: this.filterPaidVersionText(article.excerpt) || article.title || 'No description available',
               image: imageUrl,
               imageLoading: !imageUrl || imageUrl.trim() === '',
               time: this.getTimeAgo(index),
