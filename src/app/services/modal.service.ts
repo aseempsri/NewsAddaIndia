@@ -18,8 +18,7 @@ export class ModalService {
       news,
       isBreaking
     });
-    // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
+    // Prevent body scroll when modal is open (handled by component for better mobile support)
   }
 
   closeModal(): void {
@@ -28,8 +27,7 @@ export class ModalService {
       news: null,
       isBreaking: false
     });
-    // Restore body scroll
-    document.body.style.overflow = '';
+    // Restore body scroll (handled by component for better mobile support)
   }
 
   getModalState(): Observable<{ isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean }> {

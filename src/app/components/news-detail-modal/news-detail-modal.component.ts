@@ -12,26 +12,30 @@ import { environment } from '../../../environments/environment';
     @if (isOpen && news) {
       <!-- Backdrop -->
       <div 
+        id="modal-backdrop"
         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in"
-        (click)="close()">
+        (click)="close()"
+        (touchend)="onBackdropTouch($event)"
+        style="touch-action: none;">
       </div>
 
       <!-- Modal -->
       <div 
         class="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 pointer-events-none"
-        (click)="close()"
-        (touchstart)="close()">
+        (click)="close()">
         <div 
           class="glass-card max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
           (click)="$event.stopPropagation()"
-          (touchstart)="$event.stopPropagation()">
+          (touchstart)="$event.stopPropagation()"
+          (touchmove)="$event.stopPropagation()">
           
           <!-- Close Button -->
           <button
             (click)="close()"
-            (touchstart)="close()"
+            (touchend)="onCloseButtonTouch($event)"
             class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2.5 sm:p-2 rounded-full bg-background/90 hover:bg-background active:bg-background/70 border border-border/50 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            aria-label="Close modal">
+            aria-label="Close modal"
+            type="button">
             <svg class="w-5 h-5 sm:w-5 sm:h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -69,7 +73,7 @@ import { environment } from '../../../environments/environment';
           </div>
 
           <!-- Content (Scrollable) -->
-          <div class="flex-1 overflow-y-auto overscroll-contain">
+          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch" style="touch-action: pan-y;">
             <div class="p-4 sm:p-6 lg:p-8">
               <!-- Title -->
               <h1 class="font-display text-xl sm:text-2xl lg:text-4xl font-bold leading-tight mb-3 sm:mb-4 text-foreground">
@@ -121,14 +125,16 @@ import { environment } from '../../../environments/environment';
           <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
             <button
               (click)="close()"
-              (touchstart)="close()"
-              class="px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium touch-manipulation min-h-[44px] sm:min-h-0">
+              (touchend)="onCloseButtonTouch($event)"
+              class="px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium touch-manipulation min-h-[44px] sm:min-h-0"
+              type="button">
               Close
             </button>
             <button
               (click)="shareNews()"
-              (touchstart)="shareNews()"
-              class="px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] sm:min-h-0">
+              (touchend)="shareNews(); $event.stopPropagation()"
+              class="px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] sm:min-h-0"
+              type="button">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
@@ -183,6 +189,15 @@ import { environment } from '../../../environments/environment';
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
+    /* Prevent scroll on backdrop */
+    .fixed.inset-0 {
+      touch-action: none;
+    }
+    /* Allow scroll in modal content */
+    .overflow-y-auto {
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
     @media (max-width: 640px) {
       .news-content {
         font-size: 0.95rem;
@@ -213,15 +228,24 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['news'] || changes['isOpen']) {
-      if (this.news && this.isOpen) {
-        this.loadFullContent();
+    if (changes['isOpen']) {
+      if (this.isOpen) {
+        this.preventBodyScroll();
+        if (this.news) {
+          this.loadFullContent();
+        }
+      } else {
+        this.restoreBodyScroll();
       }
+    }
+    if (changes['news'] && this.news && this.isOpen) {
+      this.loadFullContent();
     }
   }
 
   ngOnDestroy() {
-    // Cleanup if needed
+    // Ensure body scroll is restored when component is destroyed
+    this.restoreBodyScroll();
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -229,6 +253,20 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     if (this.isOpen) {
       this.close();
     }
+  }
+
+  private preventBodyScroll() {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+  }
+
+  private restoreBodyScroll() {
+    // Restore body scroll when modal is closed
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
   }
 
   loadFullContent() {
@@ -274,7 +312,28 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   close() {
+    this.restoreBodyScroll();
     this.closeModal.emit();
+  }
+
+  onBackdropTouch(event: TouchEvent) {
+    // Only close if touching the backdrop directly (not modal content)
+    const target = event.target as HTMLElement;
+    if (target && (target.classList.contains('fixed') || target.id === 'modal-backdrop')) {
+      // Check if touch is on backdrop, not modal content
+      const modalContent = target.closest('.glass-card');
+      if (!modalContent) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.close();
+      }
+    }
+  }
+
+  onCloseButtonTouch(event: TouchEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.close();
   }
 
   shareNews() {

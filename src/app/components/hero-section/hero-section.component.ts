@@ -228,8 +228,53 @@ export class HeroSectionComponent implements OnInit {
     this.newsService.fetchBreakingNews().subscribe({
       next: (news) => {
         this.featuredNews = news;
-        // Fetch image based on headline if loading
-        if (news.imageLoading || !news.image) {
+        // Verify image loads, or fetch if missing/invalid
+        if (news.image && news.image.trim() !== '' && !news.imageLoading) {
+          // Image URL exists, verify it loads
+          const featuredImagePromise = new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              this.featuredNews.imageLoading = false;
+              resolve();
+            };
+            img.onerror = () => {
+              // Image failed to load, fetch alternative
+              console.warn(`Featured image failed to load, fetching alternative...`);
+              this.featuredNews.imageLoading = true;
+              this.featuredNews.image = '';
+              this.newsService.fetchImageForHeadline(news.title, news.category).subscribe({
+                next: (imageUrl) => {
+                  if (imageUrl && imageUrl.trim() !== '') {
+                    const newImg = new Image();
+                    newImg.onload = () => {
+                      this.featuredNews.image = imageUrl;
+                      this.featuredNews.imageLoading = false;
+                      resolve();
+                    };
+                    newImg.onerror = () => {
+                      this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+                      this.featuredNews.imageLoading = false;
+                      resolve();
+                    };
+                    newImg.src = imageUrl;
+                  } else {
+                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+                    this.featuredNews.imageLoading = false;
+                    resolve();
+                  }
+                },
+                error: () => {
+                  this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+                  this.featuredNews.imageLoading = false;
+                  resolve();
+                }
+              });
+            };
+            img.src = news.image;
+          });
+          imagePromises.push(featuredImagePromise);
+        } else if (news.imageLoading || !news.image || news.image.trim() === '') {
+          // Fetch image based on headline if loading or empty
           this.featuredNews.imageLoading = true;
           this.featuredNews.image = ''; // Clear any placeholder
           
@@ -251,13 +296,13 @@ export class HeroSectionComponent implements OnInit {
                   };
                   img.src = imageUrl;
                 } else {
-                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+                  this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
                   this.featuredNews.imageLoading = false;
                   resolve();
                 }
               },
               error: () => {
-                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+                this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
                 this.featuredNews.imageLoading = false;
                 resolve();
               }
@@ -322,7 +367,15 @@ export class HeroSectionComponent implements OnInit {
         });
 
         // Wait for all images to load before showing page
-        Promise.all(imagePromises).then(() => {
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise<void>((resolve) => {
+          setTimeout(() => {
+            console.warn('Hero section image loading timeout - showing page anyway');
+            resolve();
+          }, 15000); // 15 second timeout
+        });
+
+        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
           this.isLoading = false;
           this.imagesLoaded.emit(true);
           console.log('All hero section images loaded');

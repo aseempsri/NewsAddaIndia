@@ -421,8 +421,15 @@ export class NewsService {
           return response.data.map((article: any, index: number) => {
             // Construct full image URL if it's a relative path
             let imageUrl = article.image || '';
-            if (imageUrl && !imageUrl.startsWith('http')) {
+            if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
+              // Ensure the path starts with /
+              if (!imageUrl.startsWith('/')) {
+                imageUrl = '/' + imageUrl;
+              }
               imageUrl = `${this.backendApiUrl}${imageUrl}`;
+            } else if (!imageUrl || imageUrl.trim() === '') {
+              // If no image from backend, mark as loading so it can fetch from external sources
+              imageUrl = '';
             }
 
             return {
@@ -432,7 +439,7 @@ export class NewsService {
               titleEn: article.titleEn || article.title,
               excerpt: article.excerpt,
               image: imageUrl,
-              imageLoading: !imageUrl,
+              imageLoading: !imageUrl || imageUrl.trim() === '',
               time: this.getTimeAgo(index),
               author: article.author || 'News Adda India',
               date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {
@@ -491,8 +498,15 @@ export class NewsService {
         if (response.success && response.data && response.data.length > 0) {
           const article = response.data[0];
           let imageUrl = article.image || '';
-          if (imageUrl && !imageUrl.startsWith('http')) {
+          if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
+            // Ensure the path starts with /
+            if (!imageUrl.startsWith('/')) {
+              imageUrl = '/' + imageUrl;
+            }
             imageUrl = `${this.backendApiUrl}${imageUrl}`;
+          } else if (!imageUrl || imageUrl.trim() === '') {
+            // If no image from backend, mark as loading so it can fetch from external sources
+            imageUrl = '';
           }
           
           return {
@@ -502,7 +516,7 @@ export class NewsService {
             titleEn: article.titleEn || article.title,
             excerpt: article.excerpt,
             image: imageUrl,
-            imageLoading: !imageUrl,
+            imageLoading: !imageUrl || imageUrl.trim() === '',
             time: this.getTimeAgo(0),
             author: article.author || 'News Adda India',
             date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {

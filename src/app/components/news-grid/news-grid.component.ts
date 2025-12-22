@@ -215,8 +215,53 @@ export class NewsGridComponent implements OnInit {
     const imagePromises: Promise<void>[] = [];
     
     this.newsItems.forEach((item, index) => {
-      // Fetch image based on headline using Pixabay/Pexels if loading
-      if (item.imageLoading && !item.image) {
+      // If image exists and is a valid URL, verify it loads
+      if (item.image && item.image.trim() !== '' && !item.imageLoading) {
+        const imagePromise = new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            // Image loaded successfully
+            item.imageLoading = false;
+            resolve();
+          };
+          img.onerror = () => {
+            // Image failed to load, try fetching from external source
+            console.warn(`Image failed to load for "${item.title}", fetching alternative...`);
+            item.imageLoading = true;
+            item.image = '';
+            this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
+              next: (imageUrl) => {
+                if (imageUrl && imageUrl.trim() !== '') {
+                  const newImg = new Image();
+                  newImg.onload = () => {
+                    item.image = imageUrl;
+                    item.imageLoading = false;
+                    resolve();
+                  };
+                  newImg.onerror = () => {
+                    item.image = this.newsService.getPlaceholderImage(item.title);
+                    item.imageLoading = false;
+                    resolve();
+                  };
+                  newImg.src = imageUrl;
+                } else {
+                  item.image = this.newsService.getPlaceholderImage(item.title);
+                  item.imageLoading = false;
+                  resolve();
+                }
+              },
+              error: () => {
+                item.image = this.newsService.getPlaceholderImage(item.title);
+                item.imageLoading = false;
+                resolve();
+              }
+            });
+          };
+          img.src = item.image;
+        });
+        imagePromises.push(imagePromise);
+      } else if (item.imageLoading || !item.image || item.image.trim() === '') {
+        // Fetch image based on headline using Pixabay/Pexels if loading or empty
         const imagePromise = new Promise<void>((resolve) => {
           this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
             next: (imageUrl) => {
@@ -253,14 +298,22 @@ export class NewsGridComponent implements OnInit {
           });
         });
         imagePromises.push(imagePromise);
-      } else if (!item.imageLoading && item.image) {
-        // Image already loaded, create resolved promise
+      } else {
+        // Image already loaded and valid, create resolved promise
         imagePromises.push(Promise.resolve());
       }
     });
 
     // Wait for all images to load before showing the page
-    Promise.all(imagePromises).then(() => {
+    // Add timeout to prevent infinite loading
+    const timeoutPromise = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        console.warn('Image loading timeout - showing page anyway');
+        resolve();
+      }, 15000); // 15 second timeout
+    });
+
+    Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
       this.isLoading = false;
       this.imagesLoaded.emit(true);
       console.log('All news grid images loaded');
