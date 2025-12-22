@@ -35,11 +35,25 @@ import { ReadMoreTooltipComponent } from '../../components/read-more-tooltip/rea
             <!-- News Grid -->
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               @if (isLoading) {
-                <div class="col-span-full text-center py-16">
-                  <p class="text-muted-foreground">Loading news...</p>
-                </div>
+                @for (item of [1,2,3,4,5,6,7,8,9]; track $index) {
+                  <article class="news-card group">
+                    <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                      <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
+                        <div class="flex flex-col items-center gap-2">
+                          <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          <span class="text-xs text-muted-foreground">Loading image...</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="p-5">
+                      <div class="h-4 bg-secondary/50 rounded mb-2 animate-pulse"></div>
+                      <div class="h-3 bg-secondary/30 rounded mb-4 animate-pulse"></div>
+                    </div>
+                  </article>
+                }
               }
-              @for (news of filteredNews; track news.id || $index; let i = $index) {
+              @if (!isLoading) {
+                @for (news of filteredNews; track news.id || $index; let i = $index) {
                 <article
                   class="news-card group opacity-0 animate-fade-in"
                   [style.animation-delay]="i * 100 + 'ms'">
@@ -93,14 +107,9 @@ import { ReadMoreTooltipComponent } from '../../components/read-more-tooltip/rea
                     </div>
                   </div>
                 </article>
+                }
               }
             </div>
-
-            @if (filteredNews.length === 0) {
-              <div class="text-center py-16">
-                <p class="text-muted-foreground text-lg">No news found in {{ categoryName }} category.</p>
-              </div>
-            }
           </div>
         </section>
       </main>
