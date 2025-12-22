@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { ReadMoreTooltipComponent } from '../read-more-tooltip/read-more-tooltip.component';
 
 interface Article {
   title: string;
@@ -21,7 +22,7 @@ interface Category {
 @Component({
   selector: 'app-category-section',
   standalone: true,
-  imports: [CommonModule, NewsDetailModalComponent],
+  imports: [CommonModule, NewsDetailModalComponent, ReadMoreTooltipComponent],
   template: `
     <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
       <div class="container mx-auto px-4">
@@ -50,7 +51,7 @@ interface Category {
               <div class="space-y-4">
                 <!-- Featured Article -->
                 @if (category.articles && category.articles.length > 0) {
-                  <article class="news-card group cursor-pointer touch-manipulation" (click)="openNewsModal(category.title, 0)" (touchstart)="openNewsModal(category.title, 0)">
+                  <article class="news-card group">
                     <div class="relative aspect-video overflow-hidden rounded-t-xl bg-secondary/20">
                       <!-- Loading Animation - Show while image is loading -->
                       @if (category.articles[0]?.imageLoading || !category.articles[0]?.image) {
@@ -80,19 +81,32 @@ interface Category {
                       <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
                     </div>
                     <div class="p-4">
-                      <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
-                        {{ category.articles[0].title }}
-                      </h3>
-                      <span class="text-xs text-muted-foreground mt-2 inline-block">
-                        {{ category.articles[0].time }}
-                      </span>
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1">
+                          <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
+                            {{ category.articles[0].title }}
+                          </h3>
+                          <span class="text-xs text-muted-foreground mt-2 inline-block">
+                            {{ category.articles[0].time }}
+                          </span>
+                        </div>
+                        <svg 
+                          class="w-7 h-7 sm:w-8 sm:h-8 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation flex-shrink-0" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24" 
+                          (click)="onArrowClick($event, category.title, 0)" 
+                          (touchend)="onArrowClick($event, category.title, 0)">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </div>
                     </div>
                   </article>
                 }
 
                 <!-- List Articles -->
                 @for (article of category.articles.slice(1); track $index) {
-                  <article class="group flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer touch-manipulation" (click)="openNewsModal(category.title, $index + 1)" (touchstart)="openNewsModal(category.title, $index + 1)">
+                  <article class="group flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors">
                     <div class="relative w-24 h-20 rounded-lg overflow-hidden shrink-0 bg-secondary/20">
                       <!-- Loading Animation - Show while image is loading -->
                       @if (article.imageLoading || !article.image) {
@@ -116,6 +130,15 @@ interface Category {
                         {{ article.time }}
                       </span>
                     </div>
+                    <svg 
+                      class="w-6 h-6 sm:w-7 sm:h-7 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation flex-shrink-0" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24" 
+                      (click)="onArrowClick($event, category.title, $index + 1)" 
+                      (touchend)="onArrowClick($event, category.title, $index + 1)">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
                   </article>
                 }
               </div>
@@ -124,6 +147,14 @@ interface Category {
         </div>
       </div>
     </section>
+
+    <!-- Read More Tooltip -->
+    <app-read-more-tooltip
+      [isVisible]="showReadMoreTooltip"
+      [positionX]="tooltipX"
+      [positionY]="tooltipY"
+      (readMoreClick)="onReadMoreClick()">
+    </app-read-more-tooltip>
 
     <!-- News Detail Modal -->
     @if (modalState.isOpen && modalState.news) {
@@ -158,6 +189,11 @@ export class CategorySectionComponent implements OnInit {
 
   isLoading = true;
   private originalNewsItems: { [key: string]: any[] } = {};
+  showReadMoreTooltip = false;
+  tooltipX = 0;
+  tooltipY = 0;
+  selectedCategoryTitle: string = '';
+  selectedArticleIndex: number = -1;
 
   constructor(
     private newsService: NewsService,
@@ -262,6 +298,37 @@ export class CategorySectionComponent implements OnInit {
     });
   }
 
+  onArrowClick(event: Event, categoryTitle: string, articleIndex: number) {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    const arrowElement = event.target as HTMLElement;
+    const rect = arrowElement.getBoundingClientRect();
+    
+    this.tooltipX = rect.right + 10;
+    this.tooltipY = rect.top - 10;
+    
+    if (this.tooltipX + 150 > window.innerWidth) {
+      this.tooltipX = rect.left - 160;
+    }
+    if (this.tooltipY < 10) {
+      this.tooltipY = 10;
+    }
+    
+    this.selectedCategoryTitle = categoryTitle;
+    this.selectedArticleIndex = articleIndex;
+    this.showReadMoreTooltip = true;
+  }
+
+  onReadMoreClick() {
+    this.showReadMoreTooltip = false;
+    if (this.selectedCategoryTitle && this.selectedArticleIndex >= 0) {
+      this.openNewsModal(this.selectedCategoryTitle, this.selectedArticleIndex);
+      this.selectedCategoryTitle = '';
+      this.selectedArticleIndex = -1;
+    }
+  }
+
   openNewsModal(categoryTitle: string, articleIndex: number) {
     const category = this.categories.find(c => c.title === categoryTitle);
     if (!category || !category.articles || articleIndex >= category.articles.length) {
@@ -295,6 +362,17 @@ export class CategorySectionComponent implements OnInit {
 
   closeModal() {
     this.modalService.closeModal();
+  }
+
+  @HostListener('document:click', ['$event'])
+  @HostListener('document:touchend', ['$event'])
+  onDocumentClick(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.read-more-tooltip') && !target.closest('svg')) {
+      this.showReadMoreTooltip = false;
+      this.selectedCategoryTitle = '';
+      this.selectedArticleIndex = -1;
+    }
   }
 }
 

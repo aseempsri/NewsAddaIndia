@@ -27,7 +27,7 @@ interface SideNews {
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
-            <article class="news-card group h-full cursor-pointer touch-manipulation" (click)="openNewsModal(featuredNews)" (touchstart)="openNewsModal(featuredNews)">
+            <article class="news-card group h-full">
               <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden rounded-t-xl bg-secondary/20">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (featuredNews.imageLoading || !featuredNews.image) {
@@ -110,14 +110,17 @@ interface SideNews {
                 </div>
               </div>
 
-              <!-- Desktop: Read Full Story button (hidden on mobile) -->
-              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block" (click)="$event.stopPropagation()">
-                <app-button variant="ghost" class="group/btn text-primary hover:text-primary" (click)="openNewsModal(featuredNews)">
-                  Read Full Story
-                  <svg class="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </app-button>
+              <!-- Desktop: Read More Arrow (hidden on mobile) -->
+              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block flex justify-end">
+                <svg 
+                  class="w-7 h-7 sm:w-8 sm:h-8 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  (click)="onArrowClick($event, featuredNews)" 
+                  (touchend)="onArrowClick($event, featuredNews)">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </div>
             </article>
           </div>
@@ -126,10 +129,8 @@ interface SideNews {
           <div class="flex flex-col gap-6">
             @for (news of sideNews; track $index; let i = $index) {
               <article
-                class="news-card group flex-1 cursor-pointer touch-manipulation"
-                [style.animation-delay]="i * 100 + 'ms'"
-                (click)="openNewsModalFromSide(news, $index)"
-                (touchstart)="openNewsModalFromSide(news, $index)">
+                class="news-card group flex-1"
+                [style.animation-delay]="i * 100 + 'ms'">
                 <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                   <!-- Loading Animation - Show while image is loading -->
                   @if (news.imageLoading || !news.image) {

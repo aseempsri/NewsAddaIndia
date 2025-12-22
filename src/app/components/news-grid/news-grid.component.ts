@@ -59,10 +59,8 @@ import { ReadMoreTooltipComponent } from '../read-more-tooltip/read-more-tooltip
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (news of newsItems; track news.id; let i = $index) {
               <article
-                class="news-card group opacity-0 animate-fade-in cursor-pointer touch-manipulation"
-                [style.animation-delay]="i * 100 + 'ms'"
-                (click)="openNewsModal(news)"
-                (touchstart)="openNewsModal(news)">
+                class="news-card group opacity-0 animate-fade-in"
+                [style.animation-delay]="i * 100 + 'ms'">
               <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
