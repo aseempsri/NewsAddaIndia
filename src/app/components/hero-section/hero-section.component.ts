@@ -2,6 +2,8 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonComponent } from '../../ui/button/button.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
+import { ModalService } from '../../services/modal.service';
+import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 
 interface SideNews {
   category: string;
@@ -13,7 +15,7 @@ interface SideNews {
 @Component({
   selector: 'app-hero-section',
   standalone: true,
-  imports: [CommonModule, ButtonComponent],
+  imports: [CommonModule, ButtonComponent, NewsDetailModalComponent],
   template: `
     <section class="relative py-8 lg:py-12">
       <!-- Background Glow -->
@@ -24,7 +26,7 @@ interface SideNews {
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
-            <article class="news-card group h-full">
+            <article class="news-card group h-full cursor-pointer touch-manipulation" (click)="openNewsModal(featuredNews)" (touchstart)="openNewsModal(featuredNews)">
               <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden rounded-t-xl bg-secondary/20">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (featuredNews.imageLoading || !featuredNews.image) {
@@ -46,7 +48,10 @@ interface SideNews {
                 <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent hidden lg:block"></div>
                 
                 <!-- Category Badge - Top Left -->
-                <div class="absolute top-4 left-4 z-20">
+                <div class="absolute top-4 left-4 z-20 flex gap-2">
+                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
+                    BREAKING
+                  </span>
                   <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-foreground">
                     {{ featuredNews.category }}
                   </span>
@@ -92,15 +97,15 @@ interface SideNews {
                     </svg>
                     {{ featuredNews.time }}
                   </span>
-                  <svg class="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 text-primary opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" fill="none" stroke="currentColor" viewBox="0 0 24 24" (click)="openNewsModal(featuredNews); $event.stopPropagation()" (touchstart)="openNewsModal(featuredNews); $event.stopPropagation()">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
               </div>
 
               <!-- Desktop: Read Full Story button (hidden on mobile) -->
-              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block">
-                <app-button variant="ghost" class="group/btn text-primary hover:text-primary">
+              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block" (click)="$event.stopPropagation()">
+                <app-button variant="ghost" class="group/btn text-primary hover:text-primary" (click)="openNewsModal(featuredNews)">
                   Read Full Story
                   <svg class="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -114,8 +119,10 @@ interface SideNews {
           <div class="flex flex-col gap-6">
             @for (news of sideNews; track $index; let i = $index) {
               <article
-                class="news-card group flex-1"
-                [style.animation-delay]="i * 100 + 'ms'">
+                class="news-card group flex-1 cursor-pointer touch-manipulation"
+                [style.animation-delay]="i * 100 + 'ms'"
+                (click)="openNewsModalFromSide(news, $index)"
+                (touchstart)="openNewsModalFromSide(news, $index)">
                 <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                   <!-- Loading Animation - Show while image is loading -->
                   @if (news.imageLoading || !news.image) {
@@ -144,7 +151,7 @@ interface SideNews {
 
                 <div class="p-4 flex items-center justify-between border-t border-border/30">
                   <span class="text-xs text-muted-foreground">2 hours ago</span>
-                  <svg class="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 text-primary opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer touch-manipulation" fill="none" stroke="currentColor" viewBox="0 0 24 24" (click)="openNewsModalFromSide(news, $index); $event.stopPropagation()" (touchstart)="openNewsModalFromSide(news, $index); $event.stopPropagation()">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
@@ -154,11 +161,26 @@ interface SideNews {
         </div>
       </div>
     </section>
+
+    <!-- News Detail Modal -->
+    @if (modalState.isOpen && modalState.news) {
+      <app-news-detail-modal
+        [news]="modalState.news"
+        [isOpen]="modalState.isOpen"
+        [isBreaking]="modalState.isBreaking || false"
+        (closeModal)="closeModal()">
+      </app-news-detail-modal>
+    }
   `,
   styles: []
 })
 export class HeroSectionComponent implements OnInit {
   @Output() imagesLoaded = new EventEmitter<boolean>();
+  modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
+    isOpen: false,
+    news: null,
+    isBreaking: false
+  };
   featuredNews: NewsArticle = {
     category: 'National',
     title: 'Loading latest news...',
@@ -185,7 +207,15 @@ export class HeroSectionComponent implements OnInit {
 
   isLoading = true;
 
-  constructor(private newsService: NewsService) { }
+  constructor(
+    private newsService: NewsService,
+    private modalService: ModalService
+  ) {
+    // Subscribe to modal state changes
+    this.modalService.getModalState().subscribe(state => {
+      this.modalState = state;
+    });
+  }
 
   ngOnInit() {
     this.loadNews();
@@ -194,8 +224,8 @@ export class HeroSectionComponent implements OnInit {
   loadNews() {
     const imagePromises: Promise<void>[] = [];
 
-    // Load featured news
-    this.newsService.fetchFeaturedNews('National').subscribe({
+    // Load breaking news for hero section (falls back to featured if no breaking news)
+    this.newsService.fetchBreakingNews().subscribe({
       next: (news) => {
         this.featuredNews = news;
         // Fetch image based on headline if loading
@@ -303,6 +333,33 @@ export class HeroSectionComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  openNewsModal(news: NewsArticle) {
+    // Check if this is breaking news (you might want to add a property to NewsArticle)
+    const isBreaking = false; // You can determine this based on your data
+    this.modalService.openModal(news, isBreaking);
+  }
+
+  openNewsModalFromSide(sideNews: SideNews, index: number) {
+    // Convert SideNews to NewsArticle format
+    const newsArticle: NewsArticle = {
+      id: index + 1000, // Temporary ID
+      category: sideNews.category,
+      title: sideNews.title,
+      titleEn: sideNews.title,
+      excerpt: sideNews.title, // Use title as excerpt for side news
+      image: sideNews.image,
+      imageLoading: sideNews.imageLoading || false,
+      time: '2 hours ago',
+      author: 'News Adda India',
+      date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+    };
+    this.modalService.openModal(newsArticle, false);
+  }
+
+  closeModal() {
+    this.modalService.closeModal();
   }
 }
 

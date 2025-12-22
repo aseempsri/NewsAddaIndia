@@ -31,7 +31,7 @@ import { FooterComponent } from '../../components/footer/footer.component';
           <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           <div class="text-center">
             <p class="text-lg font-semibold text-foreground mb-2">Loading News</p>
-            <p class="text-sm text-muted-foreground">Fetching images based on headlines...</p>
+            <!-- <p class="text-sm text-muted-foreground">Fetching images based on headlines...</p> -->
           </div>
         </div>
       </div>

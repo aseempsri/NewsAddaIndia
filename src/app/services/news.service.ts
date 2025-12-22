@@ -25,6 +25,7 @@ export class NewsService {
   private newsApiUrl = 'https://newsdata.io/api/1/news';
   private pexelsUrl = 'https://api.pexels.com/v1/search';
   private pexelsApiKey = ''; // Optional: Get from pexels.com/api
+  private backendApiUrl = environment.apiUrl || 'http://localhost:3000';
   private readonly CACHE_PREFIX = 'news_cache_';
   private readonly CACHE_TIMESTAMP_PREFIX = 'news_cache_timestamp_';
   private readonly IMAGE_CACHE_PREFIX = 'image_cache_';
@@ -356,36 +357,167 @@ export class NewsService {
   }
 
   /**
-   * Fetch latest news for a specific category - uses REAL news APIs
+   * Fetch latest news for a specific category - prioritizes backend, then external APIs
    */
   fetchNewsByCategory(category: string, count: number = 5): Observable<NewsArticle[]> {
     console.log(`Fetching news for category: ${category}, count: ${count}`);
 
-    // Always fetch fresh news on each refresh (no cache check)
-    // Cache is still used as fallback if API fails
+    // Try backend API first
+    return this.fetchFromBackend(category, count, undefined, true).pipe(
+      catchError(backendError => {
+        console.log('Backend API unavailable, falling back to external APIs');
+        // Fallback to external APIs
+        return this.fetchRealNewsFromAPI(category, count).pipe(
+          map(news => {
+            console.log(`Fetched ${news.length} news articles for ${category}`);
+            // Cache the news after successful fetch
+            if (news.length > 0) {
+              this.cacheNews(`${category}_${count}`, news);
+            } else {
+              console.warn(`No news articles returned for ${category}`);
+            }
+            return news;
+          }),
+          catchError(error => {
+            console.error('Error fetching real news:', error);
+            // Try to return cached news as fallback
+            const cachedNews = this.getCachedNews(`${category}_${count}`);
+            if (cachedNews && cachedNews.length > 0) {
+              console.log(`Returning cached news as fallback for ${category}`);
+              return of(cachedNews);
+            }
+            console.warn(`No news available for ${category}, returning empty array`);
+            return of([]);
+          })
+        );
+      })
+    );
+  }
 
-    // Fetch REAL news from NewsAPI or Google News RSS
-    return this.fetchRealNewsFromAPI(category, count).pipe(
-      map(news => {
-        console.log(`Fetched ${news.length} news articles for ${category}`);
-        // Cache the news after successful fetch
-        if (news.length > 0) {
-          this.cacheNews(`${category}_${count}`, news);
-        } else {
-          console.warn(`No news articles returned for ${category}`);
+  /**
+   * Fetch news from backend API
+   */
+  private fetchFromBackend(category: string, count: number, page?: string, excludeBreaking: boolean = false): Observable<NewsArticle[]> {
+    let url = `${this.backendApiUrl}/api/news?limit=${count}&published=true`;
+    
+    // Add page filter if specified
+    if (page) {
+      url += `&page=${encodeURIComponent(page)}`;
+    } else if (category) {
+      // If no page specified, filter by category
+      url += `&category=${encodeURIComponent(category)}`;
+    }
+    
+    // Exclude breaking news if requested
+    if (excludeBreaking) {
+      url += `&excludeBreaking=true`;
+    }
+    
+    return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
+      timeout(5000), // 5 second timeout
+      map(response => {
+        if (response.success && response.data && response.data.length > 0) {
+          // Transform backend news format to NewsArticle format
+          return response.data.map((article: any, index: number) => {
+            // Construct full image URL if it's a relative path
+            let imageUrl = article.image || '';
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${this.backendApiUrl}${imageUrl}`;
+            }
+
+            return {
+              id: article._id || index + 1,
+              category: article.category,
+              title: article.title,
+              titleEn: article.titleEn || article.title,
+              excerpt: article.excerpt,
+              image: imageUrl,
+              imageLoading: !imageUrl,
+              time: this.getTimeAgo(index),
+              author: article.author || 'News Adda India',
+              date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+            } as NewsArticle;
+          });
         }
-        return news;
+        throw new Error('No news from backend');
       }),
       catchError(error => {
-        console.error('Error fetching real news:', error);
-        // Try to return cached news as fallback
-        const cachedNews = this.getCachedNews(`${category}_${count}`);
-        if (cachedNews && cachedNews.length > 0) {
-          console.log(`Returning cached news as fallback for ${category}`);
-          return of(cachedNews);
+        console.error('Backend API error:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Fetch news by page (e.g., 'home', 'national', etc.)
+   */
+  fetchNewsByPage(page: string, count: number = 5): Observable<NewsArticle[]> {
+    console.log(`Fetching news for page: ${page}, count: ${count}`);
+
+    // Try backend API first (exclude breaking news from regular grid)
+    return this.fetchFromBackend('', count, page, true).pipe(
+      catchError(backendError => {
+        console.log('Backend API unavailable for page, falling back to category-based fetch');
+        // Fallback: map page to category and fetch
+        const pageToCategory: Record<string, string> = {
+          'home': 'National',
+          'national': 'National',
+          'international': 'International',
+          'politics': 'Politics',
+          'health': 'Health',
+          'entertainment': 'Entertainment',
+          'sports': 'Sports',
+          'business': 'Business'
+        };
+        const category = pageToCategory[page.toLowerCase()] || 'National';
+        return this.fetchNewsByCategory(category, count);
+      })
+    );
+  }
+
+  /**
+   * Fetch breaking news for hero section
+   */
+  fetchBreakingNews(): Observable<NewsArticle> {
+    const url = `${this.backendApiUrl}/api/news?breaking=true&limit=1&published=true`;
+    
+    return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
+      timeout(5000),
+      map(response => {
+        if (response.success && response.data && response.data.length > 0) {
+          const article = response.data[0];
+          let imageUrl = article.image || '';
+          if (imageUrl && !imageUrl.startsWith('http')) {
+            imageUrl = `${this.backendApiUrl}${imageUrl}`;
+          }
+          
+          return {
+            id: article._id || 1,
+            category: article.category,
+            title: article.title,
+            titleEn: article.titleEn || article.title,
+            excerpt: article.excerpt,
+            image: imageUrl,
+            imageLoading: !imageUrl,
+            time: this.getTimeAgo(0),
+            author: article.author || 'News Adda India',
+            date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+          } as NewsArticle;
         }
-        console.warn(`No news available for ${category}, returning empty array`);
-        return of([]);
+        throw new Error('No breaking news found');
+      }),
+      catchError(error => {
+        console.warn('No breaking news from backend, falling back to featured:', error);
+        // Fallback to regular featured news
+        return this.fetchFeaturedNews('National');
       })
     );
   }

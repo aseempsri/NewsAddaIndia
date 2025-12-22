@@ -1,13 +1,15 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
+import { ModalService } from '../../services/modal.service';
+import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 
 // Using NewsArticle from service
 
 @Component({
   selector: 'app-news-grid',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NewsDetailModalComponent],
   template: `
     <section class="py-12 lg:py-16">
       <div class="container mx-auto px-4">
@@ -56,8 +58,10 @@ import { NewsService, NewsArticle } from '../../services/news.service';
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (news of newsItems; track news.id; let i = $index) {
               <article
-                class="news-card group opacity-0 animate-fade-in"
-                [style.animation-delay]="i * 100 + 'ms'">
+                class="news-card group opacity-0 animate-fade-in cursor-pointer touch-manipulation"
+                [style.animation-delay]="i * 100 + 'ms'"
+                (click)="openNewsModal(news)"
+                (touchstart)="openNewsModal(news)">
               <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
@@ -96,7 +100,7 @@ import { NewsService, NewsArticle } from '../../services/news.service';
                     </svg>
                     {{ news.time }}
                   </span>
-                  <svg class="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 text-primary opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" fill="none" stroke="currentColor" viewBox="0 0 24 24" (click)="openNewsModal(news); $event.stopPropagation()" (touchstart)="openNewsModal(news); $event.stopPropagation()">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </div>
@@ -104,6 +108,16 @@ import { NewsService, NewsArticle } from '../../services/news.service';
             </article>
           }
         </div>
+        }
+
+        <!-- News Detail Modal -->
+        @if (modalState.isOpen && modalState.news) {
+          <app-news-detail-modal
+            [news]="modalState.news"
+            [isOpen]="modalState.isOpen"
+            [isBreaking]="modalState.isBreaking || false"
+            (closeModal)="closeModal()">
+          </app-news-detail-modal>
         }
 
         <!-- Mobile View All -->
@@ -126,50 +140,72 @@ export class NewsGridComponent implements OnInit {
   @Output() imagesLoaded = new EventEmitter<boolean>();
   newsItems: NewsArticle[] = [];
   isLoading = true;
+  modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
+    isOpen: false,
+    news: null,
+    isBreaking: false
+  };
 
-  constructor(private newsService: NewsService) { }
+  constructor(
+    private newsService: NewsService,
+    private modalService: ModalService
+  ) {
+    // Subscribe to modal state changes
+    this.modalService.getModalState().subscribe(state => {
+      this.modalState = state;
+    });
+  }
 
   ngOnInit() {
     this.loadNews();
   }
 
   loadNews() {
-    // Load news from multiple categories - mix of different categories
-    const categoryCounts = [
-      { category: 'National', count: 2 },
-      { category: 'Sports', count: 1 },
-      { category: 'Business', count: 1 },
-      { category: 'Entertainment', count: 1 },
-      { category: 'International', count: 1 }
-    ];
-
-    // Fetch news from all categories and combine
-    const observables = categoryCounts.map(({ category, count }) =>
-      this.newsService.fetchNewsByCategory(category, count)
-    );
-
-    // Use forkJoin to fetch all at once, then combine
-    this.newsService.fetchNewsByCategory('National', 6).subscribe({
+    // Try to fetch news specifically marked for 'home' page first
+    this.newsService.fetchNewsByPage('home', 6).subscribe({
       next: (news) => {
-        // Ensure we have enough news items
-        if (news.length < 6) {
-          // Fetch more from other categories
-          this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
-            next: (sportsNews) => {
-              this.newsItems = [...news, ...sportsNews].slice(0, 6);
-              // Wait for all images to load before showing page
-              this.fetchImagesForAllItemsAndWait();
+        // If we got news from backend for home page, use it
+        if (news.length > 0) {
+          this.newsItems = news.slice(0, 6);
+          this.fetchImagesForAllItemsAndWait();
+        } else {
+          // Fallback to category-based fetch
+          this.newsService.fetchNewsByCategory('National', 6).subscribe({
+            next: (categoryNews) => {
+              // Ensure we have enough news items
+              if (categoryNews.length < 6) {
+                // Fetch more from other categories
+                this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
+                  next: (sportsNews) => {
+                    this.newsItems = [...categoryNews, ...sportsNews].slice(0, 6);
+                    this.fetchImagesForAllItemsAndWait();
+                  }
+                });
+              } else {
+                this.newsItems = categoryNews.slice(0, 6);
+                this.fetchImagesForAllItemsAndWait();
+              }
+            },
+            error: (error) => {
+              console.error('Error loading news:', error);
+              this.isLoading = false;
             }
           });
-        } else {
-          this.newsItems = news.slice(0, 6);
-          // Wait for all images to load before showing page
-          this.fetchImagesForAllItemsAndWait();
         }
       },
       error: (error) => {
-        console.error('Error loading news:', error);
-        this.isLoading = false;
+        console.error('Error loading home page news:', error);
+        // Fallback to category-based fetch
+        this.newsService.fetchNewsByCategory('National', 6).subscribe({
+          next: (news) => {
+            this.newsItems = news.slice(0, 6);
+            this.fetchImagesForAllItemsAndWait();
+          },
+          error: (err) => {
+            console.error('Error loading news:', err);
+            this.isLoading = false;
+          }
+        });
       }
     });
   }
@@ -242,6 +278,14 @@ export class NewsGridComponent implements OnInit {
 
   getCategoryColor(category: string): string {
     return this.categoryColors[category] || 'bg-primary/20 text-primary';
+  }
+
+  openNewsModal(news: NewsArticle) {
+    this.modalService.openModal(news, false);
+  }
+
+  closeModal() {
+    this.modalService.closeModal();
   }
 }
 

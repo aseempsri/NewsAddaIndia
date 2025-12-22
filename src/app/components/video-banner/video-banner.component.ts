@@ -157,8 +157,10 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   // Play from 4:19 (259s) to 4:28 (268s)
   private readonly VIDEO_START = 259; // 4:19 in seconds
   private readonly VIDEO_END = 268; // 4:28 in seconds
+  private readonly PAUSE_DURATION = 3000; // 3 seconds pause before showing modal
   showBlurOverlay = false; // Track if we should show blur overlay (public for template access)
   private modalTimer: any = null; // Timer to show modal as fallback
+  private pauseTimer: any = null; // Timer for 2-second pause before showing modal
   private youtubeWindow: Window | null = null; // Track opened YouTube window to prevent duplicates
 
   // Social Media URLs
@@ -268,10 +270,14 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       // Reset blur overlay
       this.showBlurOverlay = false;
 
-      // Clear any existing timer
+      // Clear any existing timers
       if (this.modalTimer) {
         clearTimeout(this.modalTimer);
         this.modalTimer = null;
+      }
+      if (this.pauseTimer) {
+        clearTimeout(this.pauseTimer);
+        this.pauseTimer = null;
       }
 
       // Set initial time to video start (4:19)
@@ -301,10 +307,14 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       // Reset blur overlay
       this.showBlurOverlay = false;
 
-      // Clear any existing timer
+      // Clear any existing timers
       if (this.modalTimer) {
         clearTimeout(this.modalTimer);
         this.modalTimer = null;
+      }
+      if (this.pauseTimer) {
+        clearTimeout(this.pauseTimer);
+        this.pauseTimer = null;
       }
 
       // Only start video if images are loaded
@@ -325,17 +335,17 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
 
     const video = this.videoPlayer.nativeElement;
 
-    // Set a fallback timer to show modal after 9 seconds
+    // Set a fallback timer to show modal after 9 seconds (video play) + 3 seconds (pause) = 12 seconds total
     this.modalTimer = setTimeout(() => {
-      if (!this.showBlurOverlay && this.videoPlayer?.nativeElement) {
-        console.log('Fallback timer: Showing modal after 9 seconds');
+      if (!this.showBlurOverlay && !this.pauseTimer && this.videoPlayer?.nativeElement) {
+        console.log('Fallback timer: Showing modal after 12 seconds (9s play + 3s pause)');
         const video = this.videoPlayer.nativeElement;
         video.pause();
         video.loop = false;
         this.showBlurOverlay = true;
         this.cdr.detectChanges();
       }
-    }, 9000); // 9 seconds (4:19 to 4:28)
+    }, 12000); // 12 seconds total (9 seconds video + 3 seconds pause)
 
     // Try to play the video
     const playPromise = video.play();
@@ -379,20 +389,25 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
     }
 
     // Check if we've reached the end (4:28)
-    if (currentTime >= this.VIDEO_END && !this.showBlurOverlay) {
-      console.log('Video ended (4:28), pausing and showing modal');
+    if (currentTime >= this.VIDEO_END && !this.showBlurOverlay && !this.pauseTimer) {
+      console.log('Video reached 4:28, pausing for 3 seconds before showing modal');
       video.pause();
       video.loop = false; // Ensure no looping
-      this.showBlurOverlay = true;
 
-      // Clear the fallback timer since we're showing it now
+      // Clear the fallback timer since we're handling it now
       if (this.modalTimer) {
         clearTimeout(this.modalTimer);
         this.modalTimer = null;
       }
 
-      this.cdr.detectChanges(); // Force change detection
-      console.log('Modal should be visible now, showBlurOverlay:', this.showBlurOverlay);
+      // Wait 3 seconds before showing modal
+      this.pauseTimer = setTimeout(() => {
+        console.log('3-second pause completed, showing modal');
+        this.showBlurOverlay = true;
+        this.pauseTimer = null;
+        this.cdr.detectChanges(); // Force change detection
+        console.log('Modal should be visible now, showBlurOverlay:', this.showBlurOverlay);
+      }, this.PAUSE_DURATION);
     } else if (currentTime < this.VIDEO_START) {
       // If video somehow goes before start time, reset to start
       console.log('Video went before start time, resetting to 4:19');
@@ -414,10 +429,14 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   closeModal() {
     this.showBlurOverlay = false;
     this.cdr.detectChanges();
-    // Clear timer if modal is closed manually
+    // Clear timers if modal is closed manually
     if (this.modalTimer) {
       clearTimeout(this.modalTimer);
       this.modalTimer = null;
+    }
+    if (this.pauseTimer) {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = null;
     }
   }
 

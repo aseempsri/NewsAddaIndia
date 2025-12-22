@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NewsService } from '../../services/news.service';
+import { NewsService, NewsArticle } from '../../services/news.service';
+import { ModalService } from '../../services/modal.service';
+import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 
 interface Article {
   title: string;
@@ -19,7 +21,7 @@ interface Category {
 @Component({
   selector: 'app-category-section',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NewsDetailModalComponent],
   template: `
     <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
       <div class="container mx-auto px-4">
@@ -48,7 +50,7 @@ interface Category {
               <div class="space-y-4">
                 <!-- Featured Article -->
                 @if (category.articles && category.articles.length > 0) {
-                  <article class="news-card group">
+                  <article class="news-card group cursor-pointer touch-manipulation" (click)="openNewsModal(category.title, 0)" (touchstart)="openNewsModal(category.title, 0)">
                     <div class="relative aspect-video overflow-hidden rounded-t-xl bg-secondary/20">
                       <!-- Loading Animation - Show while image is loading -->
                       @if (category.articles[0]?.imageLoading || !category.articles[0]?.image) {
@@ -90,7 +92,7 @@ interface Category {
 
                 <!-- List Articles -->
                 @for (article of category.articles.slice(1); track $index) {
-                  <article class="group flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <article class="group flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer touch-manipulation" (click)="openNewsModal(category.title, $index + 1)" (touchstart)="openNewsModal(category.title, $index + 1)">
                     <div class="relative w-24 h-20 rounded-lg overflow-hidden shrink-0 bg-secondary/20">
                       <!-- Loading Animation - Show while image is loading -->
                       @if (article.imageLoading || !article.image) {
@@ -122,10 +124,25 @@ interface Category {
         </div>
       </div>
     </section>
+
+    <!-- News Detail Modal -->
+    @if (modalState.isOpen && modalState.news) {
+      <app-news-detail-modal
+        [news]="modalState.news"
+        [isOpen]="modalState.isOpen"
+        [isBreaking]="modalState.isBreaking || false"
+        (closeModal)="closeModal()">
+      </app-news-detail-modal>
+    }
   `,
   styles: []
 })
 export class CategorySectionComponent implements OnInit {
+  modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
+    isOpen: false,
+    news: null,
+    isBreaking: false
+  };
   categories: Category[] = [
     {
       title: 'Entertainment',
@@ -142,7 +159,15 @@ export class CategorySectionComponent implements OnInit {
   isLoading = true;
   private originalNewsItems: { [key: string]: any[] } = {};
 
-  constructor(private newsService: NewsService) { }
+  constructor(
+    private newsService: NewsService,
+    private modalService: ModalService
+  ) {
+    // Subscribe to modal state changes
+    this.modalService.getModalState().subscribe(state => {
+      this.modalState = state;
+    });
+  }
 
   ngOnInit() {
     this.loadCategoryNews();
@@ -235,6 +260,41 @@ export class CategorySectionComponent implements OnInit {
         article.imageLoading = false;
       }
     });
+  }
+
+  openNewsModal(categoryTitle: string, articleIndex: number) {
+    const category = this.categories.find(c => c.title === categoryTitle);
+    if (!category || !category.articles || articleIndex >= category.articles.length) {
+      return;
+    }
+
+    const article = category.articles[articleIndex];
+    const originalNews = this.originalNewsItems[categoryTitle];
+    
+    if (originalNews && originalNews[articleIndex]) {
+      // Use the original NewsArticle from the service
+      const newsArticle = originalNews[articleIndex];
+      this.modalService.openModal(newsArticle, false);
+    } else {
+      // Fallback: create a NewsArticle from the Article interface
+      const newsArticle: NewsArticle = {
+        id: articleIndex + 10000, // Temporary ID
+        category: categoryTitle,
+        title: article.title,
+        titleEn: article.title,
+        excerpt: article.title, // Use title as excerpt
+        image: article.image,
+        imageLoading: article.imageLoading || false,
+        time: article.time,
+        author: 'News Adda India',
+        date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+      };
+      this.modalService.openModal(newsArticle, false);
+    }
+  }
+
+  closeModal() {
+    this.modalService.closeModal();
   }
 }
 

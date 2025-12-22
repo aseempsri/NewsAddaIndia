@@ -1,8 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Location } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ButtonComponent } from '../../ui/button/button.component';
+import { environment } from '../../../environments/environment';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 interface NavLink {
   name: string;
@@ -36,7 +40,7 @@ interface NavLink {
           <div class="flex items-center gap-3">
             <span class="text-muted-foreground">21°C</span>
             <div class="w-px h-4 bg-border"></div>
-            <span class="text-accent font-medium">04,320+ Readers</span>
+            <span class="text-accent font-medium">{{ readerCount | number }}+ Readers</span>
           </div>
         </div>
       </div>
@@ -133,14 +137,33 @@ interface NavLink {
   `,
   styles: []
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   isMenuOpen = false;
   logoPath: string;
+  readerCount = 4320;
+  private apiUrl = environment.apiUrl || 'http://localhost:3000';
 
-  constructor(private location: Location) {
+  constructor(private location: Location, private http: HttpClient) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
     this.logoPath = baseHref + 'assets/videos/slogo.png';
+  }
+
+  ngOnInit() {
+    this.fetchReaderCount();
+  }
+
+  fetchReaderCount() {
+    this.http.get<{ success: boolean; data: { readerCount: number } }>(`${this.apiUrl}/api/stats`).pipe(
+      catchError(error => {
+        console.error('Error fetching reader count:', error);
+        return of({ success: false, data: { readerCount: 4320 } });
+      })
+    ).subscribe(response => {
+      if (response.success) {
+        this.readerCount = response.data.readerCount;
+      }
+    });
   }
 
   navLinks: NavLink[] = [
