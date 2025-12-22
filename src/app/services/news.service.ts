@@ -326,6 +326,8 @@ export class NewsService {
   /**
    * Filter out paid/premium version text from excerpt
    * If excerpt contains paid/premium text, return empty string (will use headline instead)
+   * @param excerpt - The excerpt text to filter
+   * @returns Filtered excerpt or empty string if contains paid keywords
    */
   private filterPaidVersionText(excerpt: string): string {
     if (!excerpt) return '';
