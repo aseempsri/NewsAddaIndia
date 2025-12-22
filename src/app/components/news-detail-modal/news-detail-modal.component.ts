@@ -218,6 +218,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   fullContent: string = '';
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
+  private scrollPosition: number = 0;
 
   constructor(private http: HttpClient) {}
 
@@ -256,9 +257,14 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private preventBodyScroll() {
+    // Save current scroll position
+    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    
     // Prevent body scroll when modal is open
+    // Use fixed position with negative top to maintain scroll position
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
+    document.body.style.top = `-${this.scrollPosition}px`;
     document.body.style.width = '100%';
   }
 
@@ -266,7 +272,14 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     // Restore body scroll when modal is closed
     document.body.style.overflow = '';
     document.body.style.position = '';
+    document.body.style.top = '';
     document.body.style.width = '';
+    
+    // Restore scroll position
+    window.scrollTo(0, this.scrollPosition);
+    
+    // Reset scroll position variable
+    this.scrollPosition = 0;
   }
 
   loadFullContent() {
