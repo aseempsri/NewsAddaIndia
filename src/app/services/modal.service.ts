@@ -11,8 +11,12 @@ export class ModalService {
     news: null,
     isBreaking: false
   });
+  private scrollPosition: number = 0;
 
   openModal(news: NewsArticle, isBreaking: boolean = false): void {
+    // Save scroll position BEFORE opening modal
+    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    
     this.modalState$.next({
       isOpen: true,
       news,
@@ -32,6 +36,14 @@ export class ModalService {
 
   getModalState(): Observable<{ isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean }> {
     return this.modalState$.asObservable();
+  }
+
+  getScrollPosition(): number {
+    return this.scrollPosition;
+  }
+
+  resetScrollPosition(): void {
+    this.scrollPosition = 0;
   }
 }
 

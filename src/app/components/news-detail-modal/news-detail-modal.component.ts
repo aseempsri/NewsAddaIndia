@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NewsArticle } from '../../services/news.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ModalService } from '../../services/modal.service';
 
 @Component({
   selector: 'app-news-detail-modal',
@@ -218,9 +219,11 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   fullContent: string = '';
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
-  private scrollPosition: number = 0;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private modalService: ModalService
+  ) {}
 
   ngOnInit() {
     if (this.news && this.isOpen) {
@@ -257,29 +260,37 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private preventBodyScroll() {
-    // Save current scroll position
-    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    // Get scroll position from modal service (saved when modal was opened)
+    const scrollPosition = this.modalService.getScrollPosition();
     
     // Prevent body scroll when modal is open
     // Use fixed position with negative top to maintain scroll position
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
-    document.body.style.top = `-${this.scrollPosition}px`;
+    document.body.style.top = `-${scrollPosition}px`;
     document.body.style.width = '100%';
   }
 
   private restoreBodyScroll() {
+    // Get scroll position from modal service
+    const scrollPosition = this.modalService.getScrollPosition();
+    
     // Restore body scroll when modal is closed
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
     
-    // Restore scroll position
-    window.scrollTo(0, this.scrollPosition);
-    
-    // Reset scroll position variable
-    this.scrollPosition = 0;
+    // Use requestAnimationFrame to ensure DOM updates are complete before scrolling
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: scrollPosition,
+        behavior: 'auto' // Use 'auto' instead of 'smooth' for instant restoration
+      });
+      
+      // Reset scroll position after restoring
+      this.modalService.resetScrollPosition();
+    });
   }
 
   loadFullContent() {
