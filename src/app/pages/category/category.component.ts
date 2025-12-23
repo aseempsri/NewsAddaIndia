@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
@@ -6,12 +6,11 @@ import { FooterComponent } from '../../components/footer/footer.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { NewsDetailModalComponent } from '../../components/news-detail-modal/news-detail-modal.component';
-import { ReadMoreTooltipComponent } from '../../components/read-more-tooltip/read-more-tooltip.component';
 
 @Component({
   selector: 'app-category',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, FooterComponent, NewsDetailModalComponent, ReadMoreTooltipComponent],
+  imports: [CommonModule, RouterLink, HeaderComponent, FooterComponent, NewsDetailModalComponent],
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
@@ -95,15 +94,13 @@ import { ReadMoreTooltipComponent } from '../../components/read-more-tooltip/rea
                         </svg>
                         {{ news.time }}
                       </span>
-                      <svg 
-                        class="w-7 h-7 sm:w-8 sm:h-8 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24" 
-                        (click)="onArrowClick($event, news)" 
-                        (touchend)="onArrowClick($event, news)">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      <button 
+                        class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
+                        type="button"
+                        (click)="openNewsModal(news)" 
+                        (touchend)="openNewsModal(news)">
+                        Read more
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -116,14 +113,6 @@ import { ReadMoreTooltipComponent } from '../../components/read-more-tooltip/rea
 
       <app-footer />
     </div>
-
-    <!-- Read More Tooltip -->
-    <app-read-more-tooltip
-      [isVisible]="showReadMoreTooltip"
-      [positionX]="tooltipX"
-      [positionY]="tooltipY"
-      (readMoreClick)="onReadMoreClick()">
-    </app-read-more-tooltip>
 
     <!-- News Detail Modal -->
     @if (modalState.isOpen && modalState.news) {
@@ -146,10 +135,6 @@ export class CategoryComponent implements OnInit {
     news: null,
     isBreaking: false
   };
-  showReadMoreTooltip = false;
-  tooltipX = 0;
-  tooltipY = 0;
-  selectedNews: NewsArticle | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -457,37 +442,6 @@ export class CategoryComponent implements OnInit {
     return this.categoryAccentColors[category] || 'from-primary to-primary/80';
   }
 
-  onArrowClick(event: Event, news: NewsArticle) {
-    event.stopPropagation();
-    event.preventDefault();
-    
-    // Get arrow element position
-    const arrowElement = event.target as HTMLElement;
-    const rect = arrowElement.getBoundingClientRect();
-    
-    // Position tooltip next to arrow (to the right and slightly above)
-    this.tooltipX = rect.right + 10;
-    this.tooltipY = rect.top - 10;
-    
-    // Ensure tooltip stays within viewport
-    if (this.tooltipX + 150 > window.innerWidth) {
-      this.tooltipX = rect.left - 160; // Show on left side instead
-    }
-    if (this.tooltipY < 10) {
-      this.tooltipY = 10;
-    }
-    
-    this.selectedNews = news;
-    this.showReadMoreTooltip = true;
-  }
-
-  onReadMoreClick() {
-    this.showReadMoreTooltip = false;
-    if (this.selectedNews) {
-      this.openNewsModal(this.selectedNews);
-      this.selectedNews = null;
-    }
-  }
 
   openNewsModal(news: NewsArticle) {
     this.modalService.openModal(news, false);
@@ -497,14 +451,4 @@ export class CategoryComponent implements OnInit {
     this.modalService.closeModal();
   }
 
-  @HostListener('document:click', ['$event'])
-  @HostListener('document:touchend', ['$event'])
-  onDocumentClick(event: Event) {
-    // Close tooltip if clicking outside
-    const target = event.target as HTMLElement;
-    if (!target.closest('.read-more-tooltip') && !target.closest('svg')) {
-      this.showReadMoreTooltip = false;
-      this.selectedNews = null;
-    }
-  }
 }

@@ -1,9 +1,8 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
-import { ReadMoreTooltipComponent } from '../read-more-tooltip/read-more-tooltip.component';
 
 interface Article {
   title: string;
@@ -22,7 +21,7 @@ interface Category {
 @Component({
   selector: 'app-category-section',
   standalone: true,
-  imports: [CommonModule, NewsDetailModalComponent, ReadMoreTooltipComponent],
+  imports: [CommonModule, NewsDetailModalComponent],
   template: `
     <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
       <div class="container mx-auto px-4">
@@ -90,15 +89,13 @@ interface Category {
                             {{ category.articles[0].time }}
                           </span>
                         </div>
-                        <svg 
-                          class="w-7 h-7 sm:w-8 sm:h-8 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation flex-shrink-0" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24" 
-                          (click)="onArrowClick($event, category.title, 0)" 
-                          (touchend)="onArrowClick($event, category.title, 0)">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
+                        <button 
+                          class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2 flex-shrink-0"
+                          type="button"
+                          (click)="openNewsModal(category.title, 0)" 
+                          (touchend)="openNewsModal(category.title, 0)">
+                          Read more
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -130,15 +127,13 @@ interface Category {
                         {{ article.time }}
                       </span>
                     </div>
-                    <svg 
-                      class="w-6 h-6 sm:w-7 sm:h-7 text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all transform group-hover:translate-x-1 cursor-pointer touch-manipulation flex-shrink-0" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24" 
-                      (click)="onArrowClick($event, category.title, $index + 1)" 
-                      (touchend)="onArrowClick($event, category.title, $index + 1)">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                    <button 
+                      class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2 flex-shrink-0"
+                      type="button"
+                      (click)="openNewsModal(category.title, $index + 1)" 
+                      (touchend)="openNewsModal(category.title, $index + 1)">
+                      Read more
+                    </button>
                   </article>
                 }
               </div>
@@ -147,14 +142,6 @@ interface Category {
         </div>
       </div>
     </section>
-
-    <!-- Read More Tooltip -->
-    <app-read-more-tooltip
-      [isVisible]="showReadMoreTooltip"
-      [positionX]="tooltipX"
-      [positionY]="tooltipY"
-      (readMoreClick)="onReadMoreClick()">
-    </app-read-more-tooltip>
 
     <!-- News Detail Modal -->
     @if (modalState.isOpen && modalState.news) {
@@ -189,11 +176,6 @@ export class CategorySectionComponent implements OnInit {
 
   isLoading = true;
   private originalNewsItems: { [key: string]: any[] } = {};
-  showReadMoreTooltip = false;
-  tooltipX = 0;
-  tooltipY = 0;
-  selectedCategoryTitle: string = '';
-  selectedArticleIndex: number = -1;
 
   constructor(
     private newsService: NewsService,
@@ -298,36 +280,6 @@ export class CategorySectionComponent implements OnInit {
     });
   }
 
-  onArrowClick(event: Event, categoryTitle: string, articleIndex: number) {
-    event.stopPropagation();
-    event.preventDefault();
-    
-    const arrowElement = event.target as HTMLElement;
-    const rect = arrowElement.getBoundingClientRect();
-    
-    this.tooltipX = rect.right + 10;
-    this.tooltipY = rect.top - 10;
-    
-    if (this.tooltipX + 150 > window.innerWidth) {
-      this.tooltipX = rect.left - 160;
-    }
-    if (this.tooltipY < 10) {
-      this.tooltipY = 10;
-    }
-    
-    this.selectedCategoryTitle = categoryTitle;
-    this.selectedArticleIndex = articleIndex;
-    this.showReadMoreTooltip = true;
-  }
-
-  onReadMoreClick() {
-    this.showReadMoreTooltip = false;
-    if (this.selectedCategoryTitle && this.selectedArticleIndex >= 0) {
-      this.openNewsModal(this.selectedCategoryTitle, this.selectedArticleIndex);
-      this.selectedCategoryTitle = '';
-      this.selectedArticleIndex = -1;
-    }
-  }
 
   openNewsModal(categoryTitle: string, articleIndex: number) {
     const category = this.categories.find(c => c.title === categoryTitle);
@@ -364,15 +316,5 @@ export class CategorySectionComponent implements OnInit {
     this.modalService.closeModal();
   }
 
-  @HostListener('document:click', ['$event'])
-  @HostListener('document:touchend', ['$event'])
-  onDocumentClick(event: Event) {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.read-more-tooltip') && !target.closest('svg')) {
-      this.showReadMoreTooltip = false;
-      this.selectedCategoryTitle = '';
-      this.selectedArticleIndex = -1;
-    }
-  }
 }
 
