@@ -25,55 +25,14 @@ export class YouTubeService {
       return of(cachedUrl);
     }
 
-    // Try RSS feed first (most reliable, no proxy needed)
-    return this.fetchLatestVideoFromRSS().pipe(
-      catchError(() => {
-        // If RSS fails, try channel page parsing
-        return this.fetchLatestVideoFromChannelPage();
-      })
-    );
-  }
+    // Try to get the channel ID first, then use RSS feed
+    // For channels with handle, we need to find the channel ID
+    // First, try to fetch channel page to get channel ID, then use RSS feed
+    // Or use a simpler approach: parse the channel's videos page directly
 
-  /**
-   * Fetch latest video using YouTube RSS feed
-   * RSS feed format: https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID
-   * For channel handles, we need to get channel ID first or use a different approach
-   */
-  private fetchLatestVideoFromRSS(): Observable<string | null> {
-    // Try RSS feed with channel handle (may not work for all channels)
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?user=${this.CHANNEL_HANDLE}`;
-    
-    return this.http.get(rssUrl, { responseType: 'text' }).pipe(
-      timeout(10000),
-      map(response => {
-        try {
-          // Parse XML to get first video entry
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(response, 'text/xml');
-          
-          // Get first entry (latest video)
-          const entry = xmlDoc.querySelector('entry');
-          if (entry) {
-            const videoIdElement = entry.querySelector('yt\\:videoId, videoId');
-            if (videoIdElement) {
-              const videoId = videoIdElement.textContent;
-              if (videoId) {
-                const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                this.cacheVideoUrl(videoUrl);
-                return videoUrl;
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing RSS feed:', error);
-        }
-        return null;
-      }),
-      catchError(error => {
-        console.warn('RSS feed fetch failed, trying channel page:', error);
-        throw error; // Re-throw to trigger fallback
-      })
-    );
+    // Method 1: Try to use RSS feed (if we can get channel ID)
+    // For now, let's try parsing the channel page directly which is more reliable
+    return this.fetchLatestVideoFromChannelPage();
   }
 
   /**

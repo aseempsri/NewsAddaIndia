@@ -1,10 +1,7 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstagramService } from '../../services/instagram.service';
 import { YouTubeService } from '../../services/youtube.service';
-
-// YouTube IFrame API types
-declare var YT: any;
 
 @Component({
   selector: 'app-video-banner',
@@ -15,37 +12,24 @@ declare var YT: any;
       <div 
         class="relative w-full h-[264px] md:h-[396px] lg:h-[528px] cursor-pointer"
         (click)="redirectToYouTube()">
-        <!-- YouTube iframe embed -->
-        @if (youtubeVideoId) {
-          <div 
-            id="youtube-player"
-            class="w-full h-full transition-all duration-500 pointer-events-none"
-            [class.opacity-0]="isLoading"
-            [class.blur-xl]="showBlurOverlay">
-          </div>
-        } @else if (!isLoading && !youtubeVideoId) {
-          <!-- Fallback: Show channel link when video can't be loaded -->
-          <div class="w-full h-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center">
-            <div class="text-center text-white p-8">
-              <svg class="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-              <h3 class="text-xl font-bold mb-2">Watch Latest News</h3>
-              <p class="text-sm opacity-90">Click to visit our YouTube channel</p>
-            </div>
-          </div>
-        } @else {
-          <!-- Loading state -->
-          <div class="w-full h-full bg-secondary/30 flex items-center justify-center">
-            <div class="flex flex-col items-center gap-4">
-              <div class="relative w-16 h-16">
-                <div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                <div class="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-              </div>
-              <p class="text-muted-foreground">Loading video...</p>
-            </div>
-          </div>
-        }
+        <video
+          #videoPlayer
+          class="w-full h-full object-cover pointer-events-none transition-all duration-500"
+          [class.opacity-0]="isLoading"
+          [class.blur-xl]="showBlurOverlay"
+          [attr.autoplay]="canStartVideo"
+          muted
+          playsinline
+          [attr.loop]="false"
+          (canplay)="onVideoCanPlay()"
+          (playing)="onVideoPlaying()"
+          (timeupdate)="onTimeUpdate()"
+          (error)="onVideoError()"
+          (loadeddata)="onVideoLoadedData()"
+          (ended)="onVideoEnded()">
+          <source [src]="videoUrl" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
         
         <!-- Loading Animation -->
         @if (isLoading) {
@@ -149,29 +133,25 @@ declare var YT: any;
       </div>
     </section>
   `,
-  styles: [`
-    #youtube-player iframe {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-    }
-  `]
+  styles: []
 })
 export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
+  @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
   @Input() imagesLoaded: boolean = false; // Input to know when images are loaded
 
-  // YouTube video ID and embed URL
-  youtubeVideoId: string | null = null;
-  youtubeEmbedUrl: string | null = null;
+  // Video URL - Fallback to local video file
+  videoUrl = 'assets/videos/Video-279.mp4';
 
-  // Audio state - starts muted for autoplay
+  // Audio state - starts muted for autoplay, then attempts to unmute
   isMuted = true;
+  private shouldBeUnmuted = false; // Track desired unmuted state
 
   // Loading state
   isLoading = true;
   
   // Control when video can start (only after images are loaded)
   canStartVideo = false;
+
 
   // Video segment control
   // Play from 4:19 (259s) to 4:28 (268s)
@@ -182,7 +162,6 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   private modalTimer: any = null; // Timer to show modal as fallback
   private pauseTimer: any = null; // Timer for 2-second pause before showing modal
   private youtubeWindow: Window | null = null; // Track opened YouTube window to prevent duplicates
-  private youtubePlayer: any = null; // YouTube player instance
 
   // Social Media URLs
   instagramUrl = 'https://www.instagram.com/newsaddaindialive/';
@@ -198,189 +177,63 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   ) { }
 
   ngOnInit() {
-    // Default video ID - update this when you upload a new video
-    const defaultVideoId = 'yllJ8l6B6r8';
-    
-    // Fetch the latest YouTube video URL and set up embed
+    // Keep video muted by default
+    this.shouldBeUnmuted = false;
+
+    // Attempt to fetch the latest Instagram reel
+    this.instagramService.getLatestReelVideoUrl().subscribe(
+      (reelVideoUrl) => {
+        if (reelVideoUrl) {
+          this.videoUrl = reelVideoUrl;
+          this.isLoading = true; // Reset loading state when URL changes
+          this.showBlurOverlay = false; // Reset blur overlay
+          console.log('Using latest Instagram reel:', reelVideoUrl);
+        } else {
+          console.log('Using fallback video:', this.videoUrl);
+        }
+      }
+    );
+
+    // Fetch the latest YouTube video URL
     this.youtubeService.getLatestVideoUrl().subscribe(
       (latestVideoUrl) => {
         if (latestVideoUrl) {
           this.youtubeLatestVideoUrl = latestVideoUrl;
-          // Extract video ID from URL
-          const videoId = this.extractVideoIdFromUrl(latestVideoUrl);
-          if (videoId) {
-            this.setupYouTubePlayer(videoId);
-          } else {
-            console.error('Could not extract video ID from URL:', latestVideoUrl);
-            // Use default video as fallback
-            this.setupYouTubePlayer(defaultVideoId);
-          }
+          console.log('Latest YouTube video URL:', latestVideoUrl);
         } else {
-          // Fallback: Use default video ID
-          console.log('Could not fetch latest video, using default video ID:', defaultVideoId);
-          this.youtubeLatestVideoUrl = `https://www.youtube.com/watch?v=${defaultVideoId}`;
-          this.setupYouTubePlayer(defaultVideoId);
+          // Fallback to channel URL if we can't fetch latest video
+          this.youtubeLatestVideoUrl = this.youtubeUrl;
+          console.log('Using channel URL as fallback:', this.youtubeUrl);
         }
-      },
-      (error) => {
-        // On error, use default video ID
-        console.warn('Error fetching latest video, using default video ID:', defaultVideoId);
-        this.youtubeLatestVideoUrl = `https://www.youtube.com/watch?v=${defaultVideoId}`;
-        this.setupYouTubePlayer(defaultVideoId);
       }
     );
   }
 
-  /**
-   * Setup YouTube player with given video ID
-   */
-  private setupYouTubePlayer(videoId: string) {
-    this.youtubeVideoId = videoId;
-    // Create embed URL with autoplay, mute, and start time
-    this.youtubeEmbedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&start=${this.VIDEO_START}&end=${this.VIDEO_END}&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1&origin=${window.location.origin}`;
-    console.log('YouTube video ID:', videoId);
-    console.log('YouTube embed URL:', this.youtubeEmbedUrl);
-    
-    // Load YouTube IFrame API
-    this.loadYouTubeAPI();
-  }
-
-  /**
-   * Extract video ID from YouTube URL
-   */
-  private extractVideoIdFromUrl(url: string): string | null {
-    if (!url) return null;
-    
-    const patterns = [
-      /[?&]v=([a-zA-Z0-9_-]{11})/,  // ?v=VIDEO_ID or &v=VIDEO_ID
-      /youtu\.be\/([a-zA-Z0-9_-]{11})/,  // youtu.be/VIDEO_ID
-      /\/embed\/([a-zA-Z0-9_-]{11})/,   // /embed/VIDEO_ID
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Load YouTube IFrame API
-   */
-  private loadYouTubeAPI() {
-    // Check if API is already loaded
-    if ((window as any).YT && (window as any).YT.Player) {
-      this.initializeYouTubePlayer();
-      return;
-    }
-
-    // Load the API script
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-    // Set up callback for when API is ready
-    (window as any).onYouTubeIframeAPIReady = () => {
-      this.initializeYouTubePlayer();
-    };
-  }
-
-  /**
-   * Initialize YouTube player
-   */
-  private initializeYouTubePlayer() {
-    if (!this.youtubeVideoId) return;
-
-    // Wait for images to load before initializing player
-    if (!this.imagesLoaded) {
-      // Check periodically if images are loaded
-      const checkInterval = setInterval(() => {
-        if (this.imagesLoaded) {
-          clearInterval(checkInterval);
-          this.createYouTubePlayer();
-        }
-      }, 100);
-      return;
-    }
-
-    this.createYouTubePlayer();
-  }
-
-  /**
-   * Create YouTube player instance
-   */
-  private createYouTubePlayer() {
-    if (!this.youtubeVideoId || this.youtubePlayer) return;
-
-    const YT = (window as any).YT;
-    if (!YT || !YT.Player) {
-      console.error('YouTube IFrame API not loaded');
-      return;
-    }
-
-    this.youtubePlayer = new YT.Player('youtube-player', {
-      videoId: this.youtubeVideoId,
-      playerVars: {
-        autoplay: 1,
-        mute: 1,
-        start: this.VIDEO_START,
-        end: this.VIDEO_END,
-        controls: 0,
-        modestbranding: 1,
-        rel: 0,
-        playsinline: 1,
-        enablejsapi: 1,
-        origin: window.location.origin
-      },
-      events: {
-        onReady: (event: any) => {
-          console.log('YouTube player ready');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-          
-          // Start video playback
-          if (this.imagesLoaded) {
-            event.target.playVideo();
-            this.startVideoPlayback();
-          }
-        },
-        onStateChange: (event: any) => {
-          // YT.PlayerState.PLAYING = 1
-          // YT.PlayerState.PAUSED = 2
-          // YT.PlayerState.ENDED = 0
-          if (event.data === 1) { // Playing
-            this.isLoading = false;
-            this.cdr.detectChanges();
-          } else if (event.data === 0) { // Ended
-            this.onVideoEnded();
-          }
-        },
-        onError: (event: any) => {
-          console.error('YouTube player error:', event.data);
-          this.onVideoError();
-        }
-      }
-    });
-  }
-
   ngAfterViewInit() {
-    // YouTube player will be initialized when API loads and video ID is available
+    // Ensure video element is properly initialized
+    if (this.videoPlayer?.nativeElement) {
+      const video = this.videoPlayer.nativeElement;
+      video.muted = true;
+      this.isMuted = true;
+
+      // Load the video source but don't autoplay yet
+      video.load();
+      // Pause initially - will start when images are loaded
+      video.pause();
+    }
   }
 
   ngOnChanges(changes: SimpleChanges) {
     // When images are loaded, allow video to start
     if (changes['imagesLoaded'] && changes['imagesLoaded'].currentValue === true) {
       this.canStartVideo = true;
-      // Initialize YouTube player if video ID is available
-      if (this.youtubeVideoId && !this.youtubePlayer) {
-        this.initializeYouTubePlayer();
-      } else if (this.youtubePlayer) {
-        // Player already exists, start playback
-        this.startVideoPlayback();
+      // Start the video if it's ready
+      if (this.videoPlayer?.nativeElement) {
+        const video = this.videoPlayer.nativeElement;
+        // Check if video is ready to play
+        if (video.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+          this.startVideoPlayback();
+        }
       }
     }
   }
@@ -388,12 +241,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   toggleAudio(event: Event) {
     event.stopPropagation(); // Prevent triggering the click on the video container
     this.isMuted = !this.isMuted;
-    if (this.youtubePlayer) {
-      if (this.isMuted) {
-        this.youtubePlayer.mute();
-      } else {
-        this.youtubePlayer.unMute();
-      }
+    if (this.videoPlayer?.nativeElement) {
+      this.videoPlayer.nativeElement.muted = this.isMuted;
     }
   }
 
@@ -407,31 +256,143 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
     }
   }
 
+  onVideoLoadedData() {
+    // Video data loaded, set initial time
+    if (this.videoPlayer?.nativeElement) {
+      const video = this.videoPlayer.nativeElement;
+      // Ensure video is muted for autoplay
+      video.muted = true;
+      this.isMuted = true;
+
+      // Explicitly disable looping
+      video.loop = false;
+
+      // Reset blur overlay
+      this.showBlurOverlay = false;
+
+      // Clear any existing timers
+      if (this.modalTimer) {
+        clearTimeout(this.modalTimer);
+        this.modalTimer = null;
+      }
+      if (this.pauseTimer) {
+        clearTimeout(this.pauseTimer);
+        this.pauseTimer = null;
+      }
+
+      // Set initial time to video start (4:19)
+      video.currentTime = this.VIDEO_START;
+      console.log('Video loaded, set to start time (4:19):', this.VIDEO_START);
+    }
+  }
+
+  onVideoCanPlay() {
+    // Video is ready to play
+    console.log('Video can play');
+    if (this.videoPlayer?.nativeElement) {
+      const video = this.videoPlayer.nativeElement;
+
+      // Ensure video is muted for autoplay
+      video.muted = true;
+      this.isMuted = true;
+
+      // Explicitly disable looping
+      video.loop = false;
+
+      // Set video start time (4:19)
+      if (video.currentTime < this.VIDEO_START || video.currentTime > this.VIDEO_END) {
+        video.currentTime = this.VIDEO_START;
+      }
+
+      // Reset blur overlay
+      this.showBlurOverlay = false;
+
+      // Clear any existing timers
+      if (this.modalTimer) {
+        clearTimeout(this.modalTimer);
+        this.modalTimer = null;
+      }
+      if (this.pauseTimer) {
+        clearTimeout(this.pauseTimer);
+        this.pauseTimer = null;
+      }
+
+      // Only start video if images are loaded
+      if (this.imagesLoaded) {
+        this.startVideoPlayback();
+      } else {
+        // Video is ready but waiting for images - keep it paused
+        video.pause();
+        this.isLoading = true;
+      }
+    }
+  }
 
   private startVideoPlayback() {
-    if (!this.youtubePlayer || !this.imagesLoaded) {
+    if (!this.videoPlayer?.nativeElement || !this.imagesLoaded) {
       return;
     }
 
+    const video = this.videoPlayer.nativeElement;
+
     // Set a fallback timer to show modal after 9 seconds (video play) + 3 seconds (pause) = 12 seconds total
     this.modalTimer = setTimeout(() => {
-      if (!this.showBlurOverlay && !this.pauseTimer && this.youtubePlayer) {
+      if (!this.showBlurOverlay && !this.pauseTimer && this.videoPlayer?.nativeElement) {
         console.log('Fallback timer: Showing modal after 12 seconds (9s play + 3s pause)');
-        this.youtubePlayer.pauseVideo();
+        const video = this.videoPlayer.nativeElement;
+        video.pause();
+        video.loop = false;
         this.showBlurOverlay = true;
         this.cdr.detectChanges();
       }
     }, 12000); // 12 seconds total (9 seconds video + 3 seconds pause)
 
-    // YouTube player will handle playback automatically
-    // The onStateChange event will handle the rest
+    // Try to play the video
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log('Video playing from 4:19 (after images loaded)');
+          this.isLoading = false;
+        })
+        .catch((error) => {
+          console.warn('Autoplay prevented:', error);
+          // Hide loading even if autoplay fails
+          this.isLoading = false;
+        });
+    } else {
+      // Fallback for older browsers
+      this.isLoading = false;
+    }
   }
 
-  onVideoEnded() {
-    // Video ended (reached end time), pause and show modal after delay
-    if (this.youtubePlayer && !this.showBlurOverlay && !this.pauseTimer) {
-      console.log('Video reached end time, pausing for 3 seconds before showing modal');
-      this.youtubePlayer.pauseVideo();
+  onVideoPlaying() {
+    // Video started playing, now attempt to unmute if desired
+    if (this.shouldBeUnmuted && this.videoPlayer?.nativeElement) {
+      const video = this.videoPlayer.nativeElement;
+      // Attempt to unmute after video starts playing
+      video.muted = false;
+      this.isMuted = false;
+    }
+  }
+
+  onTimeUpdate() {
+    if (!this.videoPlayer?.nativeElement) return;
+
+    const video = this.videoPlayer.nativeElement;
+    const currentTime = video.currentTime;
+
+    // Log current time for debugging (only every second to avoid spam)
+    if (Math.floor(currentTime) % 1 === 0 && currentTime >= this.VIDEO_START) {
+      console.log(`Video time: ${currentTime.toFixed(1)}s (target: ${this.VIDEO_END}s)`);
+    }
+
+    // Check if we've reached the end (4:28)
+    if (currentTime >= this.VIDEO_END && !this.showBlurOverlay && !this.pauseTimer) {
+      console.log('Video reached 4:28, pausing for 3 seconds before showing modal');
+      video.pause();
+      video.loop = false; // Ensure no looping
 
       // Clear the fallback timer since we're handling it now
       if (this.modalTimer) {
@@ -444,8 +405,24 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
         console.log('3-second pause completed, showing modal');
         this.showBlurOverlay = true;
         this.pauseTimer = null;
-        this.cdr.detectChanges();
+        this.cdr.detectChanges(); // Force change detection
+        console.log('Modal should be visible now, showBlurOverlay:', this.showBlurOverlay);
       }, this.PAUSE_DURATION);
+    } else if (currentTime < this.VIDEO_START) {
+      // If video somehow goes before start time, reset to start
+      console.log('Video went before start time, resetting to 4:19');
+      video.currentTime = this.VIDEO_START;
+    }
+  }
+
+  onVideoEnded() {
+    // Prevent default looping behavior and show modal
+    if (this.videoPlayer?.nativeElement && !this.showBlurOverlay) {
+      const video = this.videoPlayer.nativeElement;
+      video.loop = false;
+      console.log('Video ended, showing modal');
+      this.showBlurOverlay = true;
+      this.cdr.detectChanges();
     }
   }
 
@@ -470,10 +447,10 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   }
 
   onVideoError() {
-    // Handle YouTube player error (handled in onError event callback)
-    console.warn('YouTube video failed to load.');
+    // Handle video loading error
+    console.warn('Video banner failed to load. Please check the video file path.');
+    // Hide loading animation even on error
     this.isLoading = false;
-    this.cdr.detectChanges();
   }
 }
 
