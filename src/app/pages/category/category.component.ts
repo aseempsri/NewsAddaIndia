@@ -80,6 +80,9 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                     </div>
                   </div>
 
+                  <!-- Border Line -->
+                  <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
+
                   <div class="p-5 bg-background rounded-b-xl">
                     <h3 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
                       {{ news.title }}

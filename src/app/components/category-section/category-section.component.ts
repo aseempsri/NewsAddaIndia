@@ -79,6 +79,8 @@ interface Category {
                       }
                       <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
                     </div>
+                    <!-- Border Line -->
+                    <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
                     <div class="p-4 bg-background rounded-b-xl">
                       <div class="flex items-start justify-between gap-2">
                         <div class="flex-1">

@@ -26,8 +26,8 @@ interface SideNews {
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
-            <article class="news-card group h-full">
-              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden rounded-t-xl bg-secondary/20">
+            <article class="group h-full relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50">
+              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (featuredNews.imageLoading || !featuredNews.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -42,80 +42,44 @@ interface SideNews {
                   <img
                     [src]="featuredNews.image"
                     [alt]="featuredNews.title"
-                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in" />
+                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 }
-                <!-- Desktop: Gradient overlay for text readability -->
-                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent hidden lg:block"></div>
-                
                 <!-- Category Badge - Top Left -->
-                <div class="absolute top-4 left-4 z-20 flex gap-2">
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
+                <div class="absolute top-5 left-5 z-20 flex gap-2">
+                  <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-red-600 text-white shadow-lg backdrop-blur-sm">
                     BREAKING
                   </span>
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-foreground">
+                  <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-sm">
                     {{ featuredNews.category }}
                   </span>
                 </div>
-                
-                <!-- Desktop: Content Overlay (hidden on mobile) -->
-                <div class="absolute bottom-0 left-0 right-0 p-6 lg:p-8 hidden lg:block">
-                  <h2 class="font-display text-2xl lg:text-4xl font-bold leading-tight mb-3 text-foreground">
-                    {{ featuredNews.titleEn }}
-                  </h2>
-                  <p class="text-muted-foreground text-sm lg:text-base mb-4 line-clamp-2">
-                    {{ featuredNews.excerpt }}
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span class="flex items-center gap-1.5">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      {{ featuredNews.author }}
-                    </span>
+              </div>
+
+              <!-- Bottom Section with Headline and Read More -->
+              <div class="p-5 lg:p-6 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
+                <h2 class="font-display text-xl lg:text-3xl font-bold leading-tight mb-3 text-foreground">
+                  {{ featuredNews.titleEn }}
+                </h2>
+                <p class="text-muted-foreground text-sm lg:text-base mb-4 line-clamp-2">
+                  {{ featuredNews.excerpt }}
+                </p>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3 text-sm text-muted-foreground">
                     <span class="flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {{ featuredNews.date }}
+                      {{ featuredNews.time }}
                     </span>
                   </div>
-                </div>
-              </div>
-
-              <!-- Mobile: Content below image (shown on mobile, hidden on desktop) -->
-              <div class="p-5 lg:hidden bg-background rounded-b-xl">
-                <h2 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                  {{ featuredNews.titleEn }}
-                </h2>
-                <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
-                  {{ featuredNews.excerpt }}
-                </p>
-                <div class="flex items-center justify-between">
-                  <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {{ featuredNews.time }}
-                  </span>
                   <button 
-                    class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
+                    class="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 cursor-pointer touch-manipulation"
                     type="button"
                     (click)="openNewsModal(featuredNews)" 
                     (touchend)="openNewsModal(featuredNews)">
                     Read more
                   </button>
                 </div>
-              </div>
-
-              <!-- Desktop: Read More Button (hidden on mobile) -->
-              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block flex justify-end bg-background rounded-b-xl">
-                <button 
-                  class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
-                  type="button"
-                  (click)="openNewsModal(featuredNews)" 
-                  (touchend)="openNewsModal(featuredNews)">
-                  Read more
-                </button>
               </div>
             </article>
           </div>
@@ -124,9 +88,9 @@ interface SideNews {
           <div class="flex flex-col gap-6">
             @for (news of sideNews; track $index; let i = $index) {
               <article
-                class="news-card group flex-1"
+                class="group flex-1 relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50 hover:-translate-y-1"
                 [style.animation-delay]="i * 100 + 'ms'">
-                <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                <div class="relative aspect-[16/10] overflow-hidden">
                   <!-- Loading Animation - Show while image is loading -->
                   @if (news.imageLoading || !news.image) {
                     <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -138,29 +102,37 @@ interface SideNews {
                     <img
                       [src]="news.image"
                       [alt]="news.title"
-                      class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in" />
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   }
-                  <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
                   
-                  <div class="absolute bottom-0 left-0 right-0 p-4">
-                    <span class="category-badge text-primary-foreground text-xs mb-2 inline-block">
+                  <!-- Category Badge -->
+                  <div class="absolute top-4 left-4 z-20">
+                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-sm">
                       {{ news.category }}
                     </span>
-                    <h3 class="font-display text-lg font-semibold leading-tight text-foreground line-clamp-2">
-                      {{ news.title }}
-                    </h3>
                   </div>
                 </div>
 
-                <div class="p-4 flex items-center justify-between border-t border-border/30 bg-background rounded-b-xl">
-                  <span class="text-xs text-muted-foreground">2 hours ago</span>
-                  <button 
-                    class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
-                    type="button"
-                    (click)="openNewsModalFromSide(news, $index)" 
-                    (touchend)="openNewsModalFromSide(news, $index)">
-                    Read more
-                  </button>
+                <!-- Bottom Section with Headline -->
+                <div class="p-4 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
+                  <h3 class="font-display text-lg font-bold leading-tight mb-3 text-foreground line-clamp-2">
+                    {{ news.title }}
+                  </h3>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      2 hours ago
+                    </span>
+                    <button 
+                      class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 cursor-pointer touch-manipulation"
+                      type="button"
+                      (click)="openNewsModalFromSide(news, $index)" 
+                      (touchend)="openNewsModalFromSide(news, $index)">
+                      Read more
+                    </button>
+                  </div>
                 </div>
               </article>
             }
