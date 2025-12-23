@@ -84,11 +84,23 @@ interface Category {
                     <div class="p-4 bg-background rounded-b-xl">
                       <div class="flex items-start justify-between gap-2">
                         <div class="flex-1">
-                          <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
-                            {{ category.articles[0].title }}
-                          </h3>
-                          <span class="text-xs text-muted-foreground mt-2 inline-block">
-                            {{ category.articles[0].time }}
+                          <div class="flex items-start gap-2 mb-2">
+                            <div class="flex-shrink-0 mt-0.5">
+                              @if (category.title === 'Sports') {
+                                <svg class="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+                              } @else if (category.title === 'Entertainment') {
+                                <svg class="w-5 h-5 text-pink-600" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                              } @else {
+                                <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                              }
+                            </div>
+                            <h3 [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors ' + getHeadlineColor(category.title)">
+                              {{ category.articles[0].title }}
+                            </h3>
+                          </div>
+                          <span class="text-xs font-medium mt-2 inline-block flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                            <span class="text-blue-600 dark:text-blue-400 font-bold">{{ category.articles[0].time }}</span>
                           </span>
                         </div>
                         <button 
@@ -122,11 +134,12 @@ interface Category {
                       }
                     </div>
                     <div class="flex-1 min-w-0">
-                      <h4 class="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                      <h4 [class]="'font-bold text-sm leading-tight group-hover:opacity-90 transition-colors line-clamp-2 ' + getHeadlineColor(category.title)">
                         {{ article.title }}
                       </h4>
-                      <span class="text-xs text-muted-foreground mt-1.5 inline-block">
-                        {{ article.time }}
+                      <span class="text-xs font-medium mt-1.5 inline-block flex items-center gap-1">
+                        <svg class="w-3 h-3 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                        <span class="text-blue-600 dark:text-blue-400 font-bold">{{ article.time }}</span>
                       </span>
                     </div>
                     <button 
@@ -318,5 +331,18 @@ export class CategorySectionComponent implements OnInit {
     this.modalService.closeModal();
   }
 
+  getHeadlineColor(category: string): string {
+    const colors: Record<string, string> = {
+      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent',
+      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent',
+      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent',
+      'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent',
+      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent',
+      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent',
+      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent',
+    };
+    return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent';
+  }
 }
 

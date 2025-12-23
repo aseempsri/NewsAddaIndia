@@ -57,23 +57,44 @@ interface SideNews {
 
               <!-- Bottom Section with Headline and Read More -->
               <div class="p-5 lg:p-6 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
-                <h2 class="font-display text-xl lg:text-3xl font-bold leading-tight mb-3 text-foreground">
-                  {{ featuredNews.titleEn }}
-                </h2>
+                <div class="flex items-start gap-3 mb-3">
+                  <div class="flex-shrink-0 mt-1">
+                    @if (featuredNews.category === 'National') {
+                      <svg class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    } @else if (featuredNews.category === 'International') {
+                      <svg class="w-6 h-6 text-purple-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    } @else if (featuredNews.category === 'Politics') {
+                      <svg class="w-6 h-6 text-red-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    } @else if (featuredNews.category === 'Health') {
+                      <svg class="w-6 h-6 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    } @else if (featuredNews.category === 'Sports') {
+                      <svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+                    } @else if (featuredNews.category === 'Business') {
+                      <svg class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                    } @else if (featuredNews.category === 'Entertainment') {
+                      <svg class="w-6 h-6 text-pink-600" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    } @else if (featuredNews.category === 'Technology') {
+                      <svg class="w-6 h-6 text-cyan-600" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
+                    } @else {
+                      <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    }
+                  </div>
+                  <h2 [class]="'font-display text-xl lg:text-3xl font-bold leading-tight ' + getHeadlineColor(featuredNews.category)">
+                    {{ featuredNews.titleEn }}
+                  </h2>
+                </div>
                 <p class="text-muted-foreground text-sm lg:text-base mb-4 line-clamp-2">
                   {{ featuredNews.excerpt }}
                 </p>
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span class="flex items-center gap-1.5">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {{ featuredNews.time }}
+                  <div class="flex items-center gap-3 text-sm">
+                    <span class="flex items-center gap-1.5 font-medium">
+                      <svg class="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">{{ featuredNews.time }}</span>
                     </span>
                   </div>
                   <button 
-                    class="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 cursor-pointer touch-manipulation"
+                    class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
                     type="button"
                     (click)="openNewsModal(featuredNews)" 
                     (touchend)="openNewsModal(featuredNews)">
@@ -115,18 +136,27 @@ interface SideNews {
 
                 <!-- Bottom Section with Headline -->
                 <div class="p-4 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
-                  <h3 class="font-display text-lg font-bold leading-tight mb-3 text-foreground line-clamp-2">
-                    {{ news.title }}
-                  </h3>
+                  <div class="flex items-start gap-2 mb-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                      @if (news.category === 'Sports') {
+                        <svg class="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+                      } @else if (news.category === 'Business') {
+                        <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                      } @else {
+                        <svg class="w-5 h-5" [class]="getCategoryIconColor(news.category)" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      }
+                    </div>
+                    <h3 [class]="'font-display text-lg font-bold leading-tight line-clamp-2 ' + getHeadlineColor(news.category)">
+                      {{ news.title }}
+                    </h3>
+                  </div>
                   <div class="flex items-center justify-between">
-                    <span class="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      2 hours ago
+                    <span class="text-xs font-medium flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">2 hours ago</span>
                     </span>
                     <button 
-                      class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 cursor-pointer touch-manipulation"
+                      class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
                       type="button"
                       (click)="openNewsModalFromSide(news, $index)" 
                       (touchend)="openNewsModalFromSide(news, $index)">
@@ -392,6 +422,34 @@ export class HeroSectionComponent implements OnInit {
 
   closeModal() {
     this.modalService.closeModal();
+  }
+
+  getHeadlineColor(category: string): string {
+    const colors: Record<string, string> = {
+      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent',
+      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent',
+      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent',
+      'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent',
+      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent',
+      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent',
+      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent',
+    };
+    return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent';
+  }
+
+  getCategoryIconColor(category: string): string {
+    const colors: Record<string, string> = {
+      'National': 'text-blue-600',
+      'International': 'text-purple-600',
+      'Politics': 'text-red-600',
+      'Health': 'text-green-600',
+      'Sports': 'text-orange-600',
+      'Business': 'text-blue-600',
+      'Entertainment': 'text-pink-600',
+      'Technology': 'text-cyan-600',
+    };
+    return colors[category] || 'text-primary';
   }
 
 }
