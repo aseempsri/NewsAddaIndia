@@ -16,15 +16,14 @@ import { YouTubeService } from '../../services/youtube.service';
           #videoPlayer
           class="w-full h-full object-cover pointer-events-none transition-all duration-500"
           [class.opacity-0]="isLoading"
-          [class.blur-xl]="showBlurOverlay"
-          [attr.autoplay]="canStartVideo"
+          autoplay
           muted
           playsinline
-          [attr.loop]="false"
+          preload="auto"
           (canplay)="onVideoCanPlay()"
           (playing)="onVideoPlaying()"
           (timeupdate)="onTimeUpdate()"
-          (error)="onVideoError()"
+          (error)="onVideoError($event)"
           (loadeddata)="onVideoLoadedData()"
           (ended)="onVideoEnded()">
           <source [src]="videoUrl" type="video/mp4" />
@@ -51,31 +50,6 @@ import { YouTubeService } from '../../services/youtube.service';
         
         <!-- Subtle shimmer effect -->
         <div class="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)] pointer-events-none"></div>
-        
-        <!-- Blur Overlay Modal (shown after 20 seconds) - Only on video banner section -->
-        @if (showBlurOverlay) {
-          <div class="absolute inset-0 z-30 flex items-center justify-center" (click)="closeModal()">
-            <!-- Backdrop -->
-            <div class="absolute inset-0 bg-background/95 backdrop-blur-xl"></div>
-            <!-- Modal Content -->
-            <div class="relative z-40 bg-background border-2 border-primary rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" (click)="$event.stopPropagation()">
-              <div class="text-center">
-              <h3 class="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                Watch latest news on youtube
-              </h3>
-              <p class="text-muted-foreground mb-6">
-                Continue watching on YouTube
-              </p>
-                <button 
-                  (click)="closeModalAndRedirect($event)" 
-                  class="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold">
-                  Watch on YouTube
-                </button>
-              </div>
-            </div>
-          </div>
-        }
-        
         <!-- Social Media Icons (Left side) -->
         <div class="absolute bottom-4 left-4 z-10 flex items-center gap-3" [class.opacity-0]="isLoading">
           <a [href]="instagramUrl" target="_blank" rel="noopener noreferrer" 
@@ -148,19 +122,16 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
 
   // Loading state
   isLoading = true;
-  
+
   // Control when video can start (only after images are loaded)
   canStartVideo = false;
+  private hasStartedPlaying = false; // Prevent multiple play attempts
 
 
-  // Video segment control
-  // Play from 4:19 (259s) to 4:28 (268s)
-  private readonly VIDEO_START = 259; // 4:19 in seconds
-  private readonly VIDEO_END = 268; // 4:28 in seconds
-  private readonly PAUSE_DURATION = 3000; // 3 seconds pause before showing modal
-  showBlurOverlay = false; // Track if we should show blur overlay (public for template access)
-  private modalTimer: any = null; // Timer to show modal as fallback
-  private pauseTimer: any = null; // Timer for 2-second pause before showing modal
+  // Video loop control
+  private readonly PAUSE_DURATION = 3000; // 3 seconds pause before looping
+  private pauseTimer: any = null; // Timer for pause before looping back
+  private isPausedForLoop = false; // Track if video is paused for looping
   private youtubeWindow: Window | null = null; // Track opened YouTube window to prevent duplicates
 
   // Social Media URLs
@@ -186,7 +157,6 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
         if (reelVideoUrl) {
           this.videoUrl = reelVideoUrl;
           this.isLoading = true; // Reset loading state when URL changes
-          this.showBlurOverlay = false; // Reset blur overlay
           console.log('Using latest Instagram reel:', reelVideoUrl);
         } else {
           console.log('Using fallback video:', this.videoUrl);
@@ -215,25 +185,50 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       const video = this.videoPlayer.nativeElement;
       video.muted = true;
       this.isMuted = true;
+      video.loop = false;
 
-      // Load the video source but don't autoplay yet
+      // Load the video source
       video.load();
-      // Pause initially - will start when images are loaded
-      video.pause();
+
+      console.log('Video element initialized, URL:', this.videoUrl);
+      console.log('Video readyState:', video.readyState);
+      console.log('Images loaded:', this.imagesLoaded);
+
+      // If images are already loaded, start playback
+      if (this.imagesLoaded && !this.hasStartedPlaying) {
+        this.canStartVideo = true;
+        // Small delay to ensure video is loaded
+        setTimeout(() => {
+          if (!this.hasStartedPlaying) {
+            this.hasStartedPlaying = true;
+            this.startVideoPlayback();
+          }
+        }, 500);
+      } else {
+        console.log('Waiting for images to load before starting video');
+      }
+    } else {
+      console.error('Video player element not found in ngAfterViewInit');
     }
   }
 
   ngOnChanges(changes: SimpleChanges) {
     // When images are loaded, allow video to start
-    if (changes['imagesLoaded'] && changes['imagesLoaded'].currentValue === true) {
+    if (changes['imagesLoaded'] && changes['imagesLoaded'].currentValue === true && !this.hasStartedPlaying) {
       this.canStartVideo = true;
       // Start the video if it's ready
       if (this.videoPlayer?.nativeElement) {
         const video = this.videoPlayer.nativeElement;
+        // Ensure video is muted for autoplay
+        video.muted = true;
+        this.isMuted = true;
+
         // Check if video is ready to play
-        if (video.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+        if (video.readyState >= 3 && !this.hasStartedPlaying) { // HAVE_FUTURE_DATA or higher
+          this.hasStartedPlaying = true;
           this.startVideoPlayback();
         }
+        // Note: onVideoCanPlay() will handle the case when video becomes ready
       }
     }
   }
@@ -249,7 +244,7 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   redirectToYouTube() {
     // Use latest video URL if available, otherwise fallback to channel URL
     const urlToOpen = this.youtubeLatestVideoUrl || this.youtubeUrl;
-    
+
     // Open YouTube link in a new tab (only if not already opened)
     if (!this.youtubeWindow || this.youtubeWindow.closed) {
       this.youtubeWindow = window.open(urlToOpen, '_blank', 'noopener,noreferrer');
@@ -264,30 +259,27 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       video.muted = true;
       this.isMuted = true;
 
-      // Explicitly disable looping
+      // Explicitly disable looping (we handle looping manually)
       video.loop = false;
 
-      // Reset blur overlay
-      this.showBlurOverlay = false;
-
-      // Clear any existing timers
-      if (this.modalTimer) {
-        clearTimeout(this.modalTimer);
-        this.modalTimer = null;
-      }
+      // Clear any existing pause timer
       if (this.pauseTimer) {
         clearTimeout(this.pauseTimer);
         this.pauseTimer = null;
       }
 
-      // Set initial time to video start (4:19)
-      video.currentTime = this.VIDEO_START;
-      console.log('Video loaded, set to start time (4:19):', this.VIDEO_START);
+      // Start from beginning
+      video.currentTime = 0;
+      console.log('Video loaded, ready to play from start');
     }
   }
 
   onVideoCanPlay() {
-    // Video is ready to play
+    // Video is ready to play - only start once
+    if (this.hasStartedPlaying) {
+      return; // Already started, prevent loop
+    }
+
     console.log('Video can play');
     if (this.videoPlayer?.nativeElement) {
       const video = this.videoPlayer.nativeElement;
@@ -296,56 +288,54 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       video.muted = true;
       this.isMuted = true;
 
-      // Explicitly disable looping
+      // Explicitly disable automatic looping (we handle looping manually)
       video.loop = false;
 
-      // Set video start time (4:19)
-      if (video.currentTime < this.VIDEO_START || video.currentTime > this.VIDEO_END) {
-        video.currentTime = this.VIDEO_START;
-      }
-
-      // Reset blur overlay
-      this.showBlurOverlay = false;
-
-      // Clear any existing timers
-      if (this.modalTimer) {
-        clearTimeout(this.modalTimer);
-        this.modalTimer = null;
-      }
+      // Clear any existing pause timer
       if (this.pauseTimer) {
         clearTimeout(this.pauseTimer);
         this.pauseTimer = null;
       }
 
-      // Only start video if images are loaded
-      if (this.imagesLoaded) {
-        this.startVideoPlayback();
-      } else {
-        // Video is ready but waiting for images - keep it paused
-        video.pause();
-        this.isLoading = true;
+      // Start video if images are loaded and not already started
+      if (this.imagesLoaded && this.canStartVideo && !this.hasStartedPlaying) {
+        this.hasStartedPlaying = true; // Mark as started
+        // Small delay to ensure everything is ready
+        setTimeout(() => {
+          this.startVideoPlayback();
+        }, 100);
       }
     }
   }
 
   private startVideoPlayback() {
-    if (!this.videoPlayer?.nativeElement || !this.imagesLoaded) {
+    if (!this.videoPlayer?.nativeElement) {
+      console.warn('Video player element not found');
+      return;
+    }
+
+    if (!this.imagesLoaded) {
+      console.log('Waiting for images to load before starting video');
       return;
     }
 
     const video = this.videoPlayer.nativeElement;
 
-    // Set a fallback timer to show modal after 9 seconds (video play) + 3 seconds (pause) = 12 seconds total
-    this.modalTimer = setTimeout(() => {
-      if (!this.showBlurOverlay && !this.pauseTimer && this.videoPlayer?.nativeElement) {
-        console.log('Fallback timer: Showing modal after 12 seconds (9s play + 3s pause)');
-        const video = this.videoPlayer.nativeElement;
-        video.pause();
-        video.loop = false;
-        this.showBlurOverlay = true;
-        this.cdr.detectChanges();
-      }
-    }, 12000); // 12 seconds total (9 seconds video + 3 seconds pause)
+    // Don't restart if already playing
+    if (!video.paused && video.currentTime > 0) {
+      console.log('Video is already playing, skipping restart');
+      return;
+    }
+
+    // Ensure video is properly configured
+    video.muted = true;
+    this.isMuted = true;
+    video.loop = false; // We handle looping manually
+
+    // Ensure video starts from beginning
+    if (video.currentTime > 0) {
+      video.currentTime = 0;
+    }
 
     // Try to play the video
     const playPromise = video.play();
@@ -353,16 +343,22 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
-          console.log('Video playing from 4:19 (after images loaded)');
+          console.log('Video playing from start - will loop after completion');
           this.isLoading = false;
+          this.isPausedForLoop = false;
+          this.canStartVideo = true;
         })
         .catch((error) => {
-          console.warn('Autoplay prevented:', error);
+          console.error('Error playing video:', error);
+          console.warn('Autoplay may be prevented by browser. Video will need user interaction to play.');
+          // Reset flag on error so it can retry
+          this.hasStartedPlaying = false;
           // Hide loading even if autoplay fails
           this.isLoading = false;
         });
     } else {
       // Fallback for older browsers
+      console.log('Video play() returned undefined, using fallback');
       this.isLoading = false;
     }
   }
@@ -382,73 +378,66 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
 
     const video = this.videoPlayer.nativeElement;
     const currentTime = video.currentTime;
+    const duration = video.duration;
 
-    // Log current time for debugging (only every second to avoid spam)
-    if (Math.floor(currentTime) % 1 === 0 && currentTime >= this.VIDEO_START) {
-      console.log(`Video time: ${currentTime.toFixed(1)}s (target: ${this.VIDEO_END}s)`);
-    }
-
-    // Check if we've reached the end (4:28)
-    if (currentTime >= this.VIDEO_END && !this.showBlurOverlay && !this.pauseTimer) {
-      console.log('Video reached 4:28, pausing for 3 seconds before showing modal');
+    // Check if video has reached the end (within 0.5 seconds of duration)
+    if (duration > 0 && currentTime >= duration - 0.5 && !this.pauseTimer && !this.isPausedForLoop) {
+      console.log('Video reached end, pausing for 3 seconds before looping');
       video.pause();
-      video.loop = false; // Ensure no looping
+      this.isPausedForLoop = true;
+      video.loop = false; // Ensure no automatic looping
 
-      // Clear the fallback timer since we're handling it now
-      if (this.modalTimer) {
-        clearTimeout(this.modalTimer);
-        this.modalTimer = null;
-      }
-
-      // Wait 3 seconds before showing modal
+      // Wait 3 seconds before looping back to start
       this.pauseTimer = setTimeout(() => {
-        console.log('3-second pause completed, showing modal');
-        this.showBlurOverlay = true;
+        console.log('3-second pause completed, looping back to start');
+        video.currentTime = 0;
+        this.isPausedForLoop = false;
+        video.play().catch((error) => {
+          console.warn('Error playing video after pause:', error);
+        });
         this.pauseTimer = null;
-        this.cdr.detectChanges(); // Force change detection
-        console.log('Modal should be visible now, showBlurOverlay:', this.showBlurOverlay);
       }, this.PAUSE_DURATION);
-    } else if (currentTime < this.VIDEO_START) {
-      // If video somehow goes before start time, reset to start
-      console.log('Video went before start time, resetting to 4:19');
-      video.currentTime = this.VIDEO_START;
     }
   }
 
   onVideoEnded() {
-    // Prevent default looping behavior and show modal
-    if (this.videoPlayer?.nativeElement && !this.showBlurOverlay) {
+    // Video ended event - pause and restart after 3 seconds
+    if (this.videoPlayer?.nativeElement && !this.pauseTimer) {
       const video = this.videoPlayer.nativeElement;
       video.loop = false;
-      console.log('Video ended, showing modal');
-      this.showBlurOverlay = true;
-      this.cdr.detectChanges();
+      this.isPausedForLoop = true;
+
+      console.log('Video ended, pausing for 3 seconds before looping');
+
+      // Wait 3 seconds before looping back to start
+      this.pauseTimer = setTimeout(() => {
+        console.log('3-second pause completed, restarting video');
+        video.currentTime = 0;
+        this.isPausedForLoop = false;
+        video.play().catch((error) => {
+          console.warn('Error playing video after end:', error);
+        });
+        this.pauseTimer = null;
+      }, this.PAUSE_DURATION);
     }
   }
 
-  closeModal() {
-    this.showBlurOverlay = false;
-    this.cdr.detectChanges();
-    // Clear timers if modal is closed manually
-    if (this.modalTimer) {
-      clearTimeout(this.modalTimer);
-      this.modalTimer = null;
-    }
-    if (this.pauseTimer) {
-      clearTimeout(this.pauseTimer);
-      this.pauseTimer = null;
-    }
-  }
 
-  closeModalAndRedirect(event: Event) {
-    event.stopPropagation(); // Prevent event bubbling
-    this.closeModal();
-    this.redirectToYouTube();
-  }
-
-  onVideoError() {
+  onVideoError(event: any) {
     // Handle video loading error
-    console.warn('Video banner failed to load. Please check the video file path.');
+    const video = this.videoPlayer?.nativeElement;
+    if (video) {
+      console.error('Video error details:', {
+        error: video.error,
+        code: video.error?.code,
+        message: video.error?.message,
+        networkState: video.networkState,
+        readyState: video.readyState,
+        src: video.src || video.currentSrc,
+        videoUrl: this.videoUrl
+      });
+    }
+    console.warn('Video banner failed to load. Please check the video file path:', this.videoUrl);
     // Hide loading animation even on error
     this.isLoading = false;
   }
