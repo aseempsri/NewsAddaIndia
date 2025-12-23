@@ -79,7 +79,7 @@ interface Category {
                       }
                       <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
                     </div>
-                    <div class="p-4">
+                    <div class="p-4 bg-background rounded-b-xl">
                       <div class="flex items-start justify-between gap-2">
                         <div class="flex-1">
                           <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors">

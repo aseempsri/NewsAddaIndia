@@ -44,7 +44,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                         </div>
                       </div>
                     </div>
-                    <div class="p-5">
+                    <div class="p-5 bg-background rounded-b-xl">
                       <div class="h-4 bg-secondary/50 rounded mb-2 animate-pulse"></div>
                       <div class="h-3 bg-secondary/30 rounded mb-4 animate-pulse"></div>
                     </div>
@@ -80,7 +80,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                     </div>
                   </div>
 
-                  <div class="p-5">
+                  <div class="p-5 bg-background rounded-b-xl">
                     <h3 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
                       {{ news.title }}
                     </h3>

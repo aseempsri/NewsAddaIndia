@@ -83,7 +83,7 @@ interface SideNews {
               </div>
 
               <!-- Mobile: Content below image (shown on mobile, hidden on desktop) -->
-              <div class="p-5 lg:hidden">
+              <div class="p-5 lg:hidden bg-background rounded-b-xl">
                 <h2 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
                   {{ featuredNews.titleEn }}
                 </h2>
@@ -108,7 +108,7 @@ interface SideNews {
               </div>
 
               <!-- Desktop: Read More Button (hidden on mobile) -->
-              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block flex justify-end">
+              <div class="p-4 lg:p-6 border-t border-border/30 hidden lg:block flex justify-end bg-background rounded-b-xl">
                 <button 
                   class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
                   type="button"
@@ -152,7 +152,7 @@ interface SideNews {
                   </div>
                 </div>
 
-                <div class="p-4 flex items-center justify-between border-t border-border/30">
+                <div class="p-4 flex items-center justify-between border-t border-border/30 bg-background rounded-b-xl">
                   <span class="text-xs text-muted-foreground">2 hours ago</span>
                   <button 
                     class="text-primary opacity-80 sm:opacity-60 sm:group-hover:opacity-100 transition-all hover:underline font-medium text-sm cursor-pointer touch-manipulation min-h-[44px] px-2"
