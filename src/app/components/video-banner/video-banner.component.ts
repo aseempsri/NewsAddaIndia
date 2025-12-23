@@ -187,25 +187,22 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       this.isMuted = true;
       video.loop = false;
 
-      // Load the video source
-      video.load();
+      // Don't call video.load() - let autoplay and preload handle it
+      // video.load() can interfere with autoplay
 
       console.log('Video element initialized, URL:', this.videoUrl);
       console.log('Video readyState:', video.readyState);
       console.log('Images loaded:', this.imagesLoaded);
 
-      // If images are already loaded, start playback
-      if (this.imagesLoaded && !this.hasStartedPlaying) {
+      // Check if video is already ready to play
+      if (video.readyState >= 3 && !this.hasStartedPlaying) {
+        console.log('Video already ready, starting playback immediately. ReadyState:', video.readyState);
         this.canStartVideo = true;
-        // Small delay to ensure video is loaded
-        setTimeout(() => {
-          if (!this.hasStartedPlaying) {
-            this.hasStartedPlaying = true;
-            this.startVideoPlayback();
-          }
-        }, 500);
+        this.hasStartedPlaying = true;
+        this.startVideoPlayback();
       } else {
-        console.log('Waiting for images to load before starting video');
+        // Video will start via onVideoCanPlay() event when ready
+        console.log('Video not ready yet. ReadyState:', video.readyState, 'Will wait for canplay event');
       }
     } else {
       console.error('Video player element not found in ngAfterViewInit');
@@ -213,8 +210,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    // When images are loaded, allow video to start
-    if (changes['imagesLoaded'] && changes['imagesLoaded'].currentValue === true && !this.hasStartedPlaying) {
+    // When images are loaded, allow video to start (but don't block on it)
+    if (changes['imagesLoaded'] && !this.hasStartedPlaying) {
       this.canStartVideo = true;
       // Start the video if it's ready
       if (this.videoPlayer?.nativeElement) {
@@ -223,8 +220,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
         video.muted = true;
         this.isMuted = true;
 
-        // Check if video is ready to play
-        if (video.readyState >= 3 && !this.hasStartedPlaying) { // HAVE_FUTURE_DATA or higher
+        // Check if video is ready to play (lower threshold to start earlier)
+        if (video.readyState >= 2 && !this.hasStartedPlaying) { // HAVE_CURRENT_DATA or higher
           this.hasStartedPlaying = true;
           this.startVideoPlayback();
         }
@@ -280,7 +277,7 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       return; // Already started, prevent loop
     }
 
-    console.log('Video can play');
+    console.log('Video can play - starting playback');
     if (this.videoPlayer?.nativeElement) {
       const video = this.videoPlayer.nativeElement;
 
@@ -297,13 +294,23 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
         this.pauseTimer = null;
       }
 
-      // Start video if images are loaded and not already started
-      if (this.imagesLoaded && this.canStartVideo && !this.hasStartedPlaying) {
-        this.hasStartedPlaying = true; // Mark as started
-        // Small delay to ensure everything is ready
-        setTimeout(() => {
-          this.startVideoPlayback();
-        }, 100);
+      // Mark as started and start playback immediately
+      this.hasStartedPlaying = true;
+      this.canStartVideo = true;
+      this.isLoading = false; // Hide loading since video is ready
+
+      // Start video playback - autoplay should work, but ensure it plays
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('Video started playing successfully');
+          })
+          .catch((error) => {
+            console.error('Error playing video in onVideoCanPlay:', error);
+            // Reset flag to allow retry
+            this.hasStartedPlaying = false;
+          });
       }
     }
   }
@@ -314,16 +321,12 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
       return;
     }
 
-    if (!this.imagesLoaded) {
-      console.log('Waiting for images to load before starting video');
-      return;
-    }
-
     const video = this.videoPlayer.nativeElement;
 
-    // Don't restart if already playing
-    if (!video.paused && video.currentTime > 0) {
+    // Don't restart if already playing (unless it's paused for loop)
+    if (!video.paused && video.currentTime > 0 && !this.isPausedForLoop) {
       console.log('Video is already playing, skipping restart');
+      this.isLoading = false;
       return;
     }
 
@@ -332,10 +335,13 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges {
     this.isMuted = true;
     video.loop = false; // We handle looping manually
 
-    // Ensure video starts from beginning
-    if (video.currentTime > 0) {
+    // Ensure video starts from beginning (unless paused for loop)
+    if (video.currentTime > 0 && !this.isPausedForLoop) {
       video.currentTime = 0;
     }
+
+    // Check video ready state
+    console.log('Starting video playback. ReadyState:', video.readyState, 'NetworkState:', video.networkState, 'Paused:', video.paused);
 
     // Try to play the video
     const playPromise = video.play();
