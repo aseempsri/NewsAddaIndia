@@ -18,10 +18,11 @@ interface PendingNews {
   image: string;
   isBreaking: boolean;
   isFeatured: boolean;
-  generatedBy: string;
-  generatedAt: string;
+  generatedBy?: string;
+  generatedAt?: string;
   createdAt: string;
   updatedAt: string;
+  source?: 'pending' | 'unpublished'; // 'pending' from PendingNews, 'unpublished' from News
 }
 
 @Component({
@@ -40,7 +41,7 @@ interface PendingNews {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </a>
-                <h1 class="text-3xl font-bold">Review Posts</h1>
+                <h1 class="text-3xl font-bold">Review Unpublished Posts</h1>
                 <span class="px-3 py-1 text-sm bg-primary/10 text-primary rounded-full">
                   {{ pendingNews.length }} pending
                 </span>
@@ -85,7 +86,7 @@ interface PendingNews {
                         </div>
                       }
                       <!-- Category Badge -->
-                      <div class="absolute top-4 left-4 z-20 flex gap-2">
+                      <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
                         @if (news.isBreaking) {
                           <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
                             BREAKING
@@ -94,6 +95,15 @@ interface PendingNews {
                         <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
                           {{ news.category }}
                         </span>
+                        @if (news.source === 'unpublished') {
+                          <span class="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white">
+                            Unpublished
+                          </span>
+                        } @else {
+                          <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">
+                            Pending
+                          </span>
+                        }
                       </div>
                     </div>
 
@@ -240,12 +250,18 @@ export class AdminReviewPostsComponent implements OnInit {
   publishNews(id: string) {
     if (this.processingIds.has(id)) return;
 
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) return;
+
     this.processingIds.add(id);
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
 
+    // Determine source type
+    const source = news.source || 'pending';
+
     this.http.post<{ success: boolean; message?: string; error?: string }>(
       `${this.getApiUrl()}/api/pending-news/${id}/publish`,
-      {},
+      { source },
       { headers }
     ).subscribe({
       next: (response) => {
@@ -266,12 +282,25 @@ export class AdminReviewPostsComponent implements OnInit {
 
   editNews(news: PendingNews) {
     // Store news in sessionStorage for edit page
-    sessionStorage.setItem('editNews', JSON.stringify(news));
-    this.router.navigate(['/admin/edit', news._id]);
+    if (news.source === 'unpublished') {
+      // For unpublished posts, use the live post edit route
+      sessionStorage.setItem('editLiveNews', JSON.stringify(news));
+      this.router.navigate(['/admin/edit-live', news._id]);
+    } else {
+      // For pending posts, use the pending post edit route
+      sessionStorage.setItem('editNews', JSON.stringify(news));
+      this.router.navigate(['/admin/edit', news._id]);
+    }
   }
 
   deleteNews(id: string) {
-    if (!confirm('Are you sure you want to delete this post?')) {
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) return;
+
+    const source = news.source || 'pending';
+    const sourceText = source === 'unpublished' ? 'unpublished' : 'pending';
+    
+    if (!confirm(`Are you sure you want to delete this ${sourceText} post?`)) {
       return;
     }
 
@@ -281,7 +310,7 @@ export class AdminReviewPostsComponent implements OnInit {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
 
     this.http.delete<{ success: boolean; message?: string; error?: string }>(
-      `${this.getApiUrl()}/api/pending-news/${id}`,
+      `${this.getApiUrl()}/api/pending-news/${id}?source=${source}`,
       { headers }
     ).subscribe({
       next: (response) => {

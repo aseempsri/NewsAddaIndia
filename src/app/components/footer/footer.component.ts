@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Location } from '@angular/common';
+import { LanguageService } from '../../services/language.service';
+import { Subscription } from 'rxjs';
 
 interface FooterLink {
   name: string;
@@ -49,7 +51,7 @@ interface SocialLink {
               </div>
             </a>
             <p class="text-sm text-muted-foreground mb-6">
-              Your trusted source for the latest news and updates from India and around the world.
+              {{ t.yourDailyNewsCompanion }}
             </p>
             <div class="flex gap-3">
               @for (social of socialLinks; track social.label) {
@@ -67,7 +69,7 @@ interface SocialLink {
 
           <!-- Categories -->
           <div>
-            <h4 class="font-display font-semibold mb-4">Categories</h4>
+            <h4 class="font-display font-semibold mb-4">{{ t.categories }}</h4>
             <ul class="space-y-2">
               @for (link of footerLinks.categories; track link.name) {
                 <li>
@@ -85,7 +87,7 @@ interface SocialLink {
 
           <!-- Company -->
           <div>
-            <h4 class="font-display font-semibold mb-4">Company</h4>
+            <h4 class="font-display font-semibold mb-4">{{ t.company }}</h4>
             <ul class="space-y-2">
               @for (link of footerLinks.company; track link.name) {
                 <li>
@@ -101,7 +103,7 @@ interface SocialLink {
 
           <!-- Contact -->
           <div>
-            <h4 class="font-display font-semibold mb-4">Contact Us</h4>
+            <h4 class="font-display font-semibold mb-4">{{ t.contactUs }}</h4>
             <ul class="space-y-3">
               <li class="flex items-start gap-3">
                 <svg class="w-5 h-5 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,7 +111,7 @@ interface SocialLink {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span class="text-sm text-muted-foreground">
-                  New Delhi, India
+                  {{ t.newDelhiIndia }}
                 </span>
               </li>
               <li class="flex items-center gap-3">
@@ -139,17 +141,17 @@ interface SocialLink {
         <!-- Bottom Bar -->
         <div class="mt-12 pt-8 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p class="text-sm text-muted-foreground">
-            © 2025 NewsAddaIndia. All rights reserved.
+            © 2025 NewsAddaIndia. {{ t.allRightsReserved }}
           </p>
           <div class="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#" class="hover:text-foreground transition-colors">
-              Privacy
+              {{ t.privacy }}
             </a>
             <a href="#" class="hover:text-foreground transition-colors">
-              Terms
+              {{ t.terms }}
             </a>
             <a href="#" class="hover:text-foreground transition-colors">
-              Cookies
+              {{ t.cookies }}
             </a>
           </div>
         </div>
@@ -163,24 +165,53 @@ interface SocialLink {
     }
   `]
 })
-export class FooterComponent {
+export class FooterComponent implements OnInit, OnDestroy {
   logoPath: string;
+  t: any = {};
+  footerLinks = {
+    categories: [] as FooterLink[],
+    company: [] as CompanyLink[],
+  };
+  private languageSubscription?: Subscription;
 
-  constructor(private location: Location) {
+  constructor(
+    private location: Location,
+    private languageService: LanguageService
+  ) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
     this.logoPath = baseHref + 'assets/videos/slogo.png';
   }
 
-  footerLinks = {
-    categories: [
-      { name: 'National', route: '/category/national' },
-      { name: 'International', route: '/category/international' },
-      { name: 'Politics', route: '/category/politics' },
-      { name: 'Business', route: '/category/business' },
-      { name: 'Sports', route: '/category/sports' },
-      { name: 'Entertainment', route: '/category/entertainment' },
-    ] as FooterLink[],
+  ngOnInit() {
+    this.updateTranslations();
+    this.updateFooterLinks();
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+      this.updateTranslations();
+      this.updateFooterLinks();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
+
+  updateFooterLinks() {
+    this.footerLinks = {
+      categories: [
+        { name: this.t.national, route: '/category/national' },
+        { name: this.t.international, route: '/category/international' },
+        { name: this.t.politics, route: '/category/politics' },
+        { name: this.t.business, route: '/category/business' },
+        { name: this.t.sports, route: '/category/sports' },
+        { name: this.t.entertainment, route: '/category/entertainment' },
+      ] as FooterLink[],
     company: [
       { name: 'About Us', href: '#' },
       { name: 'Contact', href: '#' },
@@ -189,7 +220,8 @@ export class FooterComponent {
       { name: 'Privacy Policy', href: '#' },
       { name: 'Terms of Service', href: '#' },
     ] as CompanyLink[],
-  };
+    };
+  }
 
   socialLinks: SocialLink[] = [
     {

@@ -1,9 +1,11 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonComponent } from '../../ui/button/button.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
+import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { Subscription } from 'rxjs';
 
 interface SideNews {
   category: string;
@@ -47,10 +49,10 @@ interface SideNews {
                 <!-- Category Badge - Top Left -->
                 <div class="absolute top-5 left-5 z-20 flex gap-2">
                   <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-red-600 text-white shadow-lg backdrop-blur-sm">
-                    BREAKING
+                    {{ t.breaking }}
                   </span>
                   <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-sm">
-                    {{ featuredNews.category }}
+                    {{ getCategoryName(featuredNews.category) }}
                   </span>
                 </div>
               </div>
@@ -80,7 +82,7 @@ interface SideNews {
                     }
                   </div>
                   <h2 [class]="'font-display text-xl lg:text-3xl font-bold leading-tight ' + getHeadlineColor(featuredNews.category)">
-                    {{ featuredNews.titleEn }}
+                    {{ getDisplayTitle(featuredNews) }}
                   </h2>
                 </div>
                 <p class="text-muted-foreground text-sm lg:text-base mb-4 line-clamp-2">
@@ -98,7 +100,7 @@ interface SideNews {
                     type="button"
                     (click)="openNewsModal(featuredNews)" 
                     (touchend)="openNewsModal(featuredNews)">
-                    Read more
+                    {{ t.readMore }}
                   </button>
                 </div>
               </div>
@@ -129,7 +131,7 @@ interface SideNews {
                   <!-- Category Badge -->
                   <div class="absolute top-4 left-4 z-20">
                     <span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-sm">
-                      {{ news.category }}
+                      {{ getCategoryName(news.category) }}
                     </span>
                   </div>
                 </div>
@@ -147,7 +149,7 @@ interface SideNews {
                       }
                     </div>
                     <h3 [class]="'font-display text-lg font-bold leading-tight line-clamp-2 ' + getHeadlineColor(news.category)">
-                      {{ news.title }}
+                      {{ getDisplayTitleForSide(news) }}
                     </h3>
                   </div>
                   <div class="flex items-center justify-between">
@@ -160,7 +162,7 @@ interface SideNews {
                       type="button"
                       (click)="openNewsModalFromSide(news, $index)" 
                       (touchend)="openNewsModalFromSide(news, $index)">
-                      Read more
+                      {{ t.readMore }}
                     </button>
                   </div>
                 </div>
@@ -183,7 +185,7 @@ interface SideNews {
   `,
   styles: []
 })
-export class HeroSectionComponent implements OnInit {
+export class HeroSectionComponent implements OnInit, OnDestroy {
   @Output() imagesLoaded = new EventEmitter<boolean>();
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
@@ -215,10 +217,13 @@ export class HeroSectionComponent implements OnInit {
   ];
 
   isLoading = true;
+  t: any = {};
+  private languageSubscription?: Subscription;
 
   constructor(
     private newsService: NewsService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private languageService: LanguageService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -227,7 +232,35 @@ export class HeroSectionComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.updateTranslations();
     this.loadNews();
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+      this.updateTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
+
+  getDisplayTitle(news: NewsArticle): string {
+    return this.languageService.getDisplayTitle(news.title, news.titleEn);
+  }
+
+  getDisplayTitleForSide(news: SideNews): string {
+    // For side news, we only have title, so just return it
+    // In a real scenario, you'd want to store both title and titleEn
+    return news.title;
+  }
+
+  getCategoryName(category: string): string {
+    return this.languageService.translateCategory(category);
   }
 
   loadNews() {
@@ -236,7 +269,24 @@ export class HeroSectionComponent implements OnInit {
     // Load breaking news for hero section (falls back to featured if no breaking news)
     this.newsService.fetchBreakingNews().subscribe({
       next: (news) => {
-        this.featuredNews = news;
+        // Ensure titleEn is set (for translation)
+        if (!news.titleEn) {
+          news.titleEn = news.title;
+        }
+        
+        // Translate if Hindi is selected
+        this.languageService.translateNewsArticle(news).subscribe({
+          next: (translatedNews) => {
+            this.featuredNews = translatedNews;
+            this.loadFeaturedImage();
+          },
+          error: () => {
+            // If translation fails, use original
+            this.featuredNews = news;
+            this.loadFeaturedImage();
+          }
+        });
+      },
         // Verify image loads, or fetch if missing/invalid
         if (news.image && news.image.trim() !== '' && !news.imageLoading) {
           // Image URL exists, verify it loads

@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LanguageService } from '../../services/language.service';
 import { WeatherWidgetComponent } from '../weather-widget/weather-widget.component';
+import { Subscription } from 'rxjs';
 
 interface PopularArticle {
   rank: number;
@@ -24,7 +26,7 @@ interface PopularArticle {
           <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          <h3 class="font-display text-lg font-semibold">Most Popular</h3>
+          <h3 class="font-display text-lg font-semibold">{{ t.mostPopular }}</h3>
         </div>
 
         <div class="space-y-4">
@@ -64,17 +66,17 @@ interface PopularArticle {
         <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
         <div class="relative">
           <h3 class="font-display text-xl font-bold mb-2">
-            Stay <span class="text-primary">Informed</span>
+            {{ t.stayInformed }}
           </h3>
           <p class="text-sm text-muted-foreground mb-4">
-            Subscribe to our newsletter for daily news updates delivered to your inbox.
+            {{ t.subscribeDescription }}
           </p>
           <input
             type="email"
-            placeholder="Enter your email"
+            [placeholder]="t.enterYourEmail"
             class="w-full px-4 py-3 rounded-lg bg-background/50 border border-border/50 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 mb-3" />
           <button class="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors glow-primary">
-            Subscribe Now
+            {{ t.subscribeNow }}
           </button>
         </div>
       </div>
@@ -82,7 +84,9 @@ interface PopularArticle {
   `,
   styles: []
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit, OnDestroy {
+  t: any = {};
+  private languageSubscription?: Subscription;
   popularArticles: PopularArticle[] = [
     {
       rank: 1,
@@ -115,5 +119,24 @@ export class SidebarComponent {
       shares: 32,
     },
   ];
+
+  constructor(private languageService: LanguageService) {}
+
+  ngOnInit() {
+    this.updateTranslations();
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+      this.updateTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
 }
 

@@ -1,11 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
+import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../../components/news-detail-modal/news-detail-modal.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-category',
@@ -24,9 +26,9 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                 <div [class]="'w-1 h-12 rounded-full bg-gradient-to-b ' + getCategoryAccentColor(categoryName)"></div>
                 <div>
                   <h1 class="font-display text-3xl lg:text-4xl font-bold">
-                    {{ categoryName }} <span class="gradient-text">News</span>
+                    {{ getCategoryDisplayName() }} <span class="gradient-text">{{ t.news }}</span>
                   </h1>
-                  <p class="text-muted-foreground mt-2">Latest updates from {{ categoryName }} category</p>
+                  <p class="text-muted-foreground mt-2">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
                 </div>
               </div>
             </div>
@@ -40,7 +42,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                       <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
                         <div class="flex flex-col items-center gap-2">
                           <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span class="text-xs text-muted-foreground">Loading image...</span>
+                          <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
                         </div>
                       </div>
                     </div>
@@ -62,7 +64,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                       <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
                         <div class="flex flex-col items-center gap-2">
                           <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span class="text-xs text-muted-foreground">Loading image...</span>
+                          <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
                         </div>
                       </div>
                     }
@@ -75,7 +77,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                     }
                     <div class="absolute top-4 left-4 z-20">
                       <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
-                        {{ news.category }}
+                        {{ getCategoryName(news.category) }}
                       </span>
                     </div>
                   </div>
@@ -99,7 +101,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                         }
                       </div>
                       <h3 [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors line-clamp-2 ' + getHeadlineColor(news.category)">
-                        {{ news.title }}
+                        {{ getDisplayTitle(news) }}
                       </h3>
                     </div>
                     <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
@@ -115,7 +117,7 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
                         type="button"
                         (click)="openNewsModal(news)" 
                         (touchend)="openNewsModal(news)">
-                        Read more
+                        {{ t.readMore }}
                       </button>
                     </div>
                   </div>
@@ -142,10 +144,12 @@ import { NewsDetailModalComponent } from '../../components/news-detail-modal/new
   `,
   styles: []
 })
-export class CategoryComponent implements OnInit {
+export class CategoryComponent implements OnInit, OnDestroy {
   categoryName: string = '';
   filteredNews: NewsArticle[] = [];
   isLoading = true;
+  t: any = {};
+  private languageSubscription?: Subscription;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -155,7 +159,8 @@ export class CategoryComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private newsService: NewsService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private languageService: LanguageService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -164,12 +169,38 @@ export class CategoryComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.updateTranslations();
     this.route.params.subscribe(params => {
       const categoryParam = params['category'];
       // Capitalize first letter
       this.categoryName = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
       this.loadNews();
     });
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+      this.updateTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
+
+  getDisplayTitle(news: NewsArticle): string {
+    return this.languageService.getDisplayTitle(news.title, news.titleEn);
+  }
+
+  getCategoryName(category: string): string {
+    return this.languageService.translateCategory(category);
+  }
+
+  getCategoryDisplayName(): string {
+    return this.languageService.translateCategory(this.categoryName);
   }
 
   loadNews() {

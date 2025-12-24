@@ -5,7 +5,9 @@ import { CategoryComponent } from './pages/category/category.component';
 import { AdminDashboardComponent } from './pages/admin/admin-dashboard/admin-dashboard.component';
 import { AdminCreatePostComponent } from './pages/admin/admin-create-post/admin-create-post.component';
 import { AdminReviewPostsComponent } from './pages/admin/admin-review-posts/admin-review-posts.component';
+import { AdminReviewLivePostsComponent } from './pages/admin/admin-review-live-posts/admin-review-live-posts.component';
 import { AdminEditPostComponent } from './pages/admin/admin-edit-post/admin-edit-post.component';
+import { AdminEditLivePostComponent } from './pages/admin/admin-edit-live-post/admin-edit-live-post.component';
 
 export const routes: Routes = [
   { path: '', component: IndexComponent },
@@ -20,7 +22,9 @@ export const routes: Routes = [
   { path: 'admin', component: AdminDashboardComponent },
   { path: 'admin/create', component: AdminCreatePostComponent },
   { path: 'admin/review', component: AdminReviewPostsComponent },
+  { path: 'admin/review-live', component: AdminReviewLivePostsComponent },
   { path: 'admin/edit/:id', component: AdminEditPostComponent },
+  { path: 'admin/edit-live/:id', component: AdminEditLivePostComponent },
   { path: '**', component: NotFoundComponent }
 ];
 

@@ -65,7 +65,7 @@ import { environment } from '../../../../environments/environment';
             </div>
 
             <!-- Menu Options -->
-            <div class="grid md:grid-cols-2 gap-6 mt-8">
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               <!-- Create Post Option -->
               <a
                 routerLink="/admin/create"
@@ -87,7 +87,7 @@ import { environment } from '../../../../environments/environment';
                 </div>
               </a>
 
-              <!-- Review Posts Option -->
+              <!-- Review Unpublished Posts Option -->
               <a
                 routerLink="/admin/review"
                 class="glass-card p-8 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer group">
@@ -97,10 +97,31 @@ import { environment } from '../../../../environments/environment';
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h2 class="text-2xl font-bold">Review Posts</h2>
+                  <h2 class="text-2xl font-bold">Review Unpublished Posts</h2>
                   <p class="text-muted-foreground">Review and approve AI-generated news articles before publishing</p>
                   <div class="flex items-center text-primary group-hover:translate-x-2 transition-transform">
-                    <span class="font-medium">Go to Review Posts</span>
+                    <span class="font-medium">Go to Review Unpublished Posts</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </a>
+
+              <!-- Review Live Posts Option -->
+              <a
+                routerLink="/admin/review-live"
+                class="glass-card p-8 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <div class="flex flex-col items-center text-center space-y-4">
+                  <div class="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                    <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h2 class="text-2xl font-bold">Review Live Posts</h2>
+                  <p class="text-muted-foreground">View and manage all published posts currently live on the website</p>
+                  <div class="flex items-center text-green-500 group-hover:translate-x-2 transition-transform">
+                    <span class="font-medium">Go to Review Live Posts</span>
                     <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>

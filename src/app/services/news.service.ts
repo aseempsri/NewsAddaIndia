@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
 import { map, catchError, switchMap, tap, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { LanguageService } from './language.service';
 
 export interface NewsArticle {
   id?: number;
@@ -41,7 +42,10 @@ export class NewsService {
     'Politics': 'politics'
   };
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private languageService: LanguageService
+  ) {
     // Get API keys from environment (for production builds) or localStorage (for development)
     // Priority: environment variable > localStorage
     this.newsApiKey = (environment.newsApiKey || localStorage.getItem('newsapi_key') || '').trim();
@@ -391,19 +395,26 @@ export class NewsService {
 
     // Try backend API first
     return this.fetchFromBackend(category, count, undefined, true).pipe(
+      switchMap(news => {
+        // Translate news if Hindi is selected
+        return this.translateNewsIfNeeded(news);
+      }),
       catchError(backendError => {
         console.log('Backend API unavailable, falling back to external APIs');
         // Fallback to external APIs
         return this.fetchRealNewsFromAPI(category, count).pipe(
-          map(news => {
+          switchMap(news => {
             console.log(`Fetched ${news.length} news articles for ${category}`);
-            // Cache the news after successful fetch
+            // Translate news if Hindi is selected
+            return this.translateNewsIfNeeded(news);
+          }),
+          tap(news => {
+            // Cache the news after successful fetch and translation
             if (news.length > 0) {
               this.cacheNews(`${category}_${count}`, news);
             } else {
               console.warn(`No news articles returned for ${category}`);
             }
-            return news;
           }),
           catchError(error => {
             console.error('Error fetching real news:', error);
@@ -411,7 +422,7 @@ export class NewsService {
             const cachedNews = this.getCachedNews(`${category}_${count}`);
             if (cachedNews && cachedNews.length > 0) {
               console.log(`Returning cached news as fallback for ${category}`);
-              return of(cachedNews);
+              return this.translateNewsIfNeeded(cachedNews);
             }
             console.warn(`No news available for ${category}, returning empty array`);
             return of([]);
@@ -442,10 +453,10 @@ export class NewsService {
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(5000), // 5 second timeout
-      map(response => {
+      switchMap(response => {
         if (response.success && response.data && response.data.length > 0) {
           // Transform backend news format to NewsArticle format
-          return response.data.map((article: any, index: number) => {
+          const newsArticles = response.data.map((article: any, index: number) => {
             // Construct full image URL if it's a relative path
             let imageUrl = article.image || '';
             if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
@@ -476,6 +487,9 @@ export class NewsService {
               }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
             } as NewsArticle;
           });
+          
+          // Translate news if Hindi is selected
+          return this.translateNewsIfNeeded(newsArticles);
         }
         throw new Error('No news from backend');
       }),
@@ -494,6 +508,10 @@ export class NewsService {
 
     // Try backend API first (exclude breaking news from regular grid)
     return this.fetchFromBackend('', count, page, true).pipe(
+      switchMap(news => {
+        // Translate news if Hindi is selected
+        return this.translateNewsIfNeeded(news);
+      }),
       catchError(backendError => {
         console.log('Backend API unavailable for page, falling back to category-based fetch');
         // Fallback: map page to category and fetch
@@ -521,7 +539,7 @@ export class NewsService {
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(5000),
-      map(response => {
+      switchMap(response => {
         if (response.success && response.data && response.data.length > 0) {
           const article = response.data[0];
           let imageUrl = article.image || '';
@@ -536,7 +554,7 @@ export class NewsService {
             imageUrl = '';
           }
           
-          return {
+          const newsArticle: NewsArticle = {
             id: article._id || 1,
             category: article.category,
             title: article.title,
@@ -552,9 +570,15 @@ export class NewsService {
               day: 'numeric'
             }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
           } as NewsArticle;
+          
+          // Translate if Hindi is selected
+          return this.translateNewsIfNeeded([newsArticle]).pipe(
+            map(translatedNews => translatedNews[0])
+          );
         }
         throw new Error('No breaking news found');
       }),
+      switchMap(observable => observable),
       catchError(error => {
         console.warn('No breaking news from backend, falling back to featured:', error);
         // Fallback to regular featured news

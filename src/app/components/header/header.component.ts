@@ -1,12 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ButtonComponent } from '../../ui/button/button.component';
+import { LanguageService, Language } from '../../services/language.service';
 import { environment } from '../../../environments/environment';
 import { catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { of, Subscription } from 'rxjs';
 
 interface NavLink {
   name: string;
@@ -34,13 +35,13 @@ interface NavLink {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              Delhi, India
+              {{ t.delhiIndia }}
             </span>
           </div>
           <div class="flex items-center gap-3">
             <span class="text-muted-foreground">21°C</span>
             <div class="w-px h-4 bg-border"></div>
-            <span class="text-accent font-medium">{{ readerCount | number }}+ Readers</span>
+            <span class="text-accent font-medium">{{ readerCount | number }}+ {{ t.readers }}</span>
           </div>
         </div>
       </div>
@@ -68,7 +69,7 @@ interface NavLink {
                   <span style="color: #FFFFFF; -webkit-text-stroke: 2px #2563EB; text-stroke: 2px #2563EB; paint-order: stroke fill;">Adda</span>
                   <span style="color: #138808;">India</span>
                 </h1>
-                <p class="text-[10px] sm:text-xs text-muted-foreground -mt-0.5">Your Daily News Companion</p>
+                <p class="text-[10px] sm:text-xs text-muted-foreground -mt-0.5">{{ t.yourDailyNewsCompanion }}</p>
               </div>
             </a>
 
@@ -87,13 +88,24 @@ interface NavLink {
 
             <!-- Actions -->
             <div class="flex items-center gap-3">
-              <app-button variant="ghost" size="icon" class="text-muted-foreground hover:text-foreground">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </app-button>
+              <!-- Language Toggle Switch (E -> H) -->
+              <button
+                (click)="toggleLanguage()"
+                [attr.aria-label]="currentLanguage === 'en' ? 'Switch to Hindi' : 'Switch to English'"
+                [class]="'relative w-14 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-lg ' + (currentLanguage === 'en' ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/50' : 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/50')">
+                <!-- Toggle Circle -->
+                <div
+                  [class]="'absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center font-bold text-xs ' + (currentLanguage === 'hi' ? 'translate-x-6 text-orange-600' : 'text-blue-600')">
+                  {{ currentLanguage === 'en' ? 'E' : 'H' }}
+                </div>
+                <!-- Language Labels -->
+                <div class="absolute inset-0 flex items-center justify-between px-2 text-xs font-semibold text-white">
+                  <span [class]="'transition-opacity duration-300 ' + (currentLanguage === 'en' ? 'opacity-100' : 'opacity-50')">E</span>
+                  <span [class]="'transition-opacity duration-300 ' + (currentLanguage === 'hi' ? 'opacity-100' : 'opacity-50')">H</span>
+                </div>
+              </button>
               <app-button class="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground glow-primary rounded-xl">
-                Subscribe
+                {{ t.subscribe }}
               </app-button>
               <app-button
                 variant="ghost"
@@ -137,13 +149,23 @@ interface NavLink {
   `,
   styles: []
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
   logoPath: string;
   readerCount = 4320;
+  currentLanguage: Language = 'en';
+  t: any = {};
+  currentDate = '';
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
+  private languageSubscription?: Subscription;
 
-  constructor(private location: Location, private http: HttpClient) {
+  navLinks: NavLink[] = [];
+
+  constructor(
+    private location: Location,
+    private http: HttpClient,
+    private languageService: LanguageService
+  ) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
     this.logoPath = baseHref + 'assets/videos/slogo.png';
@@ -151,6 +173,60 @@ export class HeaderComponent implements OnInit {
 
   ngOnInit() {
     this.fetchReaderCount();
+    this.currentLanguage = this.languageService.getCurrentLanguage();
+    // Initialize translations first
+    this.updateTranslations();
+    // Then update dependent data
+    this.updateDate();
+    this.updateNavLinks();
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(lang => {
+      this.currentLanguage = lang;
+      this.updateTranslations();
+      this.updateDate();
+      this.updateNavLinks();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  toggleLanguage() {
+    const newLang = this.currentLanguage === 'en' ? 'hi' : 'en';
+    this.languageService.setLanguage(newLang);
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
+
+  updateDate() {
+    const locale = this.currentLanguage === 'hi' ? 'hi-IN' : 'en-IN';
+    this.currentDate = new Date().toLocaleDateString(locale, {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  updateNavLinks() {
+    // Ensure translations are loaded
+    if (!this.t || !this.t.home) {
+      this.updateTranslations();
+    }
+    this.navLinks = [
+      { name: this.t.home || 'Home', route: '/' },
+      { name: this.t.national || 'National', route: '/category/national' },
+      { name: this.t.international || 'International', route: '/category/international' },
+      { name: this.t.politics || 'Politics', route: '/category/politics' },
+      { name: this.t.health || 'Health', route: '/category/health' },
+      { name: this.t.entertainment || 'Entertainment', route: '/category/entertainment' },
+      { name: this.t.sports || 'Sports', route: '/category/sports' },
+      { name: this.t.business || 'Business', route: '/category/business' },
+    ];
   }
 
   fetchReaderCount() {
@@ -166,23 +242,6 @@ export class HeaderComponent implements OnInit {
     });
   }
 
-  navLinks: NavLink[] = [
-    { name: 'Home', route: '/' },
-    { name: 'National', route: '/category/national' },
-    { name: 'International', route: '/category/international' },
-    { name: 'Politics', route: '/category/politics' },
-    { name: 'Health', route: '/category/health' },
-    { name: 'Entertainment', route: '/category/entertainment' },
-    { name: 'Sports', route: '/category/sports' },
-    { name: 'Business', route: '/category/business' },
-  ];
-
-  currentDate = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 
   toggleMenu() {
     this.isMenuOpen = !this.isMenuOpen;

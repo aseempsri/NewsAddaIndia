@@ -1,8 +1,10 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
+import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { Subscription } from 'rxjs';
 
 // Using NewsArticle from service
 
@@ -17,14 +19,14 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
         <div class="flex items-center justify-between mb-8">
           <div>
             <h2 class="font-display text-2xl lg:text-3xl font-bold">
-              Latest <span class="gradient-text">Stories</span>
+              {{ t.latestStories }}
             </h2>
-            <p class="text-muted-foreground mt-1">Stay updated with the latest news</p>
+            <p class="text-muted-foreground mt-1">{{ t.stayUpdated }}</p>
           </div>
           <a
             href="#"
             class="hidden sm:flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
-            View All
+            {{ t.viewAll }}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -79,7 +81,7 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
                 }
                 <div class="absolute top-4 left-4 z-20">
                   <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
-                    {{ news.category }}
+                    {{ getCategoryName(news.category) }}
                   </span>
                 </div>
               </div>
@@ -103,7 +105,7 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
                     }
                   </div>
                   <h3 [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors line-clamp-2 ' + getHeadlineColor(news.category)">
-                    {{ news.title }}
+                    {{ getDisplayTitle(news) }}
                   </h3>
                 </div>
                 <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
@@ -119,7 +121,7 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
                     type="button"
                     (click)="openNewsModal(news)" 
                     (touchend)="openNewsModal(news)">
-                    Read more
+                    {{ t.readMore }}
                   </button>
                 </div>
               </div>
@@ -143,7 +145,7 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
           <a
             href="#"
             class="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
-            View All Stories
+            {{ t.viewAllStories }}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -154,8 +156,10 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
   `,
   styles: []
 })
-export class NewsGridComponent implements OnInit {
+export class NewsGridComponent implements OnInit, OnDestroy {
   @Output() imagesLoaded = new EventEmitter<boolean>();
+  t: any = {};
+  private languageSubscription?: Subscription;
   newsItems: NewsArticle[] = [];
   isLoading = true;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
@@ -166,7 +170,8 @@ export class NewsGridComponent implements OnInit {
 
   constructor(
     private newsService: NewsService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private languageService: LanguageService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -175,7 +180,29 @@ export class NewsGridComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.updateTranslations();
     this.loadNews();
+    
+    // Subscribe to language changes
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+      this.updateTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.languageSubscription?.unsubscribe();
+  }
+
+  updateTranslations() {
+    this.t = this.languageService.getTranslations();
+  }
+
+  getDisplayTitle(news: NewsArticle): string {
+    return this.languageService.getDisplayTitle(news.title, news.titleEn);
+  }
+
+  getCategoryName(category: string): string {
+    return this.languageService.translateCategory(category);
   }
 
   loadNews() {

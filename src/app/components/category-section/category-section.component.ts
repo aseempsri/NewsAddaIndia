@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
+import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { Subscription } from 'rxjs';
 
 interface Article {
   title: string;
@@ -39,7 +41,7 @@ interface Category {
                 <a
                   href="#"
                   class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  More
+                  {{ t.more }}
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -57,7 +59,7 @@ interface Category {
                         <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
                           <div class="flex flex-col items-center gap-2">
                             <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span class="text-xs text-muted-foreground">Loading image...</span>
+                            <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
                           </div>
                         </div>
                       }
@@ -108,7 +110,7 @@ interface Category {
                           type="button"
                           (click)="openNewsModal(category.title, 0)" 
                           (touchend)="openNewsModal(category.title, 0)">
-                          Read more
+                          {{ t.readMore }}
                         </button>
                       </div>
                     </div>
@@ -147,7 +149,7 @@ interface Category {
                       type="button"
                       (click)="openNewsModal(category.title, $index + 1)" 
                       (touchend)="openNewsModal(category.title, $index + 1)">
-                      Read more
+                      {{ t.readMore }}
                     </button>
                   </article>
                 }
@@ -212,7 +214,7 @@ export class CategorySectionComponent implements OnInit {
       next: (news) => {
         this.originalNewsItems['Entertainment'] = news;
         this.categories[0].articles = news.map((n, index) => ({
-          title: n.title,
+          title: this.languageService.getDisplayTitle(n.title, n.titleEn),
           image: n.image || '',
           time: n.time,
           hasVideo: index === 0,
@@ -233,7 +235,7 @@ export class CategorySectionComponent implements OnInit {
       next: (news) => {
         this.originalNewsItems['Sports'] = news;
         this.categories[1].articles = news.map((n, index) => ({
-          title: n.title,
+          title: this.languageService.getDisplayTitle(n.title, n.titleEn),
           image: n.image || '',
           time: n.time,
           hasVideo: index === 0,

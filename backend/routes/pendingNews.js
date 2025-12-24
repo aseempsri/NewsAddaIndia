@@ -69,18 +69,48 @@ router.get('/', authenticateAdmin, async (req, res) => {
       query.category = category;
     }
     
+    // Fetch pending news from PendingNews collection
     const pendingNews = await PendingNews.find(query)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip));
     
-    const total = await PendingNews.countDocuments(query);
+    // Fetch unpublished news from News collection (published: false)
+    const unpublishedQuery = { published: false };
+    if (category) {
+      unpublishedQuery.category = category;
+    }
+    
+    const unpublishedNews = await News.find(unpublishedQuery)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+    
+    // Add source field to distinguish between pending and unpublished
+    const pendingWithSource = pendingNews.map(item => ({
+      ...item.toObject(),
+      source: 'pending'
+    }));
+    
+    const unpublishedWithSource = unpublishedNews.map(item => ({
+      ...item.toObject(),
+      source: 'unpublished'
+    }));
+    
+    // Combine and sort by createdAt
+    const allUnpublished = [...pendingWithSource, ...unpublishedWithSource]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, parseInt(limit));
+    
+    const totalPending = await PendingNews.countDocuments(query);
+    const totalUnpublished = await News.countDocuments(unpublishedQuery);
+    const total = totalPending + totalUnpublished;
     
     res.json({
       success: true,
-      count: pendingNews.length,
+      count: allUnpublished.length,
       total,
-      data: pendingNews
+      data: allUnpublished
     });
   } catch (error) {
     console.error('Error fetching pending news:', error);
@@ -224,76 +254,130 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
   }
 });
 
-// POST publish pending news (move to News collection) (Admin only)
+// POST publish pending news (move to News collection) or republish unpublished news (Admin only)
 router.post('/:id/publish', authenticateAdmin, async (req, res) => {
   try {
-    const pendingNews = await PendingNews.findById(req.params.id);
+    const { source } = req.body; // 'pending' or 'unpublished'
     
-    if (!pendingNews) {
-      return res.status(404).json({ success: false, error: 'Pending news not found' });
+    if (source === 'unpublished') {
+      // Republish unpublished News post
+      const news = await News.findById(req.params.id);
+      
+      if (!news) {
+        return res.status(404).json({ success: false, error: 'News article not found' });
+      }
+      
+      if (news.published) {
+        return res.status(400).json({ success: false, error: 'News article is already published' });
+      }
+      
+      // Update published status
+      news.published = true;
+      news.date = new Date();
+      await news.save();
+      
+      res.json({
+        success: true,
+        message: 'News republished successfully',
+        data: news
+      });
+    } else {
+      // Publish pending news (create new News post)
+      const pendingNews = await PendingNews.findById(req.params.id);
+      
+      if (!pendingNews) {
+        return res.status(404).json({ success: false, error: 'Pending news not found' });
+      }
+      
+      // Create news article from pending news
+      const newsData = {
+        title: pendingNews.title,
+        titleEn: pendingNews.titleEn,
+        excerpt: pendingNews.excerpt,
+        content: pendingNews.content,
+        image: pendingNews.image,
+        category: pendingNews.category,
+        tags: pendingNews.tags,
+        pages: pendingNews.pages,
+        author: pendingNews.author,
+        isBreaking: pendingNews.isBreaking,
+        isFeatured: pendingNews.isFeatured,
+        published: true,
+        date: new Date()
+      };
+      
+      // Create news article
+      const news = new News(newsData);
+      await news.save();
+      
+      // Delete pending news
+      await PendingNews.findByIdAndDelete(req.params.id);
+      
+      res.json({
+        success: true,
+        message: 'News published successfully',
+        data: news
+      });
     }
-    
-    // Create news article from pending news
-    const newsData = {
-      title: pendingNews.title,
-      titleEn: pendingNews.titleEn,
-      excerpt: pendingNews.excerpt,
-      content: pendingNews.content,
-      image: pendingNews.image,
-      category: pendingNews.category,
-      tags: pendingNews.tags,
-      pages: pendingNews.pages,
-      author: pendingNews.author,
-      isBreaking: pendingNews.isBreaking,
-      isFeatured: pendingNews.isFeatured,
-      published: true,
-      date: new Date()
-    };
-    
-    // Create news article
-    const news = new News(newsData);
-    await news.save();
-    
-    // Delete pending news
-    await PendingNews.findByIdAndDelete(req.params.id);
-    
-    res.json({
-      success: true,
-      message: 'News published successfully',
-      data: news
-    });
   } catch (error) {
-    console.error('Error publishing pending news:', error);
+    console.error('Error publishing news:', error);
     res.status(500).json({ success: false, error: 'Failed to publish news' });
   }
 });
 
-// DELETE pending news (Admin only)
+// DELETE pending news or unpublished news (Admin only)
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
-    const pendingNews = await PendingNews.findById(req.params.id);
+    const { source } = req.query; // 'pending' or 'unpublished'
     
-    if (!pendingNews) {
-      return res.status(404).json({ success: false, error: 'Pending news not found' });
-    }
-    
-    // Delete associated image if exists
-    if (pendingNews.image) {
-      const imagePath = path.join(__dirname, '..', pendingNews.image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+    if (source === 'unpublished') {
+      // Delete unpublished News post
+      const news = await News.findById(req.params.id);
+      
+      if (!news) {
+        return res.status(404).json({ success: false, error: 'News article not found' });
       }
+      
+      // Delete associated image if exists
+      if (news.image) {
+        const imagePath = path.join(__dirname, '..', news.image);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+      
+      await News.findByIdAndDelete(req.params.id);
+      
+      res.json({
+        success: true,
+        message: 'Unpublished news deleted successfully'
+      });
+    } else {
+      // Delete pending news
+      const pendingNews = await PendingNews.findById(req.params.id);
+      
+      if (!pendingNews) {
+        return res.status(404).json({ success: false, error: 'Pending news not found' });
+      }
+      
+      // Delete associated image if exists
+      if (pendingNews.image) {
+        const imagePath = path.join(__dirname, '..', pendingNews.image);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+      
+      await PendingNews.findByIdAndDelete(req.params.id);
+      
+      res.json({
+        success: true,
+        message: 'Pending news deleted successfully'
+      });
     }
-    
-    await PendingNews.findByIdAndDelete(req.params.id);
-    
-    res.json({
-      success: true,
-      message: 'Pending news deleted successfully'
-    });
   } catch (error) {
-    console.error('Error deleting pending news:', error);
-    res.status(500).json({ success: false, error: 'Failed to delete pending news' });
+    console.error('Error deleting news:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete news' });
   }
 });
 
