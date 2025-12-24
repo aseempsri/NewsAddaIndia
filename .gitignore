@@ -5,11 +5,18 @@
 /tmp
 /out-tsc
 /bazel-out
+Frontend/dist
+Frontend/tmp
+Frontend/out-tsc
+Backend/uploads/*
+!Backend/uploads/.gitkeep
 
 # Node
-/node_modules
+node_modules/
+**/node_modules/
 npm-debug.log
 yarn-error.log
+# Note: package-lock.json files should be committed for consistent builds
 
 # IDEs and editors
 .idea/
@@ -30,12 +37,25 @@ yarn-error.log
 
 # Miscellaneous
 /.angular/cache
+Frontend/.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
 /libpeerconnection.log
 testem.log
 /typings
+
+# Environment files
+.env
+Backend/.env
+Frontend/.env
+*.env.local
+
+# Backend specific
+Backend/uploads/*
+!Backend/uploads/.gitkeep
+Backend/logs/*
+Backend/*.log
 
 # System files
 .DS_Store

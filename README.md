@@ -1,84 +1,99 @@
-# NewsAddaIndia - Angular Application
+# News Adda India
 
-A modern news website built with Angular, featuring a beautiful dark theme with smooth animations and transitions.
-
-## Features
-
-- 🎨 Modern dark theme with glassmorphism effects
-- 📱 Fully responsive design
-- ⚡ Smooth animations and transitions
-- 🎯 Standalone Angular components
-- 🎨 Tailwind CSS for styling
-- 📰 News ticker, hero section, news grid, and more
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm or yarn
-
-### Installation
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Start the development server:
-```bash
-npm start
-```
-
-The application will be available at `http://localhost:4200`
-
-### Build
-
-To build for production:
-```bash
-npm run build
-```
+A comprehensive news portal with English-Hindi translation support, admin panel, and real-time news updates.
 
 ## Project Structure
 
+This project is organized into three main folders:
+
+### 📁 Backend/
+Contains the Node.js/Express backend API server with MongoDB integration.
+
+**Key Features:**
+- RESTful API for news management
+- Admin authentication (JWT)
+- Image upload and processing
+- MongoDB database integration
+
+**Setup:** See [Backend/README.md](Backend/README.md)
+
+### 📁 Frontend/
+Contains the Angular frontend application.
+
+**Key Features:**
+- Responsive news portal
+- English-Hindi language toggle
+- Admin panel for content management
+- Real-time news updates
+- Category-based news filtering
+
+**Setup:** See [Frontend/README.md](Frontend/README.md)
+
+### 📁 admin/
+Contains admin-specific backend routes and middleware.
+
+**Key Features:**
+- Admin authentication routes
+- Protected admin endpoints
+- Admin middleware
+
+**Setup:** See [admin/README.md](admin/README.md)
+
+## Quick Start
+
+### Prerequisites
+- Node.js (v18 or higher)
+- MongoDB (local or Atlas)
+- Angular CLI (v18 or higher)
+
+### Backend Setup
+```bash
+cd Backend
+npm install
+# Create .env file with MongoDB URI and other configs
+npm start
 ```
-src/
-├── app/
-│   ├── components/      # Reusable components
-│   │   ├── header/
-│   │   ├── footer/
-│   │   ├── news-ticker/
-│   │   ├── hero-section/
-│   │   ├── news-grid/
-│   │   ├── category-section/
-│   │   ├── sidebar/
-│   │   └── weather-widget/
-│   ├── pages/           # Page components
-│   │   ├── index/
-│   │   └── not-found/
-│   ├── ui/              # UI components
-│   │   └── button/
-│   ├── app.component.ts
-│   └── app.routes.ts
-├── lib/                 # Utility functions
-├── styles.css           # Global styles
-├── index.html
-└── main.ts
+
+### Frontend Setup
+```bash
+cd Frontend
+npm install
+npm start
 ```
 
-## Technologies Used
+## Environment Variables
 
-- Angular 18
-- TypeScript
-- Tailwind CSS
-- Standalone Components
+### Backend (.env)
+```
+MONGODB_URI=your_mongodb_connection_string
+PORT=3000
+FRONTEND_URL=http://localhost:4200
+JWT_SECRET=your_jwt_secret_key
+```
 
-## All Styles Preserved
+### Frontend (src/environments/environment.ts)
+```typescript
+export const environment = {
+  production: false,
+  newsApiKey: '',
+  apiUrl: 'http://localhost:3000'
+};
+```
 
-All original styles, animations, transitions, and fonts have been preserved from the React version:
-- Custom animations (ticker-scroll, float-animation, pulse-glow, shimmer)
-- Tailwind CSS classes
-- Custom design tokens
-- Font families (Space Grotesk, DM Sans)
-- Color scheme and gradients
+## Features
 
+- 🌐 **Bilingual Support**: English-Hindi translation for all content
+- 📱 **Responsive Design**: Mobile-first approach
+- 🔐 **Admin Panel**: Complete content management system
+- 📰 **Real-time News**: Latest news from multiple sources
+- 🎨 **Modern UI**: Tailwind CSS with custom components
+- 🔍 **Category Filtering**: News organized by categories
+
+## Development
+
+- Backend runs on: `http://localhost:3000`
+- Frontend runs on: `http://localhost:4200`
+
+## License
+
+ISC

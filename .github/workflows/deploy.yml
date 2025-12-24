@@ -26,11 +26,14 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
 
       - name: Install dependencies
+        working-directory: ./Frontend
         run: npm ci
 
       - name: Inject NewsAPI Key
+        working-directory: ./Frontend
         run: |
           # Use Node.js to safely replace the placeholder (handles all special characters)
           # Properly escape the API key for TypeScript string literal
@@ -59,6 +62,7 @@ jobs:
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
 
       - name: Build
+        working-directory: ./Frontend
         run: npm run build -- --base-href /NewsAddaIndia/ --configuration production
 
       - name: Setup Pages
@@ -67,7 +71,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist/news-adda-india/browser'
+          path: './Frontend/dist/news-adda-india/browser'
 
   deploy:
     environment:

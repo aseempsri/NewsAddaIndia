@@ -29,14 +29,15 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const allowedExtensions = /jpeg|jpg|jfif|png|webp|gif/;
+    const allowedMimeTypes = /image\/(jpeg|jpg|png|webp|gif)/;
+    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedMimeTypes.test(file.mimetype) || file.mimetype === 'image/jpeg'; // jfif files might have image/jpeg mimetype
     
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed (jpeg, jpg, png, webp, gif)'));
+      cb(new Error('Only image files are allowed (jpeg, jpg, jfif, png, webp, gif)'));
     }
   }
 });
@@ -57,6 +58,22 @@ async function resizeImage(inputPath, outputPath) {
     return false;
   }
 }
+
+// Middleware to handle multer errors
+const handleMulterError = (err, req, res, next) => {
+  if (err) {
+    // Handle multer errors
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, error: 'File too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    // Handle fileFilter errors (like unsupported file types)
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  next();
+};
 
 // GET /api/news - Get all news (with optional filters)
 router.get('/', async (req, res) => {
@@ -138,7 +155,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/news - Create new news (Admin only)
-router.post('/', authenticateAdmin, upload.single('image'), async (req, res) => {
+router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
   try {
     const { title, titleEn, excerpt, content, category, tags, pages, author, isBreaking, isFeatured } = req.body;
     
@@ -221,7 +238,7 @@ router.post('/', authenticateAdmin, upload.single('image'), async (req, res) => 
 });
 
 // PUT /api/news/:id - Update news (Admin only)
-router.put('/:id', authenticateAdmin, upload.single('image'), async (req, res) => {
+router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
   try {
     const { title, titleEn, excerpt, content, category, tags, pages, author, published, isBreaking, isFeatured } = req.body;
     
