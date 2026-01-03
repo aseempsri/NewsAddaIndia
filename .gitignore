@@ -38,6 +38,7 @@ yarn-error.log
 # Miscellaneous
 /.angular/cache
 Frontend/.angular/cache
+**/.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
@@ -60,5 +61,10 @@ Backend/*.log
 # System files
 .DS_Store
 Thumbs.db
+
+# WordPress exports and XML files
+*.xml
+!package.xml
+# Allow package.xml files (if needed for package managers)
 
 

@@ -38,7 +38,7 @@ interface PopularArticle {
                 </span>
               </div>
               <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-medium leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                <h4 class="text-sm font-medium leading-relaxed group-hover:text-primary transition-colors line-clamp-3 pt-2 pb-1 min-h-[3rem]">
                   {{ article.title }}
                 </h4>
                 <div class="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
@@ -65,7 +65,7 @@ interface PopularArticle {
       <div class="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 border border-primary/30">
         <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
         <div class="relative">
-          <h3 class="font-display text-xl font-bold mb-2">
+          <h3 class="font-display text-xl font-bold mb-2 leading-relaxed pt-2 pb-1">
             {{ t.stayInformed }}
           </h3>
           <p class="text-sm text-muted-foreground mb-4">

@@ -103,6 +103,7 @@ interface NewsForm {
                   <select
                     [(ngModel)]="newsForm.category"
                     name="category"
+                    (change)="onCategoryChange()"
                     class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
                     required
                   >
@@ -406,6 +407,39 @@ export class AdminCreatePostComponent implements OnInit {
       }
     } else {
       this.newsForm.pages = this.newsForm.pages.filter(p => p !== page);
+    }
+  }
+
+  // Sync pages with category
+  onCategoryChange() {
+    if (!this.newsForm.category) {
+      return;
+    }
+
+    // Map category to corresponding page
+    const categoryToPageMap: { [key: string]: string } = {
+      'National': 'national',
+      'International': 'international',
+      'Sports': 'sports',
+      'Business': 'business',
+      'Entertainment': 'entertainment',
+      'Health': 'health',
+      'Politics': 'politics'
+    };
+
+    const correspondingPage = categoryToPageMap[this.newsForm.category];
+    
+    if (correspondingPage) {
+      // Always include 'home' and the corresponding category page
+      const defaultPages = ['home', correspondingPage];
+      
+      // Keep any other pages that were already selected (except the old category page)
+      const otherPages = this.newsForm.pages.filter(
+        p => p !== 'home' && !Object.values(categoryToPageMap).includes(p)
+      );
+      
+      // Combine default pages with other selected pages
+      this.newsForm.pages = [...defaultPages, ...otherPages];
     }
   }
 

@@ -80,7 +80,7 @@ import { Subscription } from 'rxjs';
           <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch" style="touch-action: pan-y;">
             <div class="p-4 sm:p-6 lg:p-8">
               <!-- Title -->
-              <h1 class="font-display text-xl sm:text-2xl lg:text-4xl font-bold leading-tight mb-3 sm:mb-4 text-foreground">
+              <h1 class="font-display text-xl sm:text-2xl lg:text-4xl font-bold leading-relaxed mb-4 sm:mb-5 pt-3 pb-2 text-foreground">
                 {{ news.titleEn || news.title }}
               </h1>
 
@@ -111,10 +111,10 @@ import { Subscription } from 'rxjs';
               </div>
 
               <!-- Tags (if available) -->
-              @if (tags && tags.length > 0) {
+              @if (tagsArray.length > 0) {
                 <div class="mt-8 pt-6 border-t border-border/30">
                   <div class="flex flex-wrap gap-2">
-                    @for (tag of tags; track tag) {
+                    @for (tag of tagsArray; track tag) {
                       <span class="px-3 py-1 text-xs bg-secondary rounded-md text-muted-foreground">
                         {{ tag }}
                       </span>
@@ -238,6 +238,12 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   t: any = {};
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
   private languageSubscription?: Subscription;
+  private modalSubscription?: Subscription;
+  
+  // Initialize tags as empty array if not provided
+  get tagsArray(): string[] {
+    return this.tags || [];
+  }
 
   constructor(
     private http: HttpClient,
@@ -256,6 +262,22 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     // Subscribe to language changes
     this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
       this.updateTranslations();
+    });
+    // Subscribe to modal service for programmatic modal opening
+    this.modalSubscription = this.modalService.getModalState().subscribe(state => {
+      this.isOpen = state.isOpen;
+      this.news = state.news;
+      this.isBreaking = state.isBreaking || false;
+      if (this.isOpen && this.news) {
+        this.preventBodyScroll();
+        this.showFullContent = false;
+        this.tags = []; // Reset tags, will be loaded from API
+        this.loadFullContent();
+      } else if (!this.isOpen) {
+        this.restoreBodyScroll();
+        this.showFullContent = false;
+        this.tags = []; // Reset tags when modal closes
+      }
     });
   }
 
@@ -282,6 +304,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     // Ensure body scroll is restored when component is destroyed
     this.restoreBodyScroll();
     this.languageSubscription?.unsubscribe();
+    this.modalSubscription?.unsubscribe();
   }
 
   updateTranslations() {
@@ -373,6 +396,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   close() {
     this.restoreBodyScroll();
+    this.modalService.closeModal();
     this.closeModal.emit();
   }
 

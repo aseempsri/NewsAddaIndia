@@ -58,7 +58,7 @@ interface SideNews {
               </div>
 
               <!-- Bottom Section with Headline and Read More -->
-              <div class="p-5 lg:p-6 pt-6 lg:pt-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
+              <div class="p-5 lg:p-6 pt-6 lg:pt-7 pb-6 lg:pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
                 <div class="flex items-start gap-3 mb-4">
                   <div class="flex-shrink-0 mt-1">
                     @if (featuredNews.category === 'National') {
@@ -82,13 +82,13 @@ interface SideNews {
                     }
                   </div>
                   <h2 
-                    [class]="'font-display text-xl lg:text-3xl font-bold leading-tight pt-1 cursor-pointer hover:opacity-80 transition-opacity ' + getHeadlineColor(featuredNews.category)"
+                    [class]="'font-display text-xl lg:text-3xl font-bold leading-relaxed pt-3 pb-1 min-h-[3.5rem] lg:min-h-[5rem] cursor-pointer hover:opacity-80 transition-opacity ' + getHeadlineColor(featuredNews.category)"
                     (click)="openNewsModal(featuredNews)"
                     (touchend)="openNewsModal(featuredNews)">
                     {{ getDisplayTitle(featuredNews) }}
                   </h2>
                 </div>
-                <p class="text-muted-foreground text-sm lg:text-base mb-4 mt-2 line-clamp-2">
+                <p class="text-muted-foreground text-sm lg:text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
                   {{ featuredNews.excerpt }}
                 </p>
                 <div class="flex items-center gap-3 text-sm">
@@ -131,7 +131,7 @@ interface SideNews {
                 </div>
 
                 <!-- Bottom Section with Headline -->
-                <div class="p-4 pt-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
+                <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50">
                   <div class="flex items-start gap-2 mb-3">
                     <div class="flex-shrink-0 mt-0.5">
                       @if (news.category === 'Sports') {
@@ -143,7 +143,7 @@ interface SideNews {
                       }
                     </div>
                     <h3 
-                      [class]="'font-display text-lg font-bold leading-tight line-clamp-2 pt-1 cursor-pointer hover:opacity-80 transition-opacity ' + getHeadlineColor(news.category)"
+                      [class]="'font-display text-lg font-bold leading-relaxed line-clamp-3 pt-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-opacity ' + getHeadlineColor(news.category)"
                       (click)="openNewsModalFromSide(news, $index)"
                       (touchend)="openNewsModalFromSide(news, $index)">
                       {{ getDisplayTitleForSide(news) }}
@@ -277,75 +277,22 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
               resolve();
             };
             img.onerror = () => {
-              // Image failed to load, fetch alternative
-              console.warn(`Featured image failed to load, fetching alternative...`);
-              this.featuredNews.imageLoading = true;
-              this.featuredNews.image = '';
-              this.newsService.fetchImageForHeadline(news.title, news.category).subscribe({
-                next: (imageUrl) => {
-                  if (imageUrl && imageUrl.trim() !== '') {
-                    const newImg = new Image();
-                    newImg.onload = () => {
-                      this.featuredNews.image = imageUrl;
-                      this.featuredNews.imageLoading = false;
-                      resolve();
-                    };
-                    newImg.onerror = () => {
-                      this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                      this.featuredNews.imageLoading = false;
-                      resolve();
-                    };
-                    newImg.src = imageUrl;
-                  } else {
-                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                    this.featuredNews.imageLoading = false;
-                    resolve();
-                  }
-                },
-                error: () => {
-                  this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                  this.featuredNews.imageLoading = false;
-                  resolve();
-                }
-              });
+              // Image failed to load - use placeholder (no external API calls)
+              console.warn(`Featured image failed to load, using placeholder...`);
+              this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+              this.featuredNews.imageLoading = false;
+              resolve();
             };
             img.src = news.image;
           });
           imagePromises.push(featuredImagePromise);
         } else if (news.imageLoading || !news.image || news.image.trim() === '') {
-          // Fetch image based on headline if loading or empty
+          // No image in database - use placeholder (no external API calls)
           this.featuredNews.imageLoading = true;
-          this.featuredNews.image = ''; // Clear any placeholder
-          
           const featuredImagePromise = new Promise<void>((resolve) => {
-            this.newsService.fetchImageForHeadline(news.title, news.category).subscribe({
-              next: (imageUrl) => {
-                if (imageUrl && imageUrl.trim() !== '') {
-                  // Preload image
-                  const img = new Image();
-                  img.onload = () => {
-                    this.featuredNews.image = imageUrl;
-                    this.featuredNews.imageLoading = false;
-                    resolve();
-                  };
-                  img.onerror = () => {
-                    this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                    this.featuredNews.imageLoading = false;
-                    resolve();
-                  };
-                  img.src = imageUrl;
-                } else {
-                  this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                  this.featuredNews.imageLoading = false;
-                  resolve();
-                }
-              },
-              error: () => {
-                this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
-                this.featuredNews.imageLoading = false;
-                resolve();
-              }
-            });
+            this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+            this.featuredNews.imageLoading = false;
+            resolve();
           });
           imagePromises.push(featuredImagePromise);
         } else {
@@ -369,36 +316,28 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
             imageLoading: true
           };
           
-          // Fetch image based on headline
+          // Use image from database or placeholder (no external API calls)
           const sideImagePromise = new Promise<void>((resolve) => {
-            this.newsService.fetchImageForHeadline(n.title, n.category).subscribe({
-              next: (imageUrl) => {
-                if (imageUrl && imageUrl.trim() !== '') {
-                  // Preload image
-                  const img = new Image();
-                  img.onload = () => {
-                    sideNewsItem.image = imageUrl;
-                    sideNewsItem.imageLoading = false;
-                    resolve();
-                  };
-                  img.onerror = () => {
-                    sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
-                    sideNewsItem.imageLoading = false;
-                    resolve();
-                  };
-                  img.src = imageUrl;
-                } else {
-                  sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
-                  sideNewsItem.imageLoading = false;
-                  resolve();
-                }
-              },
-              error: () => {
+            if (n.image && n.image.trim() !== '') {
+              // Use image from database
+              const img = new Image();
+              img.onload = () => {
+                sideNewsItem.image = n.image;
+                sideNewsItem.imageLoading = false;
+                resolve();
+              };
+              img.onerror = () => {
                 sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
                 sideNewsItem.imageLoading = false;
                 resolve();
-              }
-            });
+              };
+              img.src = n.image;
+            } else {
+              // No image in database - use placeholder
+              sideNewsItem.image = this.newsService.getPlaceholderImage(n.title);
+              sideNewsItem.imageLoading = false;
+              resolve();
+            }
           });
           imagePromises.push(sideImagePromise);
           

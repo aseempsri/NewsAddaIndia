@@ -47,18 +47,12 @@ export class NewsService {
     private http: HttpClient,
     private languageService: LanguageService
   ) {
-    // Get API keys from environment (for production builds) or localStorage (for development)
-    // Priority: environment variable > localStorage
+    // Note: External APIs (NewsAPI, Pexels) are disabled - using database only
+    // Keeping API key variables for potential future use, but not actively using them
     this.newsApiKey = (environment.newsApiKey || localStorage.getItem('newsapi_key') || '').trim();
     this.pexelsApiKey = localStorage.getItem('pexels_api_key') || '';
-
-    // Debug: Log if API key is available (without exposing the full key)
-    if (this.newsApiKey && this.newsApiKey !== 'NEWSAPI_KEY_PLACEHOLDER') {
-      console.log('NewsData.io API key loaded:', this.newsApiKey.substring(0, 10) + '...');
-    } else {
-      console.warn('NewsData.io API key not found or is placeholder. Will fallback to Google News RSS.');
-      console.warn('Environment key:', environment.newsApiKey ? 'Present' : 'Missing');
-    }
+    
+    console.log('NewsService initialized - Using database only (no external APIs)');
   }
 
   setNewsApiKey(key: string): void {
@@ -106,7 +100,9 @@ export class NewsService {
   }
 
   /**
-   * Fetch latest REAL news from NewsData.io
+   * DISABLED: Fetch latest REAL news from NewsData.io
+   * This method is no longer used - application now uses database only
+   * Kept for reference but not called anywhere
    */
   private fetchRealNewsFromAPI(category: string, count: number): Observable<NewsArticle[]> {
     const newsApiCategory = this.categoryMap[category] || 'top';
@@ -180,7 +176,9 @@ export class NewsService {
   }
 
   /**
-   * Fetch news from Google News RSS (free, no API key needed)
+   * DISABLED: Fetch news from Google News RSS (free, no API key needed)
+   * This method is no longer used - application now uses database only
+   * Kept for reference but not called anywhere
    */
   private fetchFromGoogleNewsRSS(category: string, count: number): Observable<NewsArticle[]> {
     // Google News RSS feed for India
@@ -389,46 +387,34 @@ export class NewsService {
   }
 
   /**
-   * Fetch latest news for a specific category - prioritizes backend, then external APIs
+   * Fetch latest news for a specific category - Database only (no external APIs)
+   * Includes breaking news since articles marked for a category should appear regardless of breaking status
    */
   fetchNewsByCategory(category: string, count: number = 5): Observable<NewsArticle[]> {
-    console.log(`Fetching news for category: ${category}, count: ${count}`);
+    console.log(`Fetching news for category: ${category}, count: ${count} from database only`);
 
-    // Try backend API first
-    return this.fetchFromBackend(category, count, undefined, true).pipe(
+    // Fetch from backend API (database) - include breaking news for consistency
+    return this.fetchFromBackend(category, count, undefined, false).pipe(
       switchMap(news => {
         // Translate news if Hindi is selected
         return this.translateNewsIfNeeded(news);
       }),
+      tap(news => {
+        // Cache the news after successful fetch and translation
+        if (news.length > 0) {
+          this.cacheNews(`${category}_${count}`, news);
+        }
+      }),
       catchError(backendError => {
-        console.log('Backend API unavailable, falling back to external APIs');
-        // Fallback to external APIs
-        return this.fetchRealNewsFromAPI(category, count).pipe(
-          switchMap(news => {
-            console.log(`Fetched ${news.length} news articles for ${category}`);
-            // Translate news if Hindi is selected
-            return this.translateNewsIfNeeded(news);
-          }),
-          tap(news => {
-            // Cache the news after successful fetch and translation
-            if (news.length > 0) {
-              this.cacheNews(`${category}_${count}`, news);
-            } else {
-              console.warn(`No news articles returned for ${category}`);
-            }
-          }),
-          catchError(error => {
-            console.error('Error fetching real news:', error);
-            // Try to return cached news as fallback
-            const cachedNews = this.getCachedNews(`${category}_${count}`);
-            if (cachedNews && cachedNews.length > 0) {
-              console.log(`Returning cached news as fallback for ${category}`);
-              return this.translateNewsIfNeeded(cachedNews);
-            }
-            console.warn(`No news available for ${category}, returning empty array`);
-            return of([]);
-          })
-        );
+        console.error('Backend API unavailable:', backendError);
+        // Try to return cached news from database as fallback
+        const cachedNews = this.getCachedNews(`${category}_${count}`);
+        if (cachedNews && cachedNews.length > 0) {
+          console.log(`Returning cached news from database as fallback for ${category}`);
+          return this.translateNewsIfNeeded(cachedNews);
+        }
+        console.warn(`No news available for ${category} in database, returning empty array`);
+        return of([]);
       })
     );
   }
@@ -557,31 +543,27 @@ export class NewsService {
 
   /**
    * Fetch news by page (e.g., 'home', 'national', etc.)
+   * Includes breaking news since articles marked for a page should appear regardless of breaking status
    */
   fetchNewsByPage(page: string, count: number = 5): Observable<NewsArticle[]> {
     console.log(`Fetching news for page: ${page}, count: ${count}`);
 
-    // Try backend API first (exclude breaking news from regular grid)
-    return this.fetchFromBackend('', count, page, true).pipe(
+    // Fetch from backend API - include breaking news since they're marked for this page
+    return this.fetchFromBackend('', count, page, false).pipe(
       switchMap(news => {
         // Translate news if Hindi is selected
         return this.translateNewsIfNeeded(news);
       }),
       catchError(backendError => {
-        console.log('Backend API unavailable for page, falling back to category-based fetch');
-        // Fallback: map page to category and fetch
-        const pageToCategory: Record<string, string> = {
-          'home': 'National',
-          'national': 'National',
-          'international': 'International',
-          'politics': 'Politics',
-          'health': 'Health',
-          'entertainment': 'Entertainment',
-          'sports': 'Sports',
-          'business': 'Business'
-        };
-        const category = pageToCategory[page.toLowerCase()] || 'National';
-        return this.fetchNewsByCategory(category, count);
+        console.error('Backend API unavailable for page:', backendError);
+        // Try to return cached news from database as fallback
+        const cachedNews = this.getCachedNews(`${page}_${count}`);
+        if (cachedNews && cachedNews.length > 0) {
+          console.log(`Returning cached news from database as fallback for page ${page}`);
+          return this.translateNewsIfNeeded(cachedNews);
+        }
+        console.warn(`No news available for page ${page} in database, returning empty array`);
+        return of([]);
       })
     );
   }
@@ -705,109 +687,24 @@ export class NewsService {
   }
 
   /**
-   * Fetch image based on headline using Pixabay and Pexels
-   * This method uses the headline to generate image search queries
-   * Returns placeholder image if no image found
+   * DISABLED: Fetch image based on headline using external APIs
+   * This method is no longer used - application now uses database images only
+   * Returns empty string to indicate no external image fetching
    */
   fetchImageForHeadline(headline: string, category: string): Observable<string> {
-    console.log(`Fetching image for headline: "${headline}"`);
-
-    // Check cache first (but skip cache in production to ensure fresh images)
-    // In production, we want fresh images on each load
-    const cacheKey = `${this.IMAGE_CACHE_PREFIX}${this.hashString(headline + category)}`;
-    const cachedImage = localStorage.getItem(cacheKey);
-    // Only use cache if it's a valid external image URL (not placeholder)
-    if (cachedImage && cachedImage.trim() !== '' &&
-      !cachedImage.includes('picsum.photos') &&
-      (cachedImage.startsWith('http://') || cachedImage.startsWith('https://'))) {
-      // Verify cached image is still accessible
-      console.log(`Using cached image for: "${headline}"`);
-      return of(cachedImage);
-    }
-
-    // Generate search query from headline and search for images on Pixabay and Pexels
-    const searchQuery = this.createIntelligentImageQuery(headline, category, '');
-    console.log(`Generated search query: "${searchQuery}"`);
-
-    // Try Pixabay first, then Pexels, then alternative query, then placeholder
-    return this.fetchFromPixabay(searchQuery).pipe(
-      catchError(() => {
-        console.log(`Pixabay search failed, trying Pexels...`);
-        return this.fetchFromPexels(searchQuery);
-      }),
-      catchError(() => {
-        console.log(`All image sources failed, trying alternative query...`);
-        // Try alternative query
-        const alternativeQuery = this.createIntelligentImageQuery(headline, category, '');
-        return this.fetchFromPixabay(alternativeQuery).pipe(
-          catchError(() => this.fetchFromPexels(alternativeQuery)),
-          catchError(() => {
-            // Last resort: placeholder image
-            const placeholder = this.getPlaceholderImage(alternativeQuery);
-            return of(placeholder);
-          })
-        );
-      }),
-      catchError(() => {
-        // Last resort: placeholder image
-        const placeholder = this.getPlaceholderImage(searchQuery);
-        return of(placeholder);
-      })
-    ).pipe(
-      tap(imageUrl => {
-        // Cache successful images (but not placeholders)
-        if (imageUrl && imageUrl.trim() !== '' && !imageUrl.includes('picsum.photos')) {
-          localStorage.setItem(cacheKey, imageUrl);
-        }
-      })
-    );
+    // Image fetching from external APIs is disabled
+    // All images should come from the database
+    console.log(`Image fetching disabled - using database images only for: "${headline}"`);
+    return of('');
   }
 
   /**
-   * Intelligently fetch relevant image based on article title, category, and content
-   * Enhanced to find perfect news-related images with multiple search strategies
+   * DISABLED: Intelligently fetch relevant image based on article title, category, and content
+   * This method is no longer used - application now uses database images only
    */
   private fetchIntelligentImage(title: string, category: string, content: string): Observable<string> {
-    // Check image cache first using title as key
-    const cacheKey = `${this.IMAGE_CACHE_PREFIX}${this.hashString(title + category)}`;
-    const cachedImage = localStorage.getItem(cacheKey);
-    if (cachedImage) {
-      return of(cachedImage);
-    }
-
-    // Generate search query from title and search for images on Pixabay and Pexels
-    const searchQuery = this.createIntelligentImageQuery(title, category, content);
-    // Generate alternative queries for better matching
-    const alternativeQuery = this.createIntelligentImageQuery(title, category, content);
-
-    // Try Pixabay first, then Pexels, then alternative query, then placeholder
-    return this.fetchFromPixabay(searchQuery).pipe(
-      catchError(() => {
-        console.log(`Pixabay search failed, trying Pexels...`);
-        return this.fetchFromPexels(searchQuery);
-      }),
-      catchError(() => {
-        console.log(`Trying alternative query...`);
-        // Try alternative query
-        return this.fetchFromPixabay(alternativeQuery).pipe(
-          catchError(() => this.fetchFromPexels(alternativeQuery)),
-          catchError(() => {
-            // Last resort: placeholder image
-            return of(this.getPlaceholderImage(alternativeQuery));
-          })
-        );
-      }),
-      catchError(() => {
-        // Last resort: placeholder image
-        return of(this.getPlaceholderImage(searchQuery));
-      }),
-      tap(imageUrl => {
-        // Cache the image URL
-        if (imageUrl && imageUrl !== this.getPlaceholderImage(title) && !imageUrl.includes('picsum.photos')) {
-          localStorage.setItem(cacheKey, imageUrl);
-        }
-      })
-    );
+    // Image fetching from external APIs is disabled
+    return of('');
   }
 
   /**
@@ -866,56 +763,19 @@ export class NewsService {
   }
 
   /**
-   * Fetch image from Pexels API (requires API key)
+   * DISABLED: Fetch image from Pexels API
+   * This method is no longer used - application now uses database images only
    */
   private fetchFromPexels(query: string): Observable<string> {
-    if (!this.pexelsApiKey) {
-      throw new Error('Pexels API key not available');
-    }
-
-    const headers = new HttpHeaders().set('Authorization', this.pexelsApiKey);
-    const url = `${this.pexelsUrl}?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`;
-
-    return this.http.get<any>(url, { headers }).pipe(
-      map(response => {
-        if (response.photos && response.photos.length > 0) {
-          return response.photos[0].src.large || response.photos[0].src.medium;
-        }
-        throw new Error('No Pexels results');
-      })
-    );
+    throw new Error('Pexels API is disabled - using database images only');
   }
 
   /**
-   * Fetch image from Pixabay API (free, no key needed)
-   * Enhanced to prioritize relevant news images
+   * DISABLED: Fetch image from Pixabay API
+   * This method is no longer used - application now uses database images only
    */
   private fetchFromPixabay(query: string): Observable<string> {
-    // Add context to query for better news relevance
-    const enhancedQuery = query.includes('news') ? query : `${query} news`.trim();
-
-    // Pixabay public API (no key required for basic usage)
-    const url = `https://pixabay.com/api/?key=9656065-a4094594c34c9a8d4e6c4e3e4&q=${encodeURIComponent(enhancedQuery)}&image_type=photo&orientation=horizontal&per_page=10&safesearch=true&order=popular`;
-
-    return this.http.get<any>(url).pipe(
-      map(response => {
-        if (response.hits && response.hits.length > 0) {
-          // Prefer images with higher relevance (tags matching query)
-          const sortedHits = response.hits.sort((a: any, b: any) => {
-            // Prioritize images with more matching tags
-            const aTags = (a.tags || '').toLowerCase();
-            const bTags = (b.tags || '').toLowerCase();
-            const queryLower = query.toLowerCase();
-            const aMatches = queryLower.split(' ').filter(term => aTags.includes(term)).length;
-            const bMatches = queryLower.split(' ').filter(term => bTags.includes(term)).length;
-            return bMatches - aMatches;
-          });
-
-          return sortedHits[0].webformatURL || sortedHits[0].largeImageURL;
-        }
-        throw new Error('No Pixabay results');
-      })
-    );
+    throw new Error('Pixabay API is disabled - using database images only');
   }
 
   /**

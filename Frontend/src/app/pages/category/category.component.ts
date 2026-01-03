@@ -25,7 +25,7 @@ import { Subscription } from 'rxjs';
               <div class="flex items-center gap-3 mb-4">
                 <div [class]="'w-1 h-12 rounded-full bg-gradient-to-b ' + getCategoryAccentColor(categoryName)"></div>
                 <div>
-                  <h1 class="font-display text-3xl lg:text-4xl font-bold">
+                  <h1 class="font-display text-3xl lg:text-4xl font-bold leading-relaxed pt-3 pb-2">
                     {{ getCategoryDisplayName() }} <span class="gradient-text">{{ t.news }}</span>
                   </h1>
                   <p class="text-muted-foreground mt-2">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
@@ -85,7 +85,7 @@ import { Subscription } from 'rxjs';
                   <!-- Border Line -->
                   <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
 
-                  <div class="p-5 pt-6 bg-background rounded-b-xl">
+                  <div class="p-5 pt-6 pb-6 bg-background rounded-b-xl">
                     <div class="flex items-start gap-2 mb-3">
                       <div class="flex-shrink-0 mt-0.5">
                         @if (news.category === 'Sports') {
@@ -101,13 +101,13 @@ import { Subscription } from 'rxjs';
                         }
                       </div>
                       <h3 
-                        [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors line-clamp-2 pt-1 cursor-pointer hover:opacity-80 ' + getHeadlineColor(news.category)"
+                        [class]="'font-display text-lg font-bold leading-relaxed group-hover:opacity-90 transition-colors line-clamp-3 pt-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 ' + getHeadlineColor(news.category)"
                         (click)="openNewsModal(news)"
                         (touchend)="openNewsModal(news)">
                         {{ getDisplayTitle(news) }}
                       </h3>
                     </div>
-                    <p class="text-muted-foreground text-sm line-clamp-2 mb-4 mt-2">
+                    <p class="text-muted-foreground text-sm line-clamp-3 mb-4 mt-3 pt-1 min-h-[3.5rem] leading-relaxed">
                       {{ news.excerpt }}
                     </p>
                     <div class="flex items-center">
@@ -201,7 +201,10 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   loadNews() {
     this.isLoading = true;
-    this.newsService.fetchNewsByCategory(this.categoryName, 12).subscribe({
+    // Use fetchNewsByPage to respect the "Pages to Display" field
+    // Convert category name to lowercase page name (e.g., "National" -> "national")
+    const pageName = this.categoryName.toLowerCase();
+    this.newsService.fetchNewsByPage(pageName, 12).subscribe({
       next: (news) => {
         this.filteredNews = news;
         this.isLoading = false;
@@ -217,38 +220,13 @@ export class CategoryComponent implements OnInit, OnDestroy {
   }
 
   fetchImagesForAllItems() {
+    // Images are now fetched from database only (no external API calls)
+    // This method is kept for compatibility but doesn't fetch external images
     this.filteredNews.forEach((item) => {
-      // Fetch image based on headline if loading
       if (item.imageLoading && !item.image) {
-        this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
-          next: (imageUrl) => {
-            // Only update if we got a valid image URL
-            if (imageUrl && imageUrl.trim() !== '') {
-              // Preload image to ensure it's ready before showing
-              const img = new Image();
-              img.onload = () => {
-                item.image = imageUrl;
-                item.imageLoading = false;
-              };
-              img.onerror = () => {
-                // If image fails to load, try placeholder as last resort
-                item.image = this.newsService.getPlaceholderImage(item.title);
-                item.imageLoading = false;
-              };
-              img.src = imageUrl;
-            } else {
-              // Fallback to placeholder if no image found
-              item.image = this.newsService.getPlaceholderImage(item.title);
-              item.imageLoading = false;
-            }
-          },
-          error: (error) => {
-            console.error(`Error fetching image for "${item.title}":`, error);
-            // Fallback to placeholder on error
-            item.image = this.newsService.getPlaceholderImage(item.title);
-            item.imageLoading = false;
-          }
-        });
+        // No image in database - use placeholder
+        item.image = this.newsService.getPlaceholderImage(item.title);
+        item.imageLoading = false;
       }
     });
   }

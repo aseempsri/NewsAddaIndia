@@ -1,0 +1,177 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'Frontend/**'
+      - '.github/workflows/deploy-hostinger-vps.yml'
+  workflow_dispatch:  # Allow manual trigger
+  # Optional: Deploy on tags
+  # tags:
+  #   - 'v*'
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend to VPS
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[backend]') || contains(github.event.head_commit.message, '[all]') || !contains(github.event.head_commit.message, '[frontend-only]')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy Backend to Hostinger VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_HOST }}
+          username: ${{ secrets.HOSTINGER_VPS_USER }}
+          key: ${{ secrets.HOSTINGER_VPS_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Starting backend deployment..."
+            
+            # Navigate to backend directory
+            cd ~/news-adda-backend || cd ~/NewsAddaIndia/backend
+            
+            # Pull latest code
+            echo "📥 Pulling latest code..."
+            git pull origin main || git pull origin master
+            
+            # Install/update dependencies
+            echo "📦 Installing dependencies..."
+            npm install --production
+            
+            # Create/update .env file
+            echo "⚙️ Updating environment variables..."
+            cat > .env << EOF
+            MONGODB_URI=${{ secrets.MONGODB_URI || 'mongodb://newsadda_user:your-password@localhost:27017/newsaddaindia?authSource=newsaddaindia' }}
+            PORT=3000
+            NODE_ENV=production
+            FRONTEND_URL=${{ secrets.FRONTEND_URL || 'https://yourdomain.com' }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME || 'admin' }}
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            NEWSAPI_KEY=${{ secrets.NEWSAPI_KEY || '' }}
+            EOF
+            
+            # Ensure uploads directory exists
+            mkdir -p uploads
+            chmod 755 uploads
+            
+            # Restart application with PM2
+            echo "🔄 Restarting application..."
+            pm2 restart news-adda-backend || pm2 start server.js --name news-adda-backend
+            pm2 save
+            
+            # Wait a moment for app to start
+            sleep 3
+            
+            # Verify deployment
+            echo "✅ Checking deployment status..."
+            pm2 status
+            pm2 logs news-adda-backend --lines 10 --nostream
+            
+            echo "✅ Backend deployment complete!"
+
+  deploy-frontend:
+    name: Deploy Frontend to VPS
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[frontend]') || contains(github.event.head_commit.message, '[all]') || !contains(github.event.head_commit.message, '[backend-only]')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: npm ci
+      
+      - name: Update production environment
+        working-directory: ./Frontend
+        run: |
+          # Update API URL for production
+          cat > src/environments/environment.prod.ts << EOF
+          export const environment = {
+            production: true,
+            newsApiKey: '${{ secrets.NEWSAPI_KEY || '' }}',
+            apiUrl: '${{ secrets.BACKEND_API_URL || 'https://api.yourdomain.com' }}'
+          };
+          EOF
+          echo "✅ Updated environment.prod.ts"
+          echo "API URL: ${{ secrets.BACKEND_API_URL || 'https://api.yourdomain.com' }}"
+      
+      - name: Build Angular app
+        working-directory: ./Frontend
+        run: npm run build -- --configuration production
+      
+      - name: Deploy Frontend to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_HOST }}
+          username: ${{ secrets.HOSTINGER_VPS_USER }}
+          key: ${{ secrets.HOSTINGER_VPS_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_VPS_PORT || 22 }}
+          source: "Frontend/dist/news-adda-india/browser/*"
+          target: "/var/www/html"
+          strip_components: 4
+          rm: false
+      
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_HOST }}
+          username: ${{ secrets.HOSTINGER_VPS_USER }}
+          key: ${{ secrets.HOSTINGER_VPS_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_VPS_PORT || 22 }}
+          script: |
+            echo "🔄 Reloading Nginx..."
+            sudo systemctl reload nginx || sudo service nginx reload
+            echo "✅ Frontend deployment complete!"
+
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+    
+    steps:
+      - name: Check Backend Health
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_HOST }}
+          username: ${{ secrets.HOSTINGER_VPS_USER }}
+          key: ${{ secrets.HOSTINGER_VPS_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_VPS_PORT || 22 }}
+          script: |
+            echo "🔍 Verifying deployment..."
+            
+            # Check backend health
+            echo "Checking backend status..."
+            pm2 status news-adda-backend || echo "⚠️ Backend not running"
+            
+            # Check if backend is responding (if API URL is set)
+            if [ -n "${{ secrets.BACKEND_API_URL }}" ]; then
+              echo "Testing backend health endpoint..."
+              curl -f ${{ secrets.BACKEND_API_URL }}/health || echo "⚠️ Backend health check failed"
+            fi
+            
+            # Check Nginx status
+            echo "Checking Nginx status..."
+            sudo systemctl status nginx --no-pager -l || echo "⚠️ Nginx check failed"
+            
+            # Check MongoDB connection (if backend is running)
+            echo "Checking MongoDB connection..."
+            pm2 logs news-adda-backend --lines 5 --nostream | grep -i mongo || echo "⚠️ MongoDB status unknown"
+            
+            echo "✅ Verification complete!"
+

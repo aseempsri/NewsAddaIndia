@@ -76,6 +76,35 @@ newsSchema.pre('save', function(next) {
   if (!this.titleEn) {
     this.titleEn = this.title;
   }
+  
+  // Auto-sync pages with category
+  // When category is set, ensure corresponding page is included
+  if (this.category && this.isModified('category')) {
+    const categoryToPageMap = {
+      'National': 'national',
+      'International': 'international',
+      'Sports': 'sports',
+      'Business': 'business',
+      'Entertainment': 'entertainment',
+      'Health': 'health',
+      'Politics': 'politics'
+    };
+    
+    const correspondingPage = categoryToPageMap[this.category];
+    if (correspondingPage) {
+      // Ensure 'home' and corresponding category page are included
+      const defaultPages = ['home', correspondingPage];
+      
+      // Keep other pages that don't conflict with category pages
+      const otherPages = (this.pages || []).filter(
+        p => p !== 'home' && !Object.values(categoryToPageMap).includes(p)
+      );
+      
+      // Combine default pages with other selected pages
+      this.pages = [...defaultPages, ...otherPages];
+    }
+  }
+  
   next();
 });
 

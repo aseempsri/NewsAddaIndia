@@ -34,7 +34,7 @@ interface Category {
               <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
                   <div [class]="'w-1 h-8 rounded-full bg-gradient-to-b ' + category.accentColor"></div>
-                  <h2 class="font-display text-xl lg:text-2xl font-bold">
+                  <h2 class="font-display text-xl lg:text-2xl font-bold leading-relaxed pt-2 pb-1">
                     {{ category.title }}
                   </h2>
                 </div>
@@ -83,7 +83,7 @@ interface Category {
                     </div>
                     <!-- Border Line -->
                     <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
-                    <div class="p-4 pt-5 bg-background rounded-b-xl">
+                    <div class="p-4 pt-5 pb-5 bg-background rounded-b-xl">
                       <div class="flex items-start justify-between gap-2">
                         <div class="flex-1">
                           <div class="flex items-start gap-2 mb-3">
@@ -97,7 +97,7 @@ interface Category {
                               }
                             </div>
                             <h3 
-                              [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors pt-1 cursor-pointer hover:opacity-80 ' + getHeadlineColor(category.title)"
+                              [class]="'font-display text-lg font-bold leading-relaxed group-hover:opacity-90 transition-colors pt-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 ' + getHeadlineColor(category.title)"
                               (click)="openNewsModal(category.title, 0)"
                               (touchend)="openNewsModal(category.title, 0)">
                               {{ category.articles[0].title }}
@@ -133,7 +133,7 @@ interface Category {
                     </div>
                     <div class="flex-1 min-w-0">
                       <h4 
-                        [class]="'font-bold text-sm leading-tight group-hover:opacity-90 transition-colors line-clamp-2 cursor-pointer hover:opacity-80 ' + getHeadlineColor(category.title)"
+                        [class]="'font-bold text-sm leading-relaxed group-hover:opacity-90 transition-colors line-clamp-3 pt-2 pb-1 min-h-[3.5rem] cursor-pointer hover:opacity-80 ' + getHeadlineColor(category.title)"
                         (click)="openNewsModal(category.title, $index + 1)"
                         (touchend)="openNewsModal(category.title, $index + 1)">
                         {{ article.title }}
@@ -243,8 +243,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
   }
 
   loadCategoryNews() {
-    // Load Entertainment news
-    this.newsService.fetchNewsByCategory('Entertainment', 4).subscribe({
+    // Load Entertainment news - use fetchNewsByPage to respect "Pages to Display" field
+    this.newsService.fetchNewsByPage('entertainment', 4).subscribe({
       next: (news) => {
         this.originalNewsItems['Entertainment'] = news;
         this.categories[0].articles = news.map((n, index) => ({
@@ -264,8 +264,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Load Sports news
-    this.newsService.fetchNewsByCategory('Sports', 4).subscribe({
+    // Load Sports news - use fetchNewsByPage to respect "Pages to Display" field
+    this.newsService.fetchNewsByPage('sports', 4).subscribe({
       next: (news) => {
         this.originalNewsItems['Sports'] = news;
         this.categories[1].articles = news.map((n, index) => ({
@@ -291,38 +291,28 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     }
 
     category.articles.forEach((article, index) => {
-      // Fetch image based on headline if loading or empty
+      // Use image from database or placeholder (no external API calls)
       if (article.imageLoading || !article.image || article.image.trim() === '') {
         const newsItem = newsItems[index];
         if (newsItem) {
-          this.newsService.fetchImageForHeadline(newsItem.title, category.title).subscribe({
-            next: (imageUrl) => {
-              if (imageUrl && imageUrl.trim() !== '') {
-                // Preload image to ensure it's ready before showing
-                const img = new Image();
-                img.onload = () => {
-                  article.image = imageUrl;
-                  article.imageLoading = false;
-                };
-                img.onerror = () => {
-                  // If image fails to load, try placeholder as last resort
-                  article.image = this.newsService.getPlaceholderImage(newsItem.title);
-                  article.imageLoading = false;
-                };
-                img.src = imageUrl;
-              } else {
-                // Fallback to placeholder if no image found
-                article.image = this.newsService.getPlaceholderImage(newsItem.title);
-                article.imageLoading = false;
-              }
-            },
-            error: (error) => {
-              console.error(`Error fetching image for "${newsItem.title}":`, error);
-              // Fallback to placeholder on error
+          if (newsItem.image && newsItem.image.trim() !== '') {
+            // Use image from database
+            const img = new Image();
+            img.onload = () => {
+              article.image = newsItem.image;
+              article.imageLoading = false;
+            };
+            img.onerror = () => {
+              // If image fails to load, use placeholder
               article.image = this.newsService.getPlaceholderImage(newsItem.title);
               article.imageLoading = false;
-            }
-          });
+            };
+            img.src = newsItem.image;
+          } else {
+            // No image in database - use placeholder
+            article.image = this.newsService.getPlaceholderImage(newsItem.title);
+            article.imageLoading = false;
+          }
         }
       } else {
         // If image already exists, ensure it's not in loading state

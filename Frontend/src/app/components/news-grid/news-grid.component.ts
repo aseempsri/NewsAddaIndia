@@ -18,7 +18,7 @@ import { Subscription } from 'rxjs';
         <!-- Section Header -->
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="font-display text-2xl lg:text-3xl font-bold">
+            <h2 class="font-display text-2xl lg:text-3xl font-bold leading-relaxed pt-2 pb-1">
               {{ t.latestStories }}
             </h2>
             <p class="text-muted-foreground mt-1">{{ t.stayUpdated }}</p>
@@ -89,7 +89,7 @@ import { Subscription } from 'rxjs';
               <!-- Border Line -->
               <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
 
-              <div class="p-5 pt-6 bg-background rounded-b-xl">
+              <div class="p-5 pt-6 pb-6 bg-background rounded-b-xl">
                 <div class="flex items-start gap-2 mb-3">
                   <div class="flex-shrink-0 mt-0.5">
                     @if (news.category === 'Sports') {
@@ -105,13 +105,13 @@ import { Subscription } from 'rxjs';
                     }
                   </div>
                   <h3 
-                    [class]="'font-display text-lg font-bold leading-tight group-hover:opacity-90 transition-colors line-clamp-2 pt-1 cursor-pointer hover:opacity-80 ' + getHeadlineColor(news.category)"
+                    [class]="'font-display text-lg font-bold leading-relaxed group-hover:opacity-90 transition-colors line-clamp-3 pt-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 ' + getHeadlineColor(news.category)"
                     (click)="openNewsModal(news)"
                     (touchend)="openNewsModal(news)">
                     {{ getDisplayTitle(news) }}
                   </h3>
                 </div>
-                <p class="text-muted-foreground text-sm line-clamp-2 mb-4 mt-2">
+                <p class="text-muted-foreground text-sm line-clamp-3 mb-4 mt-3 pt-1 min-h-[3.5rem] leading-relaxed">
                   {{ news.excerpt }}
                 </p>
                 <div class="flex items-center">
@@ -266,77 +266,21 @@ export class NewsGridComponent implements OnInit, OnDestroy {
             resolve();
           };
           img.onerror = () => {
-            // Image failed to load, try fetching from external source
-            console.warn(`Image failed to load for "${item.title}", fetching alternative...`);
-            item.imageLoading = true;
-            item.image = '';
-            this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
-              next: (imageUrl) => {
-                if (imageUrl && imageUrl.trim() !== '') {
-                  const newImg = new Image();
-                  newImg.onload = () => {
-                    item.image = imageUrl;
-                    item.imageLoading = false;
-                    resolve();
-                  };
-                  newImg.onerror = () => {
-                    item.image = this.newsService.getPlaceholderImage(item.title);
-                    item.imageLoading = false;
-                    resolve();
-                  };
-                  newImg.src = imageUrl;
-                } else {
-                  item.image = this.newsService.getPlaceholderImage(item.title);
-                  item.imageLoading = false;
-                  resolve();
-                }
-              },
-              error: () => {
-                item.image = this.newsService.getPlaceholderImage(item.title);
-                item.imageLoading = false;
-                resolve();
-              }
-            });
+            // Image failed to load - use placeholder (no external API calls)
+            console.warn(`Image failed to load for "${item.title}", using placeholder...`);
+            item.image = this.newsService.getPlaceholderImage(item.title);
+            item.imageLoading = false;
+            resolve();
           };
           img.src = item.image;
         });
         imagePromises.push(imagePromise);
       } else if (item.imageLoading || !item.image || item.image.trim() === '') {
-        // Fetch image based on headline using Pixabay/Pexels if loading or empty
+        // No image in database - use placeholder (no external API calls)
         const imagePromise = new Promise<void>((resolve) => {
-          this.newsService.fetchImageForHeadline(item.title, item.category).subscribe({
-            next: (imageUrl) => {
-              // Only update if we got a valid image URL
-              if (imageUrl && imageUrl.trim() !== '') {
-                // Preload image to ensure it's ready before showing
-                const img = new Image();
-                img.onload = () => {
-                  item.image = imageUrl;
-                  item.imageLoading = false;
-                  resolve();
-                };
-                img.onerror = () => {
-                  // If image fails to load, try placeholder as last resort
-                  item.image = this.newsService.getPlaceholderImage(item.title);
-                  item.imageLoading = false;
-                  resolve();
-                };
-                img.src = imageUrl;
-              } else {
-                // Fallback to placeholder if no image found
-                item.image = this.newsService.getPlaceholderImage(item.title);
-                item.imageLoading = false;
-                resolve();
-              }
-            },
-            error: (error) => {
-              console.error(`Error fetching image for "${item.title}":`, error);
-              // Fallback to placeholder on error
-              item.image = this.newsService.getPlaceholderImage(item.title);
-              item.imageLoading = false;
-              resolve();
-            }
-          });
+          item.image = this.newsService.getPlaceholderImage(item.title);
+          item.imageLoading = false;
+          resolve();
         });
         imagePromises.push(imagePromise);
       } else {

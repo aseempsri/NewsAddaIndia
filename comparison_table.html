@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostinger VPS vs AWS vs Azure Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #718096;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .azure-free {
+            color: #0078d4;
+            font-weight: 600;
+        }
+
+        .azure-paid {
+            color: #005a9e;
+            font-weight: 600;
+        }
+
+        th {
+            padding: 18px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 15px;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        td {
+            padding: 16px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #2d3748;
+        }
+
+        tr:hover {
+            background-color: #f7fafc;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .feature-name {
+            font-weight: 600;
+            color: #2d3748;
+            background-color: #f7fafc;
+        }
+
+        .hostinger {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        .aws-free {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        .aws-paid {
+            color: #3182ce;
+            font-weight: 600;
+        }
+
+        .highlight {
+            background-color: #fff5f5;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-free {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-paid {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+
+        .badge-medium {
+            background-color: #feebc8;
+            color: #7c2d12;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Cloud Hosting Comparison</h1>
+        <p class="subtitle">Hostinger VPS vs AWS vs Azure - Feature Comparison for News Adda India Project</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Hostinger VPS</th>
+                    <th>AWS Free Tier</th>
+                    <th>AWS t3.small</th>
+                    <th>Azure Free Tier</th>
+                    <th>Azure B2S</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="feature-name">Cost (first year)</td>
+                    <td class="hostinger">₹6,588</td>
+                    <td class="aws-free highlight">₹0 <span class="badge badge-free">FREE</span></td>
+                    <td class="aws-paid">₹15,000</td>
+                    <td class="azure-free highlight">₹0 <span class="badge badge-free">FREE</span></td>
+                    <td class="azure-paid">₹30,000</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Cost (after year 1)</td>
+                    <td class="hostinger">₹19,188/year</td>
+                    <td class="aws-free">₹7,200/year</td>
+                    <td class="aws-paid">₹15,000/year</td>
+                    <td class="azure-free">₹7,200/year</td>
+                    <td class="azure-paid">₹30,000/year</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">vCPU</td>
+                    <td class="hostinger">2</td>
+                    <td class="aws-free">2</td>
+                    <td class="aws-paid">2</td>
+                    <td class="azure-free">1</td>
+                    <td class="azure-paid">2</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">RAM</td>
+                    <td class="hostinger">8GB</td>
+                    <td class="aws-free">1GB</td>
+                    <td class="aws-paid">2GB</td>
+                    <td class="azure-free">1GB</td>
+                    <td class="azure-paid">4GB</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Storage</td>
+                    <td class="hostinger">100GB</td>
+                    <td class="aws-free">30GB</td>
+                    <td class="aws-paid">30GB+</td>
+                    <td class="azure-free">64GB</td>
+                    <td class="azure-paid">64GB+</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Bandwidth</td>
+                    <td class="hostinger">8TB</td>
+                    <td class="aws-free">100GB/month</td>
+                    <td class="aws-paid">Pay per GB</td>
+                    <td class="azure-free">15GB/month</td>
+                    <td class="azure-paid">Pay per GB</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Setup Complexity</td>
+                    <td class="hostinger"><span class="badge badge-free">Easy</span></td>
+                    <td class="aws-free"><span class="badge badge-medium">Medium</span></td>
+                    <td class="aws-paid"><span class="badge badge-medium">Medium</span></td>
+                    <td class="azure-free"><span class="badge badge-medium">Medium</span></td>
+                    <td class="azure-paid"><span class="badge badge-medium">Medium</span></td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Scalability</td>
+                    <td class="hostinger">Manual</td>
+                    <td class="aws-free">Auto-scaling</td>
+                    <td class="aws-paid">Auto-scaling</td>
+                    <td class="azure-free">Auto-scaling</td>
+                    <td class="azure-paid">Auto-scaling</td>
+                </tr>
+                <tr>
+                    <td class="feature-name">Support</td>
+                    <td class="hostinger">Good</td>
+                    <td class="aws-free">Community</td>
+                    <td class="aws-paid">Excellent</td>
+                    <td class="azure-free">Community</td>
+                    <td class="azure-paid">Excellent</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

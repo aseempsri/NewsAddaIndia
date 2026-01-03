@@ -80,7 +80,7 @@ import { Subscription } from 'rxjs';
 
             <!-- Title Overlay -->
             <div class="absolute bottom-0 left-0 right-0 p-8 lg:p-12">
-              <h1 class="font-display text-3xl lg:text-5xl xl:text-6xl font-bold leading-tight text-foreground mb-4 drop-shadow-lg">
+              <h1 class="font-display text-3xl lg:text-5xl xl:text-6xl font-bold leading-relaxed text-foreground mb-4 pt-3 pb-2 drop-shadow-lg">
                 {{ getDisplayTitle(news) }}
               </h1>
               
