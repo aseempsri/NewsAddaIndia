@@ -65,33 +65,70 @@ sudo apt upgrade -y
 
 ### Step 3: Install MongoDB
 
-#### For Ubuntu 22.04 (Jammy) / Debian:
+#### For Ubuntu 24.04 (Noble) - Latest LTS:
+
+**Option A: MongoDB 8.0 (Recommended - Officially Supported)**
 
 ```bash
-# Import MongoDB public GPG key
-wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+# Import MongoDB 8.0 GPG key
+curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
 
-# Create MongoDB repository list file
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+# Create MongoDB 8.0 repository list file
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
 
-# Update package list again
+# Update package list
 sudo apt update
 
-# Install MongoDB
+# Install MongoDB 8.0
 sudo apt-get install -y mongodb-org
 
 # Verify installation
 mongod --version
 ```
 
+**Option B: MongoDB 7.0 (Fallback - Use Ubuntu 22.04 Repository)**
+
+If you prefer MongoDB 7.0, use the Ubuntu 22.04 (jammy) repository which works on Ubuntu 24.04:
+
+```bash
+# Import MongoDB 7.0 GPG key
+curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+
+# Use Ubuntu 22.04 repository (works on Ubuntu 24.04)
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Update package list
+sudo apt update
+
+# Install MongoDB 7.0
+sudo apt-get install -y mongodb-org
+
+# Verify installation
+mongod --version
+```
+
+#### For Ubuntu 22.04 (Jammy):
+
+```bash
+# Import MongoDB GPG key (modern method)
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+
+# Create MongoDB repository list file
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+# Update and install
+sudo apt update
+sudo apt-get install -y mongodb-org
+```
+
 #### For Ubuntu 20.04 (Focal):
 
 ```bash
-# Import MongoDB public GPG key
-wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+# Import MongoDB GPG key (modern method)
+wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
 
 # Create MongoDB repository list file
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
 # Update and install
 sudo apt update

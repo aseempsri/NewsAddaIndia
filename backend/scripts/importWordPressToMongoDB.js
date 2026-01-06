@@ -476,11 +476,27 @@ async function importWordPressXML(xmlFilePath) {
 }
 
 // Main execution
-const xmlFilePath = path.join(__dirname, '../../newsaddaindia.WordPress.2026-01-03.xml');
+// Try multiple possible locations for the XML file
+const possiblePaths = [
+  path.join(__dirname, '../../NewsAddaIndia/newsaddaindia.WordPress.2026-01-03.xml'), // In NewsAddaIndia directory
+  path.join(__dirname, '../../newsaddaindia.WordPress.2026-01-03.xml'), // In project root
+  '/root/NewsAddaIndia/newsaddaindia.WordPress.2026-01-03.xml', // Absolute path on VPS
+  '/root/newsaddaindia.WordPress.2026-01-03.xml' // Alternative absolute path
+];
 
-if (!fs.existsSync(xmlFilePath)) {
-  console.error(`❌ XML file not found: ${xmlFilePath}`);
-  console.log('Please ensure the XML file is in the project root directory');
+let xmlFilePath = null;
+for (const possiblePath of possiblePaths) {
+  if (fs.existsSync(possiblePath)) {
+    xmlFilePath = possiblePath;
+    console.log(`✅ Found XML file at: ${xmlFilePath}`);
+    break;
+  }
+}
+
+if (!xmlFilePath) {
+  console.error(`❌ XML file not found in any of these locations:`);
+  possiblePaths.forEach(p => console.error(`   - ${p}`));
+  console.log('\nPlease ensure the XML file exists in one of these locations.');
   process.exit(1);
 }
 

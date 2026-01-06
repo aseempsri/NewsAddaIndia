@@ -63,8 +63,9 @@ Backend/*.log
 Thumbs.db
 
 # WordPress exports and XML files
-*.xml
-!package.xml
+# XML files are now allowed (for WordPress imports)
+# *.xml
+# !package.xml
 # Allow package.xml files (if needed for package managers)
 
 
