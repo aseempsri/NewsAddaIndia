@@ -3,19 +3,15 @@ name: Deploy to Hostinger VPS
 on:
   push:
     branches:
-      - main  # Deploy on every push to main branch
-  workflow_dispatch:  # Allow manual trigger
-  # Optional: Deploy on tags
-  # push:
-  #   tags:
-  #     - 'v*'
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy-backend:
     name: Deploy Backend to VPS
     runs-on: ubuntu-latest
     # Deploy backend on every push (unless commit message contains [frontend-only])
-    if: !contains(github.event.head_commit.message, '[frontend-only]')
+    if: "!contains(github.event.head_commit.message, '[frontend-only]')"
     
     steps:
       - name: Checkout code
@@ -105,7 +101,7 @@ jobs:
     name: Deploy Frontend to VPS
     runs-on: ubuntu-latest
     # Deploy frontend on every push (unless commit message contains [backend-only])
-    if: !contains(github.event.head_commit.message, '[backend-only]')
+    if: "!contains(github.event.head_commit.message, '[backend-only]')"
     
     steps:
       - name: Checkout code
