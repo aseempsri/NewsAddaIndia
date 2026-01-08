@@ -68,7 +68,7 @@ interface SocialLink {
           </div>
 
           <!-- Categories -->
-          <div>
+          <div class="hidden md:block">
             <h4 class="font-display font-semibold mb-4">{{ t.categories }}</h4>
             <ul class="space-y-2">
               @for (link of footerLinks.categories; track link.name) {
@@ -86,7 +86,7 @@ interface SocialLink {
           </div>
 
           <!-- Company -->
-          <div>
+          <div class="hidden md:block">
             <h4 class="font-display font-semibold mb-4">{{ t.company }}</h4>
             <ul class="space-y-2">
               @for (link of footerLinks.company; track link.name) {
@@ -211,6 +211,7 @@ export class FooterComponent implements OnInit, OnDestroy {
         { name: this.t.business, route: '/category/business' },
         { name: this.t.sports, route: '/category/sports' },
         { name: this.t.entertainment, route: '/category/entertainment' },
+        { name: this.t.religious, route: '/category/religious' },
       ] as FooterLink[],
     company: [
       { name: 'About Us', href: '#' },

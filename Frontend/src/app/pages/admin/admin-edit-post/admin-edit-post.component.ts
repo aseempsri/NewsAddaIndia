@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { environment } from '../../../../environments/environment';
 
 interface PendingNews {
@@ -10,14 +11,17 @@ interface PendingNews {
   title: string;
   titleEn: string;
   excerpt: string;
+  summary: string;
   content: string;
   category: string;
+  icon?: string;
   tags: string[];
   pages: string[];
   author: string;
   image: string;
   isBreaking: boolean;
   isFeatured: boolean;
+  isTrending: boolean;
   generatedBy: string;
   generatedAt: string;
   createdAt: string;
@@ -95,6 +99,22 @@ interface PendingNews {
                     ></textarea>
                   </div>
 
+                  <!-- Summary (60 words) -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Summary (60 words) *</label>
+                    <p class="text-xs text-muted-foreground mb-2">A brief summary of the article in approximately 60 words</p>
+                    <textarea
+                      [(ngModel)]="newsData.summary"
+                      name="summary"
+                      rows="4"
+                      maxlength="400"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      placeholder="Enter a concise summary of the article (approximately 60 words)..."
+                      required
+                    ></textarea>
+                    <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsData.summary) }} / 60 words</p>
+                  </div>
+
                   <!-- Detailed Content -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Detailed Content (Full Article) *</label>
@@ -126,7 +146,30 @@ interface PendingNews {
                       <option value="Entertainment">Entertainment</option>
                       <option value="Health">Health</option>
                       <option value="Politics">Politics</option>
+                      <option value="Religious">Religious</option>
                     </select>
+                  </div>
+
+                  <!-- Icon Selection -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Icon</label>
+                    <p class="text-xs text-muted-foreground mb-3">Select an icon to display with the headline</p>
+                    <div class="grid grid-cols-4 sm:grid-cols-6 gap-3 p-4 border border-border rounded-lg bg-secondary/20 max-h-64 overflow-y-auto">
+                      @for (icon of availableIcons; track icon.id) {
+                        <button
+                          type="button"
+                          (click)="selectIcon(icon.id)"
+                          [class]="'p-3 rounded-lg border-2 transition-all hover:scale-110 ' + (newsData.icon === icon.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50')"
+                          [title]="icon.name">
+                          <div [innerHTML]="getIconSvg(icon)" class="w-6 h-6 mx-auto text-foreground flex items-center justify-center"></div>
+                        </button>
+                      }
+                    </div>
+                    @if (newsData.icon) {
+                      <div class="mt-2 text-sm text-muted-foreground">
+                        Selected: {{ getIconName(newsData.icon) }}
+                      </div>
+                    }
                   </div>
 
                   <!-- Tags -->
@@ -173,8 +216,8 @@ interface PendingNews {
                     />
                   </div>
 
-                  <!-- Breaking News & Featured -->
-                  <div class="grid grid-cols-2 gap-4">
+                  <!-- Breaking News, Featured & Trending -->
+                  <div class="grid grid-cols-3 gap-4">
                     <label class="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -192,6 +235,15 @@ interface PendingNews {
                         class="rounded"
                       />
                       <span class="text-sm font-medium">Featured</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="newsData.isTrending"
+                        name="isTrending"
+                        class="rounded"
+                      />
+                      <span class="text-sm font-medium">Trending</span>
                     </label>
                   </div>
 
@@ -277,12 +329,27 @@ interface PendingNews {
                       </div>
 
                       <div class="p-5">
-                        <h3 class="font-display text-lg font-semibold leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                          {{ newsData.title || 'News Title' }}
-                        </h3>
-                        <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
+                        <div class="flex items-start gap-3 mb-2">
+                          @if (newsData.icon) {
+                            <div class="flex-shrink-0" style="margin-top: 0.76rem; line-height: 1;">
+                              <div [innerHTML]="getPreviewIconSvg(newsData.icon)" [class]="'w-6 h-6 drop-shadow-lg ' + getIconColorClass(newsData.category)" [style.filter]="getIconFilter(newsData.category)" style="vertical-align: baseline;"></div>
+                            </div>
+                          }
+                          <h3 class="font-display text-lg font-semibold leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1">
+                            {{ newsData.title || 'News Title' }}
+                          </h3>
+                        </div>
+                        <p class="text-muted-foreground text-sm line-clamp-2 mb-3">
                           {{ newsData.excerpt || 'News excerpt will appear here...' }}
                         </p>
+                        @if (newsData.summary) {
+                          <div class="mb-4 p-3 bg-secondary/30 rounded-lg border border-border/50">
+                            <p class="text-xs font-semibold text-muted-foreground mb-1">Summary:</p>
+                            <p class="text-muted-foreground text-sm leading-relaxed">
+                              {{ newsData.summary }}
+                            </p>
+                          </div>
+                        }
                         <div class="flex items-center justify-between">
                           <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,6 +380,7 @@ export class AdminEditPostComponent implements OnInit {
     title: '',
     titleEn: '',
     excerpt: '',
+    summary: '',
     content: '',
     category: '',
     tags: [],
@@ -321,6 +389,7 @@ export class AdminEditPostComponent implements OnInit {
     image: '',
     isBreaking: false,
     isFeatured: false,
+    isTrending: false,
     generatedBy: '',
     generatedAt: '',
     createdAt: '',
@@ -335,12 +404,38 @@ export class AdminEditPostComponent implements OnInit {
   currentImageUrl: string | null = null;
   newImage: File | null = null;
 
-  availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business'];
+  availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
+
+  availableIcons = [
+    { id: 'star', name: 'Star', path: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>' },
+    { id: 'location', name: 'Location Pin', path: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>' },
+    { id: 'sports', name: 'Sports/Dollar', path: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>' },
+    { id: 'business', name: 'Business/Dollar', path: '<path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>' },
+    { id: 'play', name: 'Play/Entertainment', path: '<path d="M8 5v14l11-7z"/>' },
+    { id: 'check', name: 'Check/Health', path: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>' },
+    { id: 'globe', name: 'Globe/International', path: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>' },
+    { id: 'newspaper', name: 'Newspaper', path: '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H5v-4h9v4zm0-5H5V9h9v3zm0-5H5V5h9v2zm5 10h-4v-4h4v4zm0-5h-4V9h4v3zm0-5h-4V5h4v2z"/>' },
+    { id: 'fire', name: 'Fire/Trending', path: '<path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.35 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>' },
+    { id: 'lightning', name: 'Lightning', path: '<path d="M13 10V3L4 14h7v7l9-11h-7z"/>' },
+    { id: 'heart', name: 'Heart', path: '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>' },
+    { id: 'calendar', name: 'Calendar', path: '<path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>' },
+    { id: 'clock', name: 'Clock', path: '<path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>' },
+    { id: 'user', name: 'User', path: '<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>' },
+    { id: 'tag', name: 'Tag', path: '<path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7.01v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/>' },
+    { id: 'bell', name: 'Bell', path: '<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>' },
+    { id: 'megaphone', name: 'Megaphone', path: '<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/><path d="M11.5 12.5l2.5 2.5 5-5-2.5-2.5z"/>' },
+    { id: 'camera', name: 'Camera', path: '<path d="M12 12.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5S9.5 8.62 9.5 10s1.12 2.5 2.5 2.5zM12 3l1.09 2.26L15.5 6l-2.41.74L12 9l-1.09-2.26L8.5 6l2.41-.74L12 3zm4.5 9l-1.41 1.41L16.5 15l-1.41-1.41L13.5 12l1.41-1.41L16.5 12l1.41 1.41zm-9 0l-1.41 1.41L7.5 15l-1.41-1.41L4.5 12l1.41-1.41L7.5 12l1.41 1.41z"/>' },
+    { id: 'video', name: 'Video', path: '<path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>' },
+    { id: 'chart', name: 'Chart', path: '<path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>' },
+    { id: 'shield', name: 'Shield', path: '<path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>' },
+    { id: 'trophy', name: 'Trophy', path: '<path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.78 4.39 5.13A5.96 5.96 0 009 19c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.84-1.04-3.43-2.56-4.39C16.08 12.78 18 10.55 18 8V7c0-1.1-.9-2-2-2zM7 8V7h2v3.82C7.84 10.4 7 9.3 7 8zm7 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>' }
+  ];
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private sanitizer: DomSanitizer
   ) {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -403,7 +498,7 @@ export class AdminEditPostComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.success) {
-          this.newsData = response.data;
+          this.newsData = { ...response.data, summary: response.data.summary || '' };
           this.tagsInput = this.newsData.tags.join(', ');
           if (this.newsData.image) {
             this.currentImageUrl = this.getImageUrl(this.newsData.image);
@@ -451,6 +546,67 @@ export class AdminEditPostComponent implements OnInit {
     }
   }
 
+  selectIcon(iconId: string) {
+    if (this.newsData.icon === iconId) {
+      // Deselect if clicking the same icon
+      this.newsData.icon = undefined;
+    } else {
+      this.newsData.icon = iconId;
+    }
+  }
+
+  getIconName(iconId: string): string {
+    const icon = this.availableIcons.find(i => i.id === iconId);
+    return icon ? icon.name : iconId;
+  }
+
+  getIconSvg(icon: { id: string; name: string; path: string }): SafeHtml {
+    const svgHtml = `<svg class="w-6 h-6 text-foreground" viewBox="0 0 24 24" fill="currentColor">${icon.path}</svg>`;
+    return this.sanitizer.bypassSecurityTrustHtml(svgHtml);
+  }
+
+  getPreviewIconSvg(iconId: string): SafeHtml {
+    const icon = this.availableIcons.find(i => i.id === iconId);
+    if (!icon) {
+      return this.sanitizer.bypassSecurityTrustHtml('');
+    }
+    const svgHtml = `<svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">${icon.path}</svg>`;
+    return this.sanitizer.bypassSecurityTrustHtml(svgHtml);
+  }
+
+  getIconColorClass(category: string): string {
+    const colors: Record<string, string> = {
+      'Sports': 'text-orange-500',
+      'Business': 'text-blue-500',
+      'Entertainment': 'text-pink-500',
+      'Health': 'text-green-500',
+      'National': 'text-blue-500',
+      'International': 'text-purple-500',
+      'Politics': 'text-red-500',
+      'Technology': 'text-cyan-500'
+    };
+    return colors[category] || 'text-purple-500';
+  }
+
+  getIconFilter(category: string): string {
+    const filters: Record<string, string> = {
+      'Sports': 'drop-shadow(0 2px 4px rgba(251,146,60,0.4))',
+      'Business': 'drop-shadow(0 2px 4px rgba(59,130,246,0.4))',
+      'Entertainment': 'drop-shadow(0 2px 4px rgba(236,72,153,0.4))',
+      'Health': 'drop-shadow(0 2px 4px rgba(34,197,94,0.4))',
+      'National': 'drop-shadow(0 2px 4px rgba(59,130,246,0.4))',
+      'International': 'drop-shadow(0 2px 4px rgba(168,85,247,0.4))',
+      'Politics': 'drop-shadow(0 2px 4px rgba(239,68,68,0.4))',
+      'Technology': 'drop-shadow(0 2px 4px rgba(6,182,212,0.4))'
+    };
+    return filters[category] || 'drop-shadow(0 2px 4px rgba(168,85,247,0.4))';
+  }
+
+  getWordCount(text: string | undefined): number {
+    if (!text) return 0;
+    return text.split(/\s+/).filter(w => w.length > 0).length;
+  }
+
   // Sync pages with category
   onCategoryChange() {
     if (!this.newsData.category) {
@@ -493,13 +649,18 @@ export class AdminEditPostComponent implements OnInit {
     formData.append('title', this.newsData.title);
     formData.append('titleEn', this.newsData.titleEn || this.newsData.title);
     formData.append('excerpt', this.newsData.excerpt);
+    formData.append('summary', this.newsData.summary || '');
     formData.append('content', this.newsData.content || this.newsData.excerpt);
     formData.append('category', this.newsData.category);
+    if (this.newsData.icon) {
+      formData.append('icon', this.newsData.icon);
+    }
     formData.append('tags', JSON.stringify(this.newsData.tags));
     formData.append('pages', JSON.stringify(this.newsData.pages));
     formData.append('author', this.newsData.author);
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
+    formData.append('isTrending', this.newsData.isTrending.toString());
     
     if (this.newImage) {
       formData.append('image', this.newImage);

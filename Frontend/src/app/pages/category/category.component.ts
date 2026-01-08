@@ -56,9 +56,9 @@ import { Subscription } from 'rxjs';
               @if (!isLoading) {
                 @for (news of filteredNews; track news.id || $index; let i = $index) {
                 <article
-                  class="news-card group opacity-0 animate-fade-in"
+                  class="news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300"
                   [style.animation-delay]="i * 100 + 'ms'">
-                  <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                  <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300">
                     <!-- Loading Animation - Show while image is loading -->
                     @if (news.imageLoading || !news.image) {
                       <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -75,35 +75,69 @@ import { Subscription } from 'rxjs';
                         [alt]="news.title"
                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     }
-                    <div class="absolute top-4 left-4 z-20">
-                      <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
+                    <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
+                      @if (news.isTrending) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                          </svg>
+                          <span class="text-xs leading-none">🔥</span>
+                          <span>TRENDING</span>
+                          <span class="text-xs leading-none">🔥</span>
+                        </span>
+                      }
+                      @if (news.isBreaking) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                          </svg>
+                          <span>BREAKING</span>
+                        </span>
+                      }
+                      @if (news.isFeatured) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          <span>FEATURED</span>
+                        </span>
+                      }
+                      <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
                         {{ getCategoryName(news.category) }}
                       </span>
                     </div>
                   </div>
 
-                  <!-- Border Line -->
-                  <div class="h-[2px] bg-gray-300 dark:bg-gray-600"></div>
+                  <!-- Border Line with Gradient -->
+                  <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
 
-                  <div class="p-5 pt-6 pb-6 bg-background rounded-b-xl">
-                    <div class="flex items-start gap-2 mb-3">
-                      <div class="flex-shrink-0 mt-0.5">
+                  <div class="p-5 pt-6 pb-6 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20">
+                    <div class="flex items-start gap-3 mb-3">
+                      <div class="flex-shrink-0" style="margin-top: 0.76rem; line-height: 1;">
                         @if (news.category === 'Sports') {
-                          <svg class="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
+                          <svg class="w-6 h-6 text-orange-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(251,146,60,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
                         } @else if (news.category === 'Business') {
-                          <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                          <svg class="w-6 h-6 text-blue-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(59,130,246,0.4)); vertical-align: baseline;"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
                         } @else if (news.category === 'Entertainment') {
-                          <svg class="w-5 h-5 text-pink-600" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                          <svg class="w-6 h-6 text-pink-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(236,72,153,0.4)); vertical-align: baseline;"><path d="M8 5v14l11-7z"/></svg>
                         } @else if (news.category === 'Health') {
-                          <svg class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                          <svg class="w-6 h-6 text-green-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(34,197,94,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        } @else if (news.category === 'Religious') {
+                          <svg class="w-6 h-6 text-indigo-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(99,102,241,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         } @else {
-                          <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                          <svg class="w-6 h-6 text-purple-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(168,85,247,0.4)); vertical-align: baseline;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                         }
                       </div>
                       <h3 
-                        [class]="'font-display text-lg font-bold leading-relaxed group-hover:opacity-90 transition-colors line-clamp-3 pt-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 ' + getHeadlineColor(news.category)"
+                        [class]="'font-display text-lg font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 hover:scale-[1.02] flex-1 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
                         (click)="openNewsModal(news)"
-                        (touchend)="openNewsModal(news)">
+                        (touchstart)="onTouchStart($event, news)"
+                        (touchend)="onTouchEnd($event, news)"
+                        (touchmove)="onTouchMove($event)"
+                        style="touch-action: pan-y;">
+                        @if (news.isTrending) {
+                          <span class="inline-block mr-2 text-lg leading-none">🔥</span>
+                        }
                         {{ getDisplayTitle(news) }}
                       </h3>
                     </div>
@@ -113,7 +147,7 @@ import { Subscription } from 'rxjs';
                     <div class="flex items-center">
                       <span class="flex items-center gap-1.5 text-xs font-medium">
                         <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                        <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.time }}</span>
+                        <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
                       </span>
                     </div>
                   </div>
@@ -174,8 +208,12 @@ export class CategoryComponent implements OnInit, OnDestroy {
     });
 
     // Subscribe to language changes
-    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(async () => {
       this.updateTranslations();
+      // Re-translate news titles when language changes
+      if (this.filteredNews && this.filteredNews.length > 0) {
+        await this.translateNewsTitles();
+      }
     });
   }
 
@@ -187,7 +225,31 @@ export class CategoryComponent implements OnInit, OnDestroy {
     this.t = this.languageService.getTranslations();
   }
 
+  async translateNewsTitles() {
+    if (!this.filteredNews || this.filteredNews.length === 0) return;
+    
+    // Translate titles in parallel (limited batch to avoid overwhelming API)
+    const batchSize = 5;
+    for (let i = 0; i < this.filteredNews.length; i += batchSize) {
+      const batch = this.filteredNews.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (article) => {
+        try {
+          const translatedTitle = await this.languageService.translateToCurrentLanguage(article.title);
+          // Store translated title temporarily
+          (article as any).translatedTitle = translatedTitle;
+        } catch (error) {
+          console.warn('Failed to translate title:', error);
+        }
+      }));
+    }
+  }
+
   getDisplayTitle(news: NewsArticle): string {
+    // If translated title exists, use it
+    if ((news as any).translatedTitle) {
+      return (news as any).translatedTitle;
+    }
+    // Otherwise use the language service method
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
   }
 
@@ -205,8 +267,10 @@ export class CategoryComponent implements OnInit, OnDestroy {
     // Convert category name to lowercase page name (e.g., "National" -> "national")
     const pageName = this.categoryName.toLowerCase();
     this.newsService.fetchNewsByPage(pageName, 12).subscribe({
-      next: (news) => {
+      next: async (news) => {
         this.filteredNews = news;
+        // Translate titles after loading
+        await this.translateNewsTitles();
         this.isLoading = false;
         // Fetch images for all news items
         this.fetchImagesForAllItems();
@@ -435,14 +499,15 @@ export class CategoryComponent implements OnInit, OnDestroy {
   ];
 
   categoryColors: Record<string, string> = {
-    National: 'bg-primary/20 text-primary',
-    International: 'bg-purple-500/20 text-purple-400',
-    Politics: 'bg-red-500/20 text-red-400',
-    Health: 'bg-green-500/20 text-green-400',
-    Sports: 'bg-orange-500/20 text-orange-400',
-    Business: 'bg-blue-500/20 text-blue-400',
-    Entertainment: 'bg-pink-500/20 text-pink-400',
-    Technology: 'bg-cyan-500/20 text-cyan-400',
+    National: 'bg-blue-500 text-white',
+    International: 'bg-purple-500 text-white',
+    Politics: 'bg-red-500 text-white',
+    Health: 'bg-green-500 text-white',
+    Sports: 'bg-orange-500 text-white',
+    Business: 'bg-blue-500 text-white',
+    Entertainment: 'bg-pink-500 text-white',
+    Technology: 'bg-cyan-500 text-white',
+    Religious: 'bg-indigo-500 text-white',
   };
 
   categoryAccentColors: Record<string, string> = {
@@ -453,10 +518,11 @@ export class CategoryComponent implements OnInit, OnDestroy {
     Sports: 'from-orange-500 to-amber-500',
     Business: 'from-blue-500 to-blue-600',
     Entertainment: 'from-pink-500 to-rose-500',
+    Religious: 'from-indigo-500 to-indigo-600',
   };
 
   getCategoryColor(category: string): string {
-    return this.categoryColors[category] || 'bg-primary/20 text-primary';
+    return this.categoryColors[category] || 'bg-primary text-white';
   }
 
   getCategoryAccentColor(category: string): string {
@@ -465,16 +531,64 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent',
-      'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent',
+      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
+      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
+      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
+      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
     };
-    return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent';
+    return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
+  }
+
+  // Touch handling to prevent accidental opens on mobile
+  private touchStartTime: number = 0;
+  private touchStartX: number = 0;
+  private touchStartY: number = 0;
+  private touchMoved: boolean = false;
+  private touchTargetNews: NewsArticle | null = null;
+
+  onTouchStart(event: TouchEvent, news: NewsArticle) {
+    this.touchStartTime = Date.now();
+    this.touchStartX = event.touches[0].clientX;
+    this.touchStartY = event.touches[0].clientY;
+    this.touchMoved = false;
+    this.touchTargetNews = news;
+  }
+
+  onTouchMove(event: TouchEvent) {
+    if (this.touchStartTime > 0) {
+      const deltaX = Math.abs(event.touches[0].clientX - this.touchStartX);
+      const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
+      // If touch moved more than 10px, consider it a scroll
+      if (deltaX > 10 || deltaY > 10) {
+        this.touchMoved = true;
+      }
+    }
+  }
+
+  onTouchEnd(event: TouchEvent, news: NewsArticle) {
+    const touchDuration = Date.now() - this.touchStartTime;
+    const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
+    const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
+    
+    // Only open modal if:
+    // 1. Touch didn't move much (not a scroll) - less than 10px
+    // 2. Touch was quick (less than 300ms) - deliberate tap
+    // 3. Touch target matches
+    if (!this.touchMoved && deltaX < 10 && deltaY < 10 && touchDuration < 300 && this.touchTargetNews === news) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.openNewsModal(news);
+    }
+    
+    // Reset touch state
+    this.touchStartTime = 0;
+    this.touchMoved = false;
+    this.touchTargetNews = null;
   }
 
   openNewsModal(news: NewsArticle) {

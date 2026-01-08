@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostListener, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, HostListener, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { NewsArticle } from '../../services/news.service';
@@ -37,11 +37,11 @@ import { Subscription } from 'rxjs';
           <button
             (click)="close()"
             (touchend)="onCloseButtonTouch($event)"
-            class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2.5 sm:p-2 rounded-full bg-background/90 hover:bg-background active:bg-background/70 border border-border/50 transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2.5 sm:p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow"
             aria-label="Close modal"
             type="button">
-            <svg class="w-5 h-5 sm:w-5 sm:h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg class="w-6 h-6 sm:w-6 sm:h-6 text-gray-800 dark:text-white close-icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
@@ -66,11 +66,11 @@ import { Subscription } from 'rxjs';
             <!-- Category Badge -->
             <div class="absolute top-4 left-4 flex gap-2">
               @if (isBreaking) {
-                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
+                <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
                   BREAKING
                 </span>
               }
-              <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
+              <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
                 {{ news.category }}
               </span>
             </div>
@@ -80,8 +80,8 @@ import { Subscription } from 'rxjs';
           <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch" style="touch-action: pan-y;">
             <div class="p-4 sm:p-6 lg:p-8">
               <!-- Title -->
-              <h1 class="font-display text-xl sm:text-2xl lg:text-4xl font-bold leading-relaxed mb-4 sm:mb-5 pt-3 pb-2 text-foreground">
-                {{ news.titleEn || news.title }}
+              <h1 [class]="'font-display text-xl sm:text-2xl lg:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
+                {{ getDisplayTitle() }}
               </h1>
 
               <!-- Meta Information -->
@@ -99,11 +99,6 @@ import { Subscription } from 'rxjs';
                   {{ news.date || news.time }}
                 </span>
               </div>
-
-              <!-- Excerpt -->
-              <p class="text-lg text-muted-foreground mb-6 leading-relaxed">
-                {{ news.excerpt }}
-              </p>
 
               <!-- Full Content -->
               <div class="prose prose-lg max-w-none text-foreground mb-6">
@@ -126,31 +121,24 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-2">
+          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-row items-center justify-between gap-3">
+            <div class="flex flex-row gap-3 flex-1">
               @if (news.id) {
                 <button
                   (click)="navigateToFullArticle()"
                   (touchend)="navigateToFullArticle(); $event.stopPropagation()"
-                  class="px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] sm:min-h-0">
+                  class="px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 sm:flex-none">
                   <span>{{ t.readMore }}</span>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </button>
               }
-              <button
-                (click)="close()"
-                (touchend)="onCloseButtonTouch($event)"
-                class="px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium touch-manipulation min-h-[44px] sm:min-h-0"
-                type="button">
-                Close
-              </button>
             </div>
             <button
               (click)="shareNews()"
               (touchend)="shareNews(); $event.stopPropagation()"
-              class="px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] sm:min-h-0"
+              class="px-4 sm:px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 sm:flex-none"
               type="button">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -206,6 +194,19 @@ import { Subscription } from 'rxjs';
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
+    /* Glow effect for close button */
+    .close-button-glow {
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5), 0 0 30px rgba(255, 255, 255, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .dark .close-button-glow {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.4), 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .close-icon-glow {
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+    }
+    .dark .close-icon-glow {
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+    }
     /* Prevent scroll on backdrop */
     .fixed.inset-0 {
       touch-action: none;
@@ -234,6 +235,10 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   @Output() closeModal = new EventEmitter<void>();
 
   fullContent: string = '';
+  translatedContent: string = '';
+  translatedTitle: string = '';
+  translatedExcerpt: string = '';
+  isTranslating: boolean = false;
   showFullContent: boolean = false;
   t: any = {};
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
@@ -249,7 +254,8 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     private http: HttpClient,
     private modalService: ModalService,
     private languageService: LanguageService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     this.updateTranslations();
   }
@@ -258,24 +264,46 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     this.updateTranslations();
     if (this.news && this.isOpen) {
       this.loadFullContent();
+      // Translate after content is loaded
+      setTimeout(() => this.translateContent(), 100);
     }
     // Subscribe to language changes
-    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
+    console.log('[NewsDetailModal] Subscribing to language changes...');
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
+      console.log('[NewsDetailModal] Language changed to:', lang);
       this.updateTranslations();
+      // Reset translations to trigger re-translation
+      this.translatedTitle = '';
+      this.translatedExcerpt = '';
+      this.translatedContent = '';
+      // Trigger change detection to clear old content
+      this.cdr.detectChanges();
+      console.log('[NewsDetailModal] Starting content translation...');
+      await this.translateContent();
+      console.log('[NewsDetailModal] Content translation complete');
+      // Trigger change detection after translation completes
+      this.cdr.detectChanges();
     });
+    console.log('[NewsDetailModal] Language subscription set up');
     // Subscribe to modal service for programmatic modal opening
     this.modalSubscription = this.modalService.getModalState().subscribe(state => {
-      this.isOpen = state.isOpen;
-      this.news = state.news;
-      this.isBreaking = state.isBreaking || false;
-      if (this.isOpen && this.news) {
-        this.preventBodyScroll();
-        this.showFullContent = false;
-        this.tags = []; // Reset tags, will be loaded from API
-        this.loadFullContent();
-      } else if (!this.isOpen) {
-        this.restoreBodyScroll();
-        this.showFullContent = false;
+        this.isOpen = state.isOpen;
+        this.news = state.news;
+        this.isBreaking = state.isBreaking || false;
+        if (this.isOpen && this.news) {
+          this.preventBodyScroll();
+          this.showFullContent = false;
+          this.tags = []; // Reset tags, will be loaded from API
+          // Reset translations
+          this.translatedTitle = '';
+          this.translatedExcerpt = '';
+          this.translatedContent = '';
+          this.loadFullContent();
+          // Translate after content is loaded
+          setTimeout(() => this.translateContent(), 100);
+        } else if (!this.isOpen) {
+          this.restoreBodyScroll();
+          this.showFullContent = false;
         this.tags = []; // Reset tags when modal closes
       }
     });
@@ -309,6 +337,154 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   updateTranslations() {
     this.t = this.languageService.getTranslations();
+    // Translate content when language changes
+    if (this.news && this.isOpen) {
+      this.translateContent();
+    }
+  }
+
+  /**
+   * Strip HTML tags from text for translation
+   */
+  private stripHtml(html: string): string {
+    if (!html) return '';
+    // Create a temporary div element to parse HTML
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  /**
+   * Translate HTML content by translating text nodes while preserving structure
+   */
+  private async translateHtmlContent(htmlContent: string): Promise<string> {
+    if (!htmlContent) return '';
+    
+    // Strip HTML to get plain text for translation
+    const plainText = this.stripHtml(htmlContent);
+    if (!plainText.trim()) return htmlContent;
+    
+    // Translate the plain text
+    const translatedText = await this.languageService.translateToCurrentLanguage(plainText);
+    
+    // If translation didn't change (already in correct language), return original
+    if (translatedText === plainText) {
+      return htmlContent;
+    }
+    
+    // Parse HTML and translate text nodes while preserving structure
+    const tmp = document.createElement('div');
+    tmp.innerHTML = htmlContent;
+    
+    // Extract all text nodes and translate them
+    const walker = document.createTreeWalker(
+      tmp,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    const textNodes: Text[] = [];
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.textContent && node.textContent.trim()) {
+        textNodes.push(node as Text);
+      }
+    }
+    
+    // Split translated text by paragraphs
+    const translatedParagraphs = translatedText.split(/\n\n+/).filter(p => p.trim());
+    
+    // Replace text nodes with translated content
+    textNodes.forEach((textNode, index) => {
+      if (index < translatedParagraphs.length) {
+        textNode.textContent = translatedParagraphs[index].trim();
+      }
+    });
+    
+    return tmp.innerHTML || htmlContent;
+  }
+
+  async translateContent() {
+    console.log('[NewsDetailModal] translateContent called, news:', this.news ? 'exists' : 'null', 'isTranslating:', this.isTranslating);
+    if (!this.news || this.isTranslating) {
+      console.log('[NewsDetailModal] Skipping translation - no news or already translating');
+      return;
+    }
+    
+    this.isTranslating = true;
+    const currentLang = this.languageService.getCurrentLanguage();
+    console.log('[NewsDetailModal] Current language:', currentLang);
+    
+    try {
+      // Translate title
+      if (this.news.title) {
+        console.log('[NewsDetailModal] Translating title:', this.news.title.substring(0, 30) + '...');
+        this.translatedTitle = await this.languageService.translateToCurrentLanguage(this.news.title);
+        console.log('[NewsDetailModal] Translated title:', this.translatedTitle.substring(0, 30) + '...');
+      }
+      
+      // Translate excerpt
+      if (this.news.excerpt) {
+        console.log('[NewsDetailModal] Translating excerpt:', this.news.excerpt.substring(0, 30) + '...');
+        this.translatedExcerpt = await this.languageService.translateToCurrentLanguage(this.news.excerpt);
+        console.log('[NewsDetailModal] Translated excerpt:', this.translatedExcerpt.substring(0, 30) + '...');
+      }
+      
+      // Translate content (handle HTML properly)
+      const contentToTranslate = this.fullContent || this.news.excerpt || '';
+      if (contentToTranslate) {
+        console.log('[NewsDetailModal] Translating content:', contentToTranslate.substring(0, 30) + '...');
+        // Check if content contains HTML
+        if (contentToTranslate.includes('<') && contentToTranslate.includes('>')) {
+          this.translatedContent = await this.translateHtmlContent(contentToTranslate);
+        } else {
+          this.translatedContent = await this.languageService.translateToCurrentLanguage(contentToTranslate);
+        }
+        console.log('[NewsDetailModal] Translated content:', this.translatedContent.substring(0, 30) + '...');
+      }
+    } catch (error) {
+      console.error('[NewsDetailModal] Error translating content:', error);
+      // Fallback to original content
+      this.translatedTitle = this.news.title || '';
+      this.translatedExcerpt = this.news.excerpt || '';
+      this.translatedContent = this.fullContent || this.news.excerpt || '';
+    } finally {
+      this.isTranslating = false;
+      console.log('[NewsDetailModal] Translation process complete');
+      // Trigger change detection after translation completes
+      this.cdr.detectChanges();
+    }
+  }
+
+  getDisplayTitle(): string {
+    if (!this.news) return '';
+    // If translation is available and current, use it
+    if (this.translatedTitle) {
+      return this.translatedTitle;
+    }
+    // Otherwise use the language service method
+    return this.languageService.getDisplayTitle(this.news.title, this.news.titleEn);
+  }
+
+  getDisplayContent(): string {
+    if (!this.news) return '';
+    const lang = this.languageService.getCurrentLanguage();
+    
+    // If translation is in progress, show loading or original
+    if (this.isTranslating && !this.translatedContent) {
+      return this.fullContent || this.news.excerpt || '';
+    }
+    
+    // If translation is available, use it
+    if (this.translatedContent) {
+      return this.translatedContent;
+    }
+    
+    // Otherwise fallback to original based on language
+    if (lang === 'en') {
+      return (this.news as any).contentEn || (this.news as any).excerptEn || this.fullContent || this.news.excerpt || '';
+    }
+    return this.fullContent || this.news.excerpt || '';
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -363,7 +539,24 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}`).subscribe({
         next: (response) => {
           if (response.success && response.data) {
+            // Store both Hindi and English content if available
+            // Hindi content (default)
             this.fullContent = response.data.content || response.data.excerpt || this.news.excerpt;
+            
+            // Store English content if available
+            if (response.data.contentEn) {
+              (this.news as any).contentEn = response.data.contentEn;
+            }
+            if (response.data.excerptEn) {
+              (this.news as any).excerptEn = response.data.excerptEn;
+            }
+            // Also store English content/excerpt in the news object for easy access
+            if (response.data.content) {
+              (this.news as any).contentHi = response.data.content;
+            }
+            if (response.data.excerpt) {
+              (this.news as any).excerptHi = response.data.excerpt;
+            }
             this.tags = response.data.tags || [];
           } else {
             this.fullContent = this.news.excerpt;
@@ -381,12 +574,13 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   getFormattedContent(): string {
-    if (!this.fullContent) {
-      return this.news?.excerpt || '';
+    const content = this.getDisplayContent();
+    if (!content) {
+      return '';
     }
 
     // Convert line breaks to paragraphs
-    return this.fullContent
+    return content
       .split('\n\n')
       .map(paragraph => paragraph.trim())
       .filter(paragraph => paragraph.length > 0)
@@ -453,15 +647,32 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   getCategoryColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-blue-500/20 text-blue-400',
-      'International': 'bg-purple-500/20 text-purple-400',
-      'Sports': 'bg-orange-500/20 text-orange-400',
-      'Business': 'bg-yellow-500/20 text-yellow-400',
-      'Entertainment': 'bg-pink-500/20 text-pink-400',
-      'Health': 'bg-green-500/20 text-green-400',
-      'Politics': 'bg-indigo-500/20 text-indigo-400'
+      'National': 'bg-blue-500 text-white',
+      'International': 'bg-purple-500 text-white',
+      'Sports': 'bg-orange-500 text-white',
+      'Business': 'bg-blue-500 text-white',
+      'Entertainment': 'bg-pink-500 text-white',
+      'Health': 'bg-green-500 text-white',
+      'Politics': 'bg-red-500 text-white',
+      'Technology': 'bg-cyan-500 text-white',
+      'Religious': 'bg-indigo-500 text-white'
     };
-    return colors[category] || 'bg-primary/20 text-primary';
+    return colors[category] || 'bg-primary text-white';
+  }
+
+  getHeadlineColor(category: string): string {
+    const colors: Record<string, string> = {
+      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
+      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
+      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
+      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
+    };
+    return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }
 }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
@@ -107,7 +107,7 @@ import { Subscription } from 'rxjs';
             <!-- Excerpt/Subheading -->
             <div class="mb-12">
               <p class="text-2xl lg:text-3xl text-muted-foreground leading-relaxed font-light italic border-l-4 border-primary pl-6">
-                {{ news.excerpt }}
+                {{ getDisplayExcerpt() }}
               </p>
             </div>
 
@@ -270,6 +270,10 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   isBreaking = false;
   tags: string[] = [];
   fullContent: string = '';
+  translatedContent: string = '';
+  translatedTitle: string = '';
+  translatedExcerpt: string = '';
+  isTranslating: boolean = false;
   t: any = {};
   readingProgress = 0;
   parallaxOffset = 0;
@@ -282,7 +286,8 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     private router: Router,
     private newsService: NewsService,
     private http: HttpClient,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private cdr: ChangeDetectorRef
   ) {
     this.updateTranslations();
   }
@@ -299,8 +304,19 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     });
 
     // Subscribe to language changes
-    this.languageSubscription = this.languageService.currentLanguage$.subscribe(() => {
-      this.updateTranslations();
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
+      console.log('[NewsDetailPage] Language changed to:', lang);
+      // Reset translations to trigger re-translation
+      this.translatedTitle = '';
+      this.translatedExcerpt = '';
+      this.translatedContent = '';
+      // Trigger change detection to clear old content
+      this.cdr.detectChanges();
+      console.log('[NewsDetailPage] Starting translation...');
+      await this.updateTranslations();
+      console.log('[NewsDetailPage] Translation complete');
+      // Trigger change detection after translation completes
+      this.cdr.detectChanges();
     });
   }
 
@@ -327,12 +343,168 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     this.parallaxOffset = scrollTop * 0.5;
   }
 
-  updateTranslations() {
+  async updateTranslations() {
     this.t = this.languageService.getTranslations();
+    // Translate content when language changes
+    if (this.news) {
+      await this.translateContent();
+    }
+  }
+
+  /**
+   * Strip HTML tags from text for translation
+   */
+  private stripHtml(html: string): string {
+    if (!html) return '';
+    // Create a temporary div element to parse HTML
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  /**
+   * Translate HTML content by translating text nodes while preserving structure
+   */
+  private async translateHtmlContent(htmlContent: string): Promise<string> {
+    if (!htmlContent) return '';
+    
+    // Strip HTML to get plain text for translation
+    const plainText = this.stripHtml(htmlContent);
+    if (!plainText.trim()) return htmlContent;
+    
+    // Translate the plain text
+    const translatedText = await this.languageService.translateToCurrentLanguage(plainText);
+    
+    // If translation didn't change (already in correct language), return original
+    if (translatedText === plainText) {
+      return htmlContent;
+    }
+    
+    // Parse HTML and translate text nodes while preserving structure
+    const tmp = document.createElement('div');
+    tmp.innerHTML = htmlContent;
+    
+    // Extract all text nodes and translate them
+    const walker = document.createTreeWalker(
+      tmp,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    const textNodes: Text[] = [];
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.textContent && node.textContent.trim()) {
+        textNodes.push(node as Text);
+      }
+    }
+    
+    // Split translated text by paragraphs
+    const translatedParagraphs = translatedText.split(/\n\n+/).filter(p => p.trim());
+    
+    // Replace text nodes with translated content
+    textNodes.forEach((textNode, index) => {
+      if (index < translatedParagraphs.length) {
+        textNode.textContent = translatedParagraphs[index].trim();
+      }
+    });
+    
+    return tmp.innerHTML || htmlContent;
+  }
+
+  async translateContent() {
+    console.log('[NewsDetailPage] translateContent called, news:', this.news ? 'exists' : 'null', 'isTranslating:', this.isTranslating);
+    if (!this.news || this.isTranslating) {
+      console.log('[NewsDetailPage] Skipping translation - no news or already translating');
+      return;
+    }
+    
+    this.isTranslating = true;
+    
+    try {
+      // Translate title
+      if (this.news.title) {
+        console.log('[NewsDetailPage] Translating title:', this.news.title.substring(0, 30) + '...');
+        this.translatedTitle = await this.languageService.translateToCurrentLanguage(this.news.title);
+        console.log('[NewsDetailPage] Translated title:', this.translatedTitle.substring(0, 30) + '...');
+      }
+      
+      // Translate excerpt
+      if (this.news.excerpt) {
+        console.log('[NewsDetailPage] Translating excerpt:', this.news.excerpt.substring(0, 30) + '...');
+        this.translatedExcerpt = await this.languageService.translateToCurrentLanguage(this.news.excerpt);
+        console.log('[NewsDetailPage] Translated excerpt:', this.translatedExcerpt.substring(0, 30) + '...');
+      }
+      
+      // Translate content (handle HTML properly)
+      const contentToTranslate = this.fullContent || this.news.excerpt || '';
+      if (contentToTranslate) {
+        console.log('[NewsDetailPage] Translating content:', contentToTranslate.substring(0, 30) + '...');
+        // Check if content contains HTML
+        if (contentToTranslate.includes('<') && contentToTranslate.includes('>')) {
+          this.translatedContent = await this.translateHtmlContent(contentToTranslate);
+        } else {
+          this.translatedContent = await this.languageService.translateToCurrentLanguage(contentToTranslate);
+        }
+        console.log('[NewsDetailPage] Translated content:', this.translatedContent.substring(0, 30) + '...');
+      }
+    } catch (error) {
+      console.error('[NewsDetailPage] Error translating content:', error);
+      // Fallback to original content
+      this.translatedTitle = this.news.title || '';
+      this.translatedExcerpt = this.news.excerpt || '';
+      this.translatedContent = this.fullContent || this.news.excerpt || '';
+    } finally {
+      this.isTranslating = false;
+      console.log('[NewsDetailPage] Translation process complete');
+      // Trigger change detection after translation completes
+      this.cdr.detectChanges();
+    }
   }
 
   getDisplayTitle(news: NewsArticle): string {
+    if (!news) return '';
+    // If translation is available and current, use it
+    if (this.translatedTitle && news.id === this.news?.id) {
+      return this.translatedTitle;
+    }
+    // Otherwise use the language service method
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
+  }
+
+  getDisplayExcerpt(): string {
+    if (!this.news) return '';
+    // If translation is available and current, use it
+    if (this.translatedExcerpt) {
+      return this.translatedExcerpt;
+    }
+    // Otherwise fallback to original
+    const lang = this.languageService.getCurrentLanguage();
+    if (lang === 'en' && (this.news as any).excerptEn) {
+      return (this.news as any).excerptEn;
+    }
+    return this.news.excerpt || '';
+  }
+
+  getDisplayContent(): string {
+    if (!this.news) return '';
+    const lang = this.languageService.getCurrentLanguage();
+    
+    // If translation is in progress, show loading or original
+    if (this.isTranslating && !this.translatedContent) {
+      return this.fullContent || this.news.excerpt || '';
+    }
+    
+    // If translation is available, use it
+    if (this.translatedContent) {
+      return this.translatedContent;
+    }
+    
+    // Otherwise fallback to original based on language
+    if (lang === 'en') {
+      return (this.news as any).contentEn || (this.news as any).excerptEn || this.fullContent || this.news.excerpt || '';
+    }
+    return this.fullContent || this.news.excerpt || '';
   }
 
   getCategoryName(category: string): string {
@@ -370,11 +542,21 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
               author: response.data.author,
               date: response.data.date
             };
+            // Store Hindi content (default)
             this.fullContent = response.data.content || response.data.excerpt || '';
+            // Store English content if available
+            if (response.data.contentEn) {
+              (this.news as any).contentEn = response.data.contentEn;
+            }
+            if (response.data.excerptEn) {
+              (this.news as any).excerptEn = response.data.excerptEn;
+            }
             this.tags = response.data.tags || [];
             this.isBreaking = response.data.isBreaking || false;
             this.imageError = false; // Reset image error flag
             this.isLoading = false;
+            // Translate content after loading
+            setTimeout(() => this.translateContent(), 100);
           } else {
             this.isLoading = false;
           }
@@ -397,16 +579,13 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   getFormattedContent(): string {
-    if (!this.fullContent && this.news) {
-      return this.news.excerpt || '';
-    }
-    
-    if (!this.fullContent) {
+    const content = this.getDisplayContent();
+    if (!content) {
       return '';
     }
     
     // Convert line breaks to paragraphs
-    return this.fullContent
+    return content
       .split('\n\n')
       .map(paragraph => paragraph.trim())
       .filter(paragraph => paragraph.length > 0)

@@ -14,6 +14,7 @@ export interface Translations {
   entertainment: string;
   sports: string;
   business: string;
+  religious: string;
   subscribe: string;
   readers: string;
   delhiIndia: string;
@@ -85,6 +86,7 @@ const translations: Record<Language, Translations> = {
     entertainment: 'Entertainment',
     sports: 'Sports',
     business: 'Business',
+    religious: 'Religious',
     subscribe: 'Subscribe',
     readers: 'Readers',
     delhiIndia: 'Delhi, India',
@@ -144,6 +146,7 @@ const translations: Record<Language, Translations> = {
     entertainment: 'मनोरंजन',
     sports: 'खेल',
     business: 'व्यापार',
+    religious: 'धार्मिक',
     subscribe: 'सदस्यता लें',
     readers: 'पाठक',
     delhiIndia: 'दिल्ली, भारत',
@@ -218,8 +221,25 @@ export class LanguageService {
   }
 
   setLanguage(language: Language): void {
-    localStorage.setItem('language', language);
-    this.currentLanguageSubject.next(language);
+    console.log('[LanguageService] ===== setLanguage() CALLED =====');
+    console.log('[LanguageService] Setting language to:', language);
+    const previousLang = this.currentLanguageSubject.value;
+    console.log('[LanguageService] Previous language was:', previousLang);
+    
+    try {
+      localStorage.setItem('language', language);
+      console.log('[LanguageService] Saved to localStorage');
+      
+      console.log('[LanguageService] Calling currentLanguageSubject.next(', language, ')');
+      this.currentLanguageSubject.next(language);
+      
+      const newLang = this.currentLanguageSubject.value;
+      console.log('[LanguageService] Language changed successfully. New value:', newLang);
+      console.log('[LanguageService] BehaviorSubject value after change:', this.currentLanguageSubject.value);
+      console.log('[LanguageService] ===== setLanguage() COMPLETE =====');
+    } catch (error) {
+      console.error('[LanguageService] ERROR in setLanguage:', error);
+    }
   }
 
   translate(key: keyof Translations): string {
@@ -257,9 +277,132 @@ export class LanguageService {
       'Entertainment': 'entertainment',
       'Sports': 'sports',
       'Business': 'business',
+      'Religious': 'religious',
     };
     const key = categoryMap[category];
     return key ? t[key] : category;
+  }
+
+  // Translation cache to avoid repeated API calls
+  private translationCache: Map<string, string> = new Map();
+  private readonly CACHE_PREFIX = 'translation_cache_';
+
+  /**
+   * Check if text contains Hindi/Devanagari script
+   */
+  private isHindi(text: string): boolean {
+    return /[\u0900-\u097F]/.test(text);
+  }
+
+  /**
+   * Generate cache key for translation
+   */
+  private getCacheKey(text: string, sourceLang: string, targetLang: string): string {
+    return `${sourceLang}_${targetLang}_${text}`;
+  }
+
+  /**
+   * Get cached translation or null
+   */
+  private getCachedTranslation(text: string, sourceLang: string, targetLang: string): string | null {
+    const cacheKey = this.getCacheKey(text, sourceLang, targetLang);
+    
+    // Check in-memory cache
+    if (this.translationCache.has(cacheKey)) {
+      return this.translationCache.get(cacheKey) || null;
+    }
+    
+    // Check localStorage cache
+    try {
+      const localStorageKey = `${this.CACHE_PREFIX}${this.hashString(cacheKey)}`;
+      const cached = localStorage.getItem(localStorageKey);
+      if (cached) {
+        this.translationCache.set(cacheKey, cached);
+        return cached;
+      }
+    } catch (e) {
+      // localStorage might be full or unavailable
+    }
+    
+    return null;
+  }
+
+  /**
+   * Store translation in cache
+   */
+  private setCachedTranslation(text: string, translated: string, sourceLang: string, targetLang: string): void {
+    const cacheKey = this.getCacheKey(text, sourceLang, targetLang);
+    this.translationCache.set(cacheKey, translated);
+    
+    try {
+      const localStorageKey = `${this.CACHE_PREFIX}${this.hashString(cacheKey)}`;
+      localStorage.setItem(localStorageKey, translated);
+    } catch (e) {
+      // localStorage might be full, just use in-memory cache
+    }
+  }
+
+  /**
+   * Simple hash function for cache keys
+   */
+  private hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Translate text using Google Translate API
+   */
+  async translateText(text: string, sourceLang: 'en' | 'hi', targetLang: 'en' | 'hi'): Promise<string> {
+    console.log('[LanguageService] translateText called:', { text: text.substring(0, 50) + '...', sourceLang, targetLang });
+    if (!text || text.trim() === '') return text;
+    
+    // If source and target are the same, return original
+    if (sourceLang === targetLang) {
+      console.log('[LanguageService] Source and target languages are the same, returning original');
+      return text;
+    }
+    
+    // Check cache first
+    const cached = this.getCachedTranslation(text, sourceLang, targetLang);
+    if (cached) {
+      console.log('[LanguageService] Using cached translation');
+      return cached;
+    }
+
+    console.log('[LanguageService] Calling Google Translate API...');
+    try {
+      // Use Google Translate API (free tier)
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+      console.log('[LanguageService] Translation URL:', url.substring(0, 100) + '...');
+      const response = await fetch(url);
+      
+      console.log('[LanguageService] Translation response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[LanguageService] Translation response data:', data);
+        if (data && data[0] && data[0][0] && data[0][0][0]) {
+          const translated = data[0][0][0];
+          console.log('[LanguageService] Translated text:', translated.substring(0, 50) + '...');
+          // Cache the translation
+          this.setCachedTranslation(text, translated, sourceLang, targetLang);
+          return translated;
+        }
+      } else {
+        console.error('[LanguageService] Translation API error - response not OK:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('[LanguageService] Translation API error:', error);
+    }
+
+    // Fallback: Return original text if translation fails
+    console.warn('[LanguageService] Returning original text as fallback');
+    return text;
   }
 
   /**
@@ -269,37 +412,69 @@ export class LanguageService {
   async translateToHindi(text: string): Promise<string> {
     if (!text || text.trim() === '') return text;
     
-    // Check if already in Hindi (contains Devanagari script)
-    if (/[\u0900-\u097F]/.test(text)) {
+    // Check if already in Hindi
+    if (this.isHindi(text)) {
       return text; // Already in Hindi
     }
 
-    try {
-      // Try using Google Translate API (free tier available)
-      const response = await fetch(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(text)}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data[0] && data[0][0] && data[0][0][0]) {
-          return data[0][0][0];
-        }
-      }
-    } catch (error) {
-      console.warn('Translation API error, using fallback:', error);
+    return this.translateText(text, 'en', 'hi');
+  }
+
+  /**
+   * Translate Hindi text to English
+   */
+  async translateToEnglish(text: string): Promise<string> {
+    if (!text || text.trim() === '') return text;
+    
+    // Check if already in English (not Hindi)
+    if (!this.isHindi(text)) {
+      return text; // Already in English
     }
 
-    // Fallback: Return original text if translation fails
+    return this.translateText(text, 'hi', 'en');
+  }
+
+  /**
+   * Translate text based on current language preference
+   * If current language is Hindi and text is English, translate to Hindi
+   * If current language is English and text is Hindi, translate to English
+   */
+  async translateToCurrentLanguage(text: string): Promise<string> {
+    console.log('[LanguageService] translateToCurrentLanguage called:', { text: text.substring(0, 50) + '...' });
+    if (!text || text.trim() === '') return text;
+    
+    const currentLang = this.getCurrentLanguage();
+    const isTextHindi = this.isHindi(text);
+    console.log('[LanguageService] Current language:', currentLang, 'Text is Hindi:', isTextHindi);
+    
+    if (currentLang === 'hi' && !isTextHindi) {
+      // Current language is Hindi, text is English - translate to Hindi
+      console.log('[LanguageService] Translating English to Hindi');
+      return this.translateToHindi(text);
+    } else if (currentLang === 'en' && isTextHindi) {
+      // Current language is English, text is Hindi - translate to English
+      console.log('[LanguageService] Translating Hindi to English');
+      return this.translateToEnglish(text);
+    }
+    
+    // Text is already in the correct language
+    console.log('[LanguageService] Text is already in correct language, returning original');
     return text;
+  }
+
+  /**
+   * Translate multiple texts in parallel
+   */
+  async translateMultiple(texts: string[], sourceLang: 'en' | 'hi', targetLang: 'en' | 'hi'): Promise<string[]> {
+    const translationPromises = texts.map(text => this.translateText(text, sourceLang, targetLang));
+    return Promise.all(translationPromises);
   }
 
   /**
    * Translate multiple texts to Hindi in parallel
    */
   async translateMultipleToHindi(texts: string[]): Promise<string[]> {
-    const translationPromises = texts.map(text => this.translateToHindi(text));
-    return Promise.all(translationPromises);
+    return this.translateMultiple(texts, 'en', 'hi');
   }
 }
 

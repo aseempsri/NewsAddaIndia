@@ -26,7 +26,7 @@ const newsSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics'],
+    enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'],
     index: true
   },
   tags: [{
@@ -35,7 +35,7 @@ const newsSchema = new mongoose.Schema({
   }],
   pages: [{
     type: String,
-    enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business'],
+    enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'],
     default: []
   }],
   author: {
@@ -56,6 +56,11 @@ const newsSchema = new mongoose.Schema({
     index: true
   },
   isFeatured: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  isTrending: {
     type: Boolean,
     default: false,
     index: true
@@ -87,7 +92,8 @@ newsSchema.pre('save', function(next) {
       'Business': 'business',
       'Entertainment': 'entertainment',
       'Health': 'health',
-      'Politics': 'politics'
+      'Politics': 'politics',
+      'Religious': 'religious'
     };
     
     const correspondingPage = categoryToPageMap[this.category];
@@ -113,6 +119,7 @@ newsSchema.index({ category: 1, published: 1, createdAt: -1 });
 newsSchema.index({ pages: 1, published: 1, createdAt: -1 });
 newsSchema.index({ isBreaking: 1, published: 1, createdAt: -1 });
 newsSchema.index({ isFeatured: 1, published: 1, createdAt: -1 });
+newsSchema.index({ isTrending: 1, published: 1, createdAt: -1 });
 
 module.exports = mongoose.model('News', newsSchema);
 

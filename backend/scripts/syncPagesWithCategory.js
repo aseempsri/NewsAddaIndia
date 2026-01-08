@@ -28,7 +28,8 @@ const categoryToPageMap = {
   'Business': 'business',
   'Entertainment': 'entertainment',
   'Health': 'health',
-  'Politics': 'politics'
+  'Politics': 'politics',
+  'Religious': 'religious'
 };
 
 async function syncPagesWithCategory() {

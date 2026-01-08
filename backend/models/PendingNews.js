@@ -26,7 +26,7 @@ const pendingNewsSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics'],
+        enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'],
         index: true
     },
     tags: [{
@@ -35,7 +35,7 @@ const pendingNewsSchema = new mongoose.Schema({
     }],
     pages: [{
         type: String,
-        enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business'],
+        enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'],
         default: []
     }],
     author: {

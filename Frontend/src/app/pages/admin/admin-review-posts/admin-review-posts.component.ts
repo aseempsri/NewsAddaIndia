@@ -356,7 +356,8 @@ export class AdminReviewPostsComponent implements OnInit {
       'Business': 'bg-yellow-500 text-white',
       'Entertainment': 'bg-pink-500 text-white',
       'Health': 'bg-red-500 text-white',
-      'Politics': 'bg-indigo-500 text-white'
+      'Politics': 'bg-indigo-500 text-white',
+      'Religious': 'bg-indigo-500 text-white'
     };
     return colors[category] || 'bg-primary text-primary-foreground';
   }

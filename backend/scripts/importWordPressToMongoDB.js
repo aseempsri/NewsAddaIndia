@@ -16,6 +16,7 @@ const categoryMapping = {
   'Entertainment': 'Entertainment',
   'Health': 'Health',
   'Politics': 'Politics',
+  'Religious': 'Religious',
   'State': 'National', // Map State to National
   'Breaking news': 'National', // Map Breaking news to National
   'default': 'National' // Default category

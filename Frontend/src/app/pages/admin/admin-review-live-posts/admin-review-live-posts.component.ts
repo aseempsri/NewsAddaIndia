@@ -22,6 +22,7 @@ interface LiveNews {
   image: string;
   isBreaking: boolean;
   isFeatured: boolean;
+  isTrending: boolean;
   date: string;
   createdAt: string;
   updatedAt: string;
@@ -187,6 +188,20 @@ interface GroupedNews {
                       }
                     </span>
                   </button>
+
+                  <button
+                    (click)="toggleFilter('trending')"
+                    [class]="'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' + (filters.trending ? 'bg-purple-500 text-white' : 'bg-secondary text-foreground hover:bg-secondary/80')">
+                    <span class="flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      Trending
+                      @if (filters.trending) {
+                        <span class="ml-1">({{ getTrendingCount() }})</span>
+                      }
+                    </span>
+                  </button>
                 </div>
 
                 <!-- Active Filters Display -->
@@ -238,6 +253,16 @@ interface GroupedNews {
                         <span class="px-3 py-1 text-xs bg-yellow-500/10 text-yellow-500 rounded-full flex items-center gap-2">
                           Featured
                           <button (click)="toggleFilter('featured')" class="hover:text-yellow-500/70">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </span>
+                      }
+                      @if (filters.trending) {
+                        <span class="px-3 py-1 text-xs bg-purple-500/10 text-purple-500 rounded-full flex items-center gap-2">
+                          Trending
+                          <button (click)="toggleFilter('trending')" class="hover:text-purple-500/70">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -315,6 +340,16 @@ interface GroupedNews {
                             @if (news.isFeatured) {
                               <span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-500 text-white">
                                 FEATURED
+                              </span>
+                            }
+                            @if (news.isTrending) {
+                              <span class="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                                <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                                  <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span class="text-xs leading-none">🔥</span>
+                                <span>TRENDING</span>
+                                <span class="text-xs leading-none">🔥</span>
                               </span>
                             }
                           </div>
@@ -449,7 +484,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
   dateSort: 'latest' | 'oldest' = 'latest';
   filters = {
     breaking: false,
-    featured: false
+    featured: false,
+    trending: false
   };
 
   // Available options
@@ -542,6 +578,10 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Always include all possible categories, even if no posts exist yet
+    const allCategories = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'];
+    allCategories.forEach(cat => categories.add(cat));
+
     this.availableCategories = Array.from(categories).sort();
     this.availablePages = Array.from(pages).sort();
   }
@@ -566,7 +606,7 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     });
 
     // Convert to array and sort categories
-    const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics'];
+    const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'];
     this.groupedNews = categoryOrder
       .filter(cat => grouped[cat] && grouped[cat].length > 0)
       .map(category => ({
@@ -621,6 +661,11 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(news => news.isFeatured === true);
     }
 
+    // Trending filter
+    if (this.filters.trending) {
+      filtered = filtered.filter(news => news.isTrending === true);
+    }
+
     // Date sorting
     filtered.sort((a, b) => {
       const dateA = new Date(a.date || a.createdAt).getTime();
@@ -642,7 +687,7 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       grouped[news.category].push(news);
     });
 
-    const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics'];
+    const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'];
     this.filteredGroupedNews = categoryOrder
       .filter(cat => grouped[cat] && grouped[cat].length > 0)
       .map(category => ({
@@ -661,7 +706,7 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleFilter(filterType: 'breaking' | 'featured') {
+  toggleFilter(filterType: 'breaking' | 'featured' | 'trending') {
     this.filters[filterType] = !this.filters[filterType];
     this.applyFilters();
   }
@@ -673,7 +718,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     this.dateSort = 'latest';
     this.filters = {
       breaking: false,
-      featured: false
+      featured: false,
+      trending: false
     };
     this.applyFilters();
   }
@@ -685,6 +731,7 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     if (this.selectedPage) count++;
     if (this.filters.breaking) count++;
     if (this.filters.featured) count++;
+    if (this.filters.trending) count++;
     return count;
   }
 
@@ -694,6 +741,10 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
 
   getFeaturedCount(): number {
     return this.liveNews.filter(news => news.isFeatured).length;
+  }
+
+  getTrendingCount(): number {
+    return this.liveNews.filter(news => news.isTrending).length;
   }
 
   viewNews(newsItem: LiveNews) {
@@ -814,7 +865,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       'Business': 'bg-yellow-500 text-white',
       'Entertainment': 'bg-pink-500 text-white',
       'Health': 'bg-red-500 text-white',
-      'Politics': 'bg-indigo-500 text-white'
+      'Politics': 'bg-indigo-500 text-white',
+      'Religious': 'bg-indigo-500 text-white'
     };
     return colors[category] || 'bg-primary text-primary-foreground';
   }

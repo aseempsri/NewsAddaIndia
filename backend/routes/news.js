@@ -78,7 +78,7 @@ const handleMulterError = (err, req, res, next) => {
 // GET /api/news - Get all news (with optional filters)
 router.get('/', async (req, res) => {
   try {
-    const { category, page, limit = 20, published = true, breaking, featured, excludeBreaking } = req.query;
+    const { category, page, limit = 20, published = true, breaking, featured, trending, excludeBreaking } = req.query;
     
     const query = { published: published === 'true' || published === true };
     
@@ -98,6 +98,11 @@ router.get('/', async (req, res) => {
     // Filter for featured news
     if (featured === 'true' || featured === true) {
       query.isFeatured = true;
+    }
+
+    // Filter for trending news
+    if (trending === 'true' || trending === true) {
+      query.isTrending = true;
     }
 
     // Exclude breaking news from regular feed
@@ -157,7 +162,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/news - Create new news (Admin only)
 router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, content, category, tags, pages, author, isBreaking, isFeatured } = req.body;
+    const { title, titleEn, excerpt, content, category, tags, pages, author, isBreaking, isFeatured, isTrending } = req.body;
     
     // Validate required fields
     if (!title || !excerpt || !category) {
@@ -211,7 +216,8 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
       author: author || 'News Adda India',
       image: imagePath,
       isBreaking: isBreaking === 'true' || isBreaking === true,
-      isFeatured: isFeatured === 'true' || isFeatured === true
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isTrending: isTrending === 'true' || isTrending === true
     });
 
     await news.save();
@@ -240,7 +246,7 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
 // PUT /api/news/:id - Update news (Admin only)
 router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, content, category, tags, pages, author, published, isBreaking, isFeatured } = req.body;
+    const { title, titleEn, excerpt, content, category, tags, pages, author, published, isBreaking, isFeatured, isTrending } = req.body;
     
     const news = await News.findById(req.params.id);
     
@@ -261,6 +267,7 @@ router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError,
     if (published !== undefined) news.published = published === 'true' || published === true;
     if (isBreaking !== undefined) news.isBreaking = isBreaking === 'true' || isBreaking === true;
     if (isFeatured !== undefined) news.isFeatured = isFeatured === 'true' || isFeatured === true;
+    if (isTrending !== undefined) news.isTrending = isTrending === 'true' || isTrending === true;
 
     // Parse tags and pages
     if (tags !== undefined) {

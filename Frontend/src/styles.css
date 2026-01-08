@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -59,6 +59,59 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217 91% 60%;
   }
+
+  .dark {
+    /* Modern Dark Theme */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 15%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Deep Blue Primary - Slightly brighter for dark mode */
+    --primary: 217 91% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Dark Gray Secondary */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted Colors */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Teal Accent - Brighter for dark mode */
+    --accent: 173 80% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 65%;
+
+    /* Custom Design Tokens - Dark Mode */
+    --glow-primary: 0 0 30px hsl(217 91% 65% / 0.4);
+    --glow-accent: 0 0 30px hsl(173 80% 50% / 0.4);
+    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 91% 65%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(222 47% 15%) 0%, hsl(222 47% 11%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(217 91% 65% / 0.15) 0%, transparent 50%);
+    --glass-bg: hsl(222 47% 15% / 0.8);
+    --glass-border: hsl(217 33% 17% / 0.8);
+
+    --sidebar-background: 222 47% 15%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 217 91% 65%;
+  }
 }
 
 @layer base {
@@ -99,7 +152,12 @@
     overflow-x: hidden;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Space Grotesk', sans-serif;
     /* Prevent Hindi text clipping from top */
     line-height: 1.6;
@@ -181,6 +239,18 @@
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
 
+  /* Better Hindi font for card headlines and text */
+  .news-card h2,
+  .news-card h3,
+  .news-card h4,
+  .news-card p,
+  article h2,
+  article h3,
+  article h4,
+  article p {
+    font-family: 'Noto Sans Devanagari', 'DM Sans', sans-serif;
+  }
+
   .news-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1), var(--glow-primary);
@@ -207,12 +277,50 @@
   }
 
   .ticker-scroll {
-    animation: ticker 30s linear infinite;
+    animation: ticker 21s linear infinite;
   }
 
   @keyframes ticker {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Hide scrollbar for mobile navigation */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth scrolling for mobile navigation */
+  .scrollbar-hide {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent accidental touches on mobile navigation */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Ensure proper touch targets for mobile navigation links */
+  nav.lg\\:hidden a {
+    min-height: 32px;
+    min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .float-animation {
@@ -220,8 +328,15 @@
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
   }
 
   .pulse-glow {
@@ -229,24 +344,34 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.3); }
-    50% { box-shadow: 0 0 40px hsl(var(--primary) / 0.6); }
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.6);
+    }
   }
 
   .shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted-foreground) / 0.1) 50%,
-      hsl(var(--muted)) 100%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted-foreground) / 0.1) 50%,
+        hsl(var(--muted)) 100%);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
 
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 }
 
@@ -255,4 +380,3 @@
     text-wrap: balance;
   }
 }
-

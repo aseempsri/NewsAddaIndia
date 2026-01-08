@@ -21,6 +21,7 @@ export const routes: Routes = [
   { path: 'entertainment', redirectTo: 'category/entertainment', pathMatch: 'full' },
   { path: 'sports', redirectTo: 'category/sports', pathMatch: 'full' },
   { path: 'business', redirectTo: 'category/business', pathMatch: 'full' },
+  { path: 'religious', redirectTo: 'category/religious', pathMatch: 'full' },
   { path: 'admin', component: AdminDashboardComponent },
   { path: 'admin/create', component: AdminCreatePostComponent },
   { path: 'admin/review', component: AdminReviewPostsComponent },

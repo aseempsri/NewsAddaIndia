@@ -11,12 +11,16 @@ export interface NewsArticle {
   title: string;
   titleEn?: string;
   excerpt: string;
+  summary?: string; // 60-word summary
   content?: string; // Full article content
   image: string;
   time: string;
   author?: string;
   date?: string;
   imageLoading?: boolean; // Track if image is being loaded
+  isTrending?: boolean;
+  isBreaking?: boolean;
+  isFeatured?: boolean;
 }
 
 @Injectable({
@@ -137,7 +141,10 @@ export class NewsService {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
-                }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+                }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+                isTrending: false,
+                isBreaking: false,
+                isFeatured: false
               };
 
               // Use existing image if valid, otherwise fetch based on headline
@@ -215,7 +222,10 @@ export class NewsService {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+              isTrending: false,
+              isBreaking: false,
+              isFeatured: false
             };
 
             // Use existing image if valid, otherwise will fetch based on headline
@@ -260,7 +270,10 @@ export class NewsService {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
-                  }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+                  }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  isTrending: false,
+                  isBreaking: false,
+                  isFeatured: false
                 } as NewsArticle;
               });
             }
@@ -525,7 +538,10 @@ export class NewsService {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+              isTrending: article.isTrending || false,
+              isBreaking: article.isBreaking || false,
+              isFeatured: article.isFeatured || false
             } as NewsArticle;
           });
           
@@ -605,7 +621,10 @@ export class NewsService {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
-            }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+            }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+            isTrending: article.isTrending || false,
+            isBreaking: article.isBreaking || false,
+            isFeatured: article.isFeatured || false
           } as NewsArticle;
           
           // Translate if Hindi is selected
@@ -619,6 +638,75 @@ export class NewsService {
         console.warn('No breaking news from backend, falling back to featured:', error);
         // Fallback to regular featured news
         return this.fetchFeaturedNews('National');
+      })
+    );
+  }
+
+  /**
+   * Fetch trending news for ticker
+   * Priority: Featured news > Breaking news > Recent news
+   */
+  fetchTrendingNews(limit: number = 10): Observable<NewsArticle[]> {
+    // Try to fetch featured news first, then breaking, then recent
+    const url = `${this.backendApiUrl}/api/news?limit=${limit}&published=true`;
+    
+    return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
+      timeout(5000),
+      switchMap(response => {
+        if (response.success && response.data && response.data.length > 0) {
+          // Sort: trending first, then featured, then breaking, then by date
+          const sortedNews = response.data.sort((a, b) => {
+            // Trending news first
+            if (a.isTrending && !b.isTrending) return -1;
+            if (!a.isTrending && b.isTrending) return 1;
+            // Featured news second
+            if (a.isFeatured && !b.isFeatured) return -1;
+            if (!a.isFeatured && b.isFeatured) return 1;
+            // Breaking news third
+            if (a.isBreaking && !b.isBreaking) return -1;
+            if (!a.isBreaking && b.isBreaking) return 1;
+            // Then by date (newest first)
+            return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+          });
+
+          const newsArticles: NewsArticle[] = sortedNews.slice(0, limit).map(article => {
+            let imageUrl = article.image || '';
+            if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
+              if (!imageUrl.startsWith('/')) {
+                imageUrl = '/' + imageUrl;
+              }
+              imageUrl = `${this.backendApiUrl}${imageUrl}`;
+            }
+
+            return {
+              id: article._id || article.id,
+              category: article.category,
+              title: article.title,
+              titleEn: article.titleEn || article.title,
+              excerpt: article.excerpt,
+              image: imageUrl,
+              imageLoading: !imageUrl || imageUrl.trim() === '',
+              time: this.getTimeAgo(new Date(article.createdAt || article.date).getTime()),
+              author: article.author || 'News Adda India',
+              date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+              isTrending: article.isTrending || false,
+              isBreaking: article.isBreaking || false,
+              isFeatured: article.isFeatured || false
+            } as NewsArticle;
+          });
+
+          // Translate if Hindi is selected
+          return this.translateNewsIfNeeded(newsArticles);
+        }
+        return of([]);
+      }),
+      catchError(error => {
+        console.error('Error fetching trending news:', error);
+        return of([]);
       })
     );
   }
@@ -867,7 +955,10 @@ export class NewsService {
       image: 'https://picsum.photos/seed/news/600/400',
       time: 'Just now',
       author: 'News Adda India',
-      date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+      date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+      isTrending: false,
+      isBreaking: false,
+      isFeatured: false
     };
   }
 }
