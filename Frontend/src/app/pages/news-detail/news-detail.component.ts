@@ -293,6 +293,11 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Scroll to top when component initializes
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
     this.updateTranslations();
     this.route.params.subscribe(params => {
       const newsId = params['id'];

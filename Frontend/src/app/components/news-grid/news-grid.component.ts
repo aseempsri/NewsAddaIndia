@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, NewsDetailModalComponent],
   template: `
-    <section class="py-12 lg:py-16">
+    <section class="py-12 lg:py-16 news-grid-container">
       <div class="container mx-auto px-4">
         <!-- Section Header -->
         <div class="flex items-center justify-between mb-8">
@@ -56,7 +56,7 @@ import { Subscription } from 'rxjs';
         }
 
         <!-- News Grid - Only show when all images are loaded -->
-        @if (!isLoading) {
+        @if (!isLoading && newsItems.length > 0) {
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (news of newsItems; track news.id; let i = $index) {
               <article
@@ -184,7 +184,20 @@ import { Subscription } from 'rxjs';
       </div>
     </section>
   `,
-  styles: []
+  styles: [`
+    /* Ensure loading and content states don't overlap */
+    .news-grid-container {
+      position: relative;
+    }
+    /* Prevent duplicate rendering on mobile */
+    @media (max-width: 767px) {
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+    }
+  `]
 })
 export class NewsGridComponent implements OnInit, OnDestroy {
   @Output() imagesLoaded = new EventEmitter<boolean>();
@@ -280,29 +293,40 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   }
 
   loadNews() {
+    // Reset news items to prevent duplicates
+    this.newsItems = [];
+    this.isLoading = true;
+    
     // Try to fetch news specifically marked for 'home' page first
     this.newsService.fetchNewsByPage('home', 6).subscribe({
       next: async (news) => {
         // If we got news from backend for home page, use it
-        if (news.length > 0) {
-          this.newsItems = news.slice(0, 6);
+        if (news && news.length > 0) {
+          // Remove duplicates by id
+          const uniqueNews = this.removeDuplicates(news);
+          this.newsItems = uniqueNews.slice(0, 6);
           await this.translateNewsTitles();
           this.fetchImagesForAllItemsAndWait();
         } else {
           // Fallback to category-based fetch
           this.newsService.fetchNewsByCategory('National', 6).subscribe({
             next: (categoryNews) => {
+              // Remove duplicates
+              const uniqueCategoryNews = this.removeDuplicates(categoryNews);
               // Ensure we have enough news items
-              if (categoryNews.length < 6) {
+              if (uniqueCategoryNews.length < 6) {
                 // Fetch more from other categories
                 this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
                   next: (sportsNews) => {
-                    this.newsItems = [...categoryNews, ...sportsNews].slice(0, 6);
+                    const uniqueSportsNews = this.removeDuplicates(sportsNews);
+                    // Combine and remove any duplicates
+                    const combined = [...uniqueCategoryNews, ...uniqueSportsNews];
+                    this.newsItems = this.removeDuplicates(combined).slice(0, 6);
                     this.fetchImagesForAllItemsAndWait();
                   }
                 });
               } else {
-                this.newsItems = categoryNews.slice(0, 6);
+                this.newsItems = uniqueCategoryNews.slice(0, 6);
                 this.fetchImagesForAllItemsAndWait();
               }
             },
@@ -318,7 +342,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         // Fallback to category-based fetch
         this.newsService.fetchNewsByCategory('National', 6).subscribe({
           next: async (news) => {
-            this.newsItems = news.slice(0, 6);
+            const uniqueNews = this.removeDuplicates(news);
+            this.newsItems = uniqueNews.slice(0, 6);
             await this.translateNewsTitles();
             this.fetchImagesForAllItemsAndWait();
           },
@@ -328,6 +353,19 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           }
         });
       }
+    });
+  }
+
+  private removeDuplicates(news: NewsArticle[]): NewsArticle[] {
+    const seen = new Set<string | number>();
+    return news.filter(item => {
+      if (!item.id) return false;
+      const id = typeof item.id === 'string' ? item.id : item.id.toString();
+      if (seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
     });
   }
 

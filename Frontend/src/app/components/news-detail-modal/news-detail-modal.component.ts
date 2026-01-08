@@ -125,8 +125,9 @@ import { Subscription } from 'rxjs';
             <div class="flex flex-row gap-3 flex-1">
               @if (news.id) {
                 <button
-                  (click)="navigateToFullArticle()"
-                  (touchend)="navigateToFullArticle(); $event.stopPropagation()"
+                  (click)="navigateToFullArticle(); $event.stopPropagation()"
+                  (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
+                  type="button"
                   class="px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 sm:flex-none">
                   <span>{{ t.readMore }}</span>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,11 +617,39 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   navigateToFullArticle() {
     if (this.news && this.news.id) {
+      const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
+      console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
+      
+      // Scroll to top before navigation
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
       // Close modal first
       this.close();
-      // Navigate to full article page
-      const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
-      this.router.navigate(['/news', newsId]);
+      
+      // Use setTimeout to ensure modal closes before navigation
+      setTimeout(() => {
+        // Navigate to full article page
+        this.router.navigate(['/news', newsId]).then(
+          (success) => {
+            console.log('[NewsDetailModal] Navigation successful:', success);
+            // Ensure scroll to top after navigation
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+            }, 0);
+          },
+          (error) => {
+            console.error('[NewsDetailModal] Navigation error:', error);
+            // Fallback: use window.location if router navigation fails
+            window.location.href = `/news/${newsId}`;
+          }
+        );
+      }, 100);
+    } else {
+      console.warn('[NewsDetailModal] Cannot navigate: news or news.id is missing', this.news);
     }
   }
 
