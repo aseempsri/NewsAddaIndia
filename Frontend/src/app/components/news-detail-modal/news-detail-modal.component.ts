@@ -121,29 +121,19 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-row items-center gap-3 flex-nowrap">
+          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20">
             @if (news.id) {
               <button
                 (click)="navigateToFullArticle(); $event.stopPropagation()"
                 (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
                 type="button"
-                class="px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 min-w-0 whitespace-nowrap">
-                <span class="truncate">{{ t.readMore }}</span>
+                class="w-full px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px]">
+                <span>{{ t.readMore }}</span>
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
             }
-            <button
-              (click)="shareNews()"
-              (touchend)="shareNews(); $event.stopPropagation()"
-              class="px-4 sm:px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 min-w-0 whitespace-nowrap"
-              type="button">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              <span class="truncate">Share</span>
-            </button>
           </div>
         </div>
       </div>
@@ -618,10 +608,10 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
       console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
       
-      // Scroll to top before navigation
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      // Save current scroll position before navigation
+      const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      sessionStorage.setItem('homeScrollPosition', scrollPosition.toString());
+      console.log('[NewsDetailModal] Saved scroll position:', scrollPosition);
       
       // Close modal first
       this.close();
@@ -632,12 +622,6 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
         this.router.navigate(['/news', newsId]).then(
           (success) => {
             console.log('[NewsDetailModal] Navigation successful:', success);
-            // Ensure scroll to top after navigation
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-            }, 0);
           },
           (error) => {
             console.error('[NewsDetailModal] Navigation error:', error);

@@ -285,7 +285,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Scroll to top when component initializes
+    // Scroll to top when component initializes (detail page should start at top)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
@@ -607,6 +607,8 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
+    // Navigate back to home page
+    // Scroll position will be restored by index component
     this.router.navigate(['/']);
   }
 

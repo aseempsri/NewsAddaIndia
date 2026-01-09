@@ -70,6 +70,22 @@ export class IndexComponent implements OnInit {
   newsGridImagesLoaded = false;
 
   ngOnInit() {
+    // Restore scroll position if returning from detail page
+    // Use a longer delay to ensure it happens after router's scroll restoration
+    setTimeout(() => {
+      const savedScrollPosition = sessionStorage.getItem('homeScrollPosition');
+      if (savedScrollPosition) {
+        const scrollPosition = parseInt(savedScrollPosition, 10);
+        console.log('[IndexPage] Restoring scroll position:', scrollPosition);
+        // Restore scroll position after router has done its thing
+        window.scrollTo({ top: scrollPosition, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = scrollPosition;
+        document.body.scrollTop = scrollPosition;
+        // Clear the saved position after restoring
+        sessionStorage.removeItem('homeScrollPosition');
+      }
+    }, 300);
+    
     // Maximum wait time of 30 seconds as fallback
     setTimeout(() => {
       this.isPageLoading = false;
