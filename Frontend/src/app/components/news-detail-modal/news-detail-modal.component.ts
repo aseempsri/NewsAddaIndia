@@ -28,7 +28,7 @@ import { Subscription } from 'rxjs';
         class="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 pointer-events-none"
         (click)="close()">
         <div 
-          class="glass-card max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
+          class="glass-card max-w-4xl w-full h-full sm:h-auto max-h-[100vh] sm:max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
           (click)="$event.stopPropagation()"
           (touchstart)="$event.stopPropagation()"
           (touchmove)="$event.stopPropagation()">
@@ -46,7 +46,7 @@ import { Subscription } from 'rxjs';
           </button>
 
           <!-- Image Header -->
-          <div class="relative w-full aspect-[16/9] bg-secondary/20 overflow-hidden">
+          <div class="relative w-full aspect-[16/9] bg-secondary/20 overflow-hidden flex-shrink-0">
             @if (news.imageLoading || !news.image) {
               <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
                 <div class="flex flex-col items-center gap-2">
@@ -64,7 +64,7 @@ import { Subscription } from 'rxjs';
             <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
             
             <!-- Category Badge -->
-            <div class="absolute top-4 left-4 flex gap-2">
+            <div class="absolute top-4 left-4 flex gap-2 z-10">
               @if (isBreaking) {
                 <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
                   BREAKING
@@ -77,7 +77,7 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Content (Scrollable) -->
-          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch" style="touch-action: pan-y;">
+          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0" style="touch-action: pan-y;">
             <div class="p-4 sm:p-6 lg:p-8">
               <!-- Title -->
               <h1 [class]="'font-display text-xl sm:text-2xl lg:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
@@ -121,30 +121,28 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Footer Actions -->
-          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-row items-center justify-between gap-3">
-            <div class="flex flex-row gap-3 flex-1">
-              @if (news.id) {
-                <button
-                  (click)="navigateToFullArticle(); $event.stopPropagation()"
-                  (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
-                  type="button"
-                  class="px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 sm:flex-none">
-                  <span>{{ t.readMore }}</span>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
-              }
-            </div>
+          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20 flex flex-row items-center gap-3 flex-nowrap">
+            @if (news.id) {
+              <button
+                (click)="navigateToFullArticle(); $event.stopPropagation()"
+                (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
+                type="button"
+                class="px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 min-w-0 whitespace-nowrap">
+                <span class="truncate">{{ t.readMore }}</span>
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            }
             <button
               (click)="shareNews()"
               (touchend)="shareNews(); $event.stopPropagation()"
-              class="px-4 sm:px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 sm:flex-none"
+              class="px-4 sm:px-6 py-3 sm:py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 active:bg-secondary/70 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px] flex-1 min-w-0 whitespace-nowrap"
               type="button">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Share
+              <span class="truncate">Share</span>
             </button>
           </div>
         </div>

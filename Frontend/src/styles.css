@@ -290,6 +290,55 @@
     }
   }
 
+  /* Trending news ticker scroll animation - ensure it works in production */
+  .ticker-scroll-container {
+    display: inline-flex;
+    animation: ticker-scroll 60s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  @keyframes ticker-scroll {
+    0% {
+      transform: translateX(0) translateZ(0);
+      -webkit-transform: translateX(0) translateZ(0);
+    }
+    100% {
+      transform: translateX(-50%) translateZ(0);
+      -webkit-transform: translateX(-50%) translateZ(0);
+    }
+  }
+
+  /* Force hardware acceleration and ensure animation works */
+  @media (max-width: 767px) {
+    .ticker-scroll-container {
+      animation: ticker-scroll 60s linear infinite !important;
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .ticker-scroll-container {
+      animation: ticker-scroll 60s linear infinite !important;
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+  }
+
+  /* Ensure animation plays even if reduced motion is enabled */
+  @media (prefers-reduced-motion: no-preference) {
+    .ticker-scroll-container {
+      animation: ticker-scroll 60s linear infinite;
+    }
+  }
+
   /* Hide scrollbar for mobile navigation */
   .scrollbar-hide {
     -ms-overflow-style: none;

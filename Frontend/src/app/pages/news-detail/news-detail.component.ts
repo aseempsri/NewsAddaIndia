@@ -36,18 +36,17 @@ import { Subscription } from 'rxjs';
         }
         
         @if (!isLoading && news) {
-          <!-- Hero Section with Parallax Image -->
-          <div class="relative w-full h-[60vh] min-h-[400px] overflow-hidden mb-8">
+          <!-- Sticky Image Header -->
+          <div class="sticky top-0 z-40 w-full h-[50vh] sm:h-[60vh] overflow-hidden">
             @if (news.image && news.image.trim() !== '' && !imageError) {
               <img
                 [src]="news.image"
                 [alt]="news.title"
                 (error)="handleImageError($event)"
-                class="absolute inset-0 w-full h-full object-cover transition-transform duration-300"
-                [style.transform]="'translateY(' + parallaxOffset + 'px)'"
+                class="w-full h-full object-cover"
               />
             } @else {
-              <div class="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/30 to-primary/10 flex items-center justify-center">
+              <div class="w-full h-full bg-gradient-to-br from-primary/20 via-secondary/30 to-primary/10 flex items-center justify-center">
                 <div class="text-center">
                   <svg class="w-20 h-20 text-muted-foreground/50 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -55,16 +54,36 @@ import { Subscription } from 'rxjs';
                 </div>
               </div>
             }
-            <div class="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
             
             <!-- Floating Category Badge -->
-            <div class="absolute top-6 left-6 flex gap-2 z-10">
-              @if (isBreaking) {
-                <span class="px-4 py-2 text-sm font-semibold rounded-full bg-red-600 text-white animate-pulse shadow-lg backdrop-blur-sm">
-                  {{ t.breaking || 'BREAKING' }}
+            <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex gap-1 sm:gap-2 flex-wrap">
+              @if (news.isTrending) {
+                <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
+                  <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                  <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
+                  <span>TRENDING</span>
+                  <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
                 </span>
               }
-              <span [class]="'px-4 py-2 text-sm font-semibold rounded-full shadow-lg backdrop-blur-sm ' + getCategoryColor(news.category)">
+              @if (news.isBreaking || isBreaking) {
+                <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
+                  <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                  <span>BREAKING</span>
+                </span>
+              }
+              @if (news.isFeatured) {
+                <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
+                  <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  <span>FEATURED</span>
+                </span>
+              }
+              <span [class]="'inline-flex items-center justify-center px-2 py-0.75 sm:px-3 sm:py-1 text-[0.525rem] sm:text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
                 {{ getCategoryName(news.category) }}
               </span>
             </div>
@@ -72,71 +91,45 @@ import { Subscription } from 'rxjs';
             <!-- Back Button -->
             <button
               (click)="goBack()"
-              class="absolute top-6 right-6 z-10 p-3 rounded-full bg-background/90 hover:bg-background backdrop-blur-sm shadow-lg transition-all hover:scale-110">
+              class="absolute top-4 sm:top-6 right-4 sm:right-6 z-10 p-2.5 sm:p-3 rounded-full bg-background/90 hover:bg-background backdrop-blur-sm shadow-lg transition-all hover:scale-110">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            <!-- Title Overlay -->
-            <div class="absolute bottom-0 left-0 right-0 p-8 lg:p-12">
-              <h1 class="font-display text-3xl lg:text-5xl xl:text-6xl font-bold leading-relaxed text-foreground mb-4 pt-3 pb-2 drop-shadow-lg">
-                {{ getDisplayTitle(news) }}
-              </h1>
-              
-              <!-- Meta Information -->
-              <div class="flex flex-wrap items-center gap-6 text-sm text-foreground/90">
-                <span class="flex items-center gap-2 backdrop-blur-sm bg-background/50 px-3 py-1.5 rounded-full">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  {{ news.author || 'News Adda India' }}
-                </span>
-                <span class="flex items-center gap-2 backdrop-blur-sm bg-background/50 px-3 py-1.5 rounded-full">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {{ news.date || news.time }}
-                </span>
-              </div>
-            </div>
           </div>
 
           <!-- Article Content -->
-          <article class="container mx-auto px-4 lg:px-8 max-w-4xl">
+          <article class="container mx-auto px-4 lg:px-8 max-w-4xl bg-background">
+            <!-- Title -->
+            <h1 class="font-display text-2xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold leading-relaxed text-foreground mb-6 sm:mb-8 pt-6 sm:pt-8">
+              {{ getDisplayTitle(news) }}
+            </h1>
+            
+            <!-- Meta Information -->
+            <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm mb-8 sm:mb-12 pb-6 border-b border-border/30">
+              <span class="flex items-center gap-1.5 text-xs font-medium">
+                <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
+              </span>
+            </div>
+
             <!-- Excerpt/Subheading -->
-            <div class="mb-12">
-              <p class="text-2xl lg:text-3xl text-muted-foreground leading-relaxed font-light italic border-l-4 border-primary pl-6">
+            <div class="mb-8 sm:mb-12">
+              <p class="text-xl sm:text-2xl lg:text-3xl text-muted-foreground leading-relaxed font-light italic border-l-4 border-primary pl-4 sm:pl-6">
                 {{ getDisplayExcerpt() }}
               </p>
             </div>
 
-            <!-- Social Share Buttons -->
-            <div class="sticky top-20 mb-8 flex items-center gap-4 p-4 bg-secondary/50 rounded-xl backdrop-blur-sm border border-border/50">
-              <span class="text-sm font-medium text-muted-foreground">{{ t.share || 'Share' }}:</span>
-              <div class="flex gap-3">
-                <button
-                  (click)="shareOnTwitter()"
-                  class="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/>
-                  </svg>
-                </button>
-                <button
-                  (click)="shareOnFacebook()"
-                  class="p-2 rounded-lg bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 transition-colors">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
-                  </svg>
-                </button>
-                <button
-                  (click)="shareNews()"
-                  class="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </button>
-              </div>
+            <!-- WhatsApp Share Button -->
+            <div class="sticky top-20 mb-8 flex items-center justify-center">
+              <button
+                (click)="shareOnWhatsApp()"
+                class="flex items-center gap-3 px-6 py-3 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-xl shadow-lg transition-all hover:scale-105 font-medium">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                <span>{{ t.share || 'Share on WhatsApp' }}</span>
+              </button>
             </div>
 
             <!-- Full Content -->
@@ -276,7 +269,6 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   isTranslating: boolean = false;
   t: any = {};
   readingProgress = 0;
-  parallaxOffset = 0;
   imageError = false;
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
   private languageSubscription?: Subscription;
@@ -332,7 +324,6 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   @HostListener('window:scroll', ['$event'])
   onScroll() {
     this.updateReadingProgress();
-    this.updateParallax();
   }
 
   updateReadingProgress() {
@@ -341,11 +332,6 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
     this.readingProgress = Math.min(100, Math.max(0, scrollPercent));
-  }
-
-  updateParallax() {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    this.parallaxOffset = scrollTop * 0.5;
   }
 
   async updateTranslations() {
@@ -535,6 +521,25 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
               // Otherwise, use the image as provided
             }
 
+            // Format date the same way as home page
+            const formattedDate = response.data.date 
+              ? new Date(response.data.date).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              : response.data.createdAt 
+                ? new Date(response.data.createdAt).toLocaleDateString('en-IN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })
+                : new Date().toLocaleDateString('en-IN', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  });
+
             this.news = {
               id: response.data._id || response.data.id,
               title: response.data.title,
@@ -545,7 +550,10 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
               image: imageUrl,
               time: response.data.time || response.data.createdAt,
               author: response.data.author,
-              date: response.data.date
+              date: formattedDate,
+              isTrending: response.data.isTrending || false,
+              isBreaking: response.data.isBreaking || false,
+              isFeatured: response.data.isFeatured || false
             };
             // Store Hindi content (default)
             this.fullContent = response.data.content || response.data.excerpt || '';
@@ -602,30 +610,12 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/']);
   }
 
-  shareNews() {
-    if (navigator.share && this.news) {
-      navigator.share({
-        title: this.news.titleEn || this.news.title,
-        text: this.news.excerpt,
-        url: window.location.href
-      }).catch(err => console.log('Error sharing:', err));
-    } else {
-      // Fallback: Copy to clipboard
-      const text = `${this.news?.titleEn || this.news?.title}\n\n${this.news?.excerpt}\n\n${window.location.href}`;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('News link copied to clipboard!');
-      }).catch(err => console.log('Error copying:', err));
-    }
-  }
-
-  shareOnTwitter() {
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(this.news?.titleEn || this.news?.title || '')}&url=${encodeURIComponent(window.location.href)}`;
-    window.open(url, '_blank', 'width=550,height=420');
-  }
-
-  shareOnFacebook() {
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
-    window.open(url, '_blank', 'width=550,height=420');
+  shareOnWhatsApp() {
+    const title = this.news?.titleEn || this.news?.title || '';
+    const url = window.location.href;
+    const text = `${title}\n\n${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
   }
 
   handleImageError(event: any) {
@@ -636,14 +626,16 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
 
   getCategoryColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-blue-500/20 text-blue-400',
-      'International': 'bg-purple-500/20 text-purple-400',
-      'Sports': 'bg-orange-500/20 text-orange-400',
-      'Business': 'bg-yellow-500/20 text-yellow-400',
-      'Entertainment': 'bg-pink-500/20 text-pink-400',
-      'Health': 'bg-green-500/20 text-green-400',
-      'Politics': 'bg-red-500/20 text-red-400'
+      'Health': 'bg-green-500 text-white',
+      'Sports': 'bg-orange-500 text-white',
+      'Business': 'bg-blue-500 text-white',
+      'Entertainment': 'bg-pink-500 text-white',
+      'International': 'bg-purple-500 text-white',
+      'Technology': 'bg-cyan-500 text-white',
+      'National': 'bg-blue-500 text-white',
+      'Politics': 'bg-red-500 text-white',
+      'Religious': 'bg-indigo-500 text-white',
     };
-    return colors[category] || 'bg-primary/20 text-primary';
+    return colors[category] || 'bg-primary text-white';
   }
 }

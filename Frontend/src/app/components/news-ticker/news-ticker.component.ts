@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NewsService } from '../../services/news.service';
@@ -8,6 +8,7 @@ import { LanguageService } from '../../services/language.service';
   selector: 'app-news-ticker',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="bg-gradient-to-r from-purple-600/30 via-pink-500/20 to-orange-500/30 border-y-2 border-purple-500/50 overflow-hidden w-full max-w-full shadow-lg">
       <div class="w-full max-w-full overflow-hidden">
@@ -33,7 +34,7 @@ import { LanguageService } from '../../services/language.service';
             } @else if (scrollingNews.length === 0) {
               <div class="text-sm md:text-sm text-purple-600 font-semibold">No trending news available</div>
             } @else {
-              <div class="ticker-scroll-container flex gap-4 md:gap-12 whitespace-nowrap items-center" style="will-change: transform; width: max-content;">
+              <div #tickerContainer class="ticker-scroll-container flex gap-4 md:gap-12 whitespace-nowrap items-center" style="will-change: transform;">
                 @for (news of scrollingNews; track $index) {
                   <a
                     [routerLink]="['/news', news.id]"
@@ -53,36 +54,56 @@ import { LanguageService } from '../../services/language.service';
   `,
   styles: [`
     .ticker-scroll-container {
+      display: inline-flex;
       animation: ticker-scroll 60s linear infinite;
       will-change: transform;
       backface-visibility: hidden;
       perspective: 1000px;
       -webkit-font-smoothing: antialiased;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
     }
+    
     @keyframes ticker-scroll {
       0% {
-        transform: translateX(0);
+        transform: translateX(0) translateZ(0);
+        -webkit-transform: translateX(0) translateZ(0);
       }
       100% {
-        transform: translateX(-50%);
+        transform: translateX(-50%) translateZ(0);
+        -webkit-transform: translateX(-50%) translateZ(0);
       }
     }
+    
     /* Force hardware acceleration and ensure animation works */
     @media (max-width: 767px) {
       .ticker-scroll-container {
         animation: ticker-scroll 60s linear infinite !important;
         will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
       }
     }
+    
     @media (min-width: 768px) {
       .ticker-scroll-container {
         animation: ticker-scroll 60s linear infinite !important;
         will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+      }
+    }
+    
+    /* Ensure animation plays even if reduced motion is enabled */
+    @media (prefers-reduced-motion: no-preference) {
+      .ticker-scroll-container {
+        animation: ticker-scroll 60s linear infinite;
       }
     }
   `]
 })
-export class NewsTickerComponent implements OnInit {
+export class NewsTickerComponent implements OnInit, AfterViewInit {
+  @ViewChild('tickerContainer') tickerContainer!: ElementRef<HTMLDivElement>;
   trendingNews: any[] = [];
   scrollingNews: any[] = [];
   loading = true;
@@ -101,8 +122,32 @@ export class NewsTickerComponent implements OnInit {
         await this.translateTrendingTitles();
         // Update scrolling news with translated titles
         this.scrollingNews = [...this.trendingNews, ...this.trendingNews];
+        // Restart animation after content update
+        setTimeout(() => this.ensureAnimation(), 100);
       }
     });
+  }
+
+  ngAfterViewInit() {
+    // Ensure animation starts after view initialization
+    setTimeout(() => this.ensureAnimation(), 500);
+  }
+
+  ensureAnimation() {
+    if (this.tickerContainer?.nativeElement) {
+      const element = this.tickerContainer.nativeElement;
+      // Force reflow to restart animation
+      const currentAnimation = window.getComputedStyle(element).animation;
+      if (!currentAnimation || currentAnimation === 'none') {
+        // Restart animation by removing and re-adding the class
+        element.classList.remove('ticker-scroll-container');
+        element.offsetHeight; // Trigger reflow
+        element.classList.add('ticker-scroll-container');
+        // Also set inline style as backup
+        element.style.animation = 'ticker-scroll 60s linear infinite';
+        element.style.willChange = 'transform';
+      }
+    }
   }
 
   async translateTrendingTitles() {
@@ -134,6 +179,8 @@ export class NewsTickerComponent implements OnInit {
           this.scrollingNews = [...this.trendingNews, ...this.trendingNews];
           console.log('[NewsTicker] Total scrolling items:', this.scrollingNews.length);
           console.log('[NewsTicker] Scrolling news titles:', this.scrollingNews.map(n => n.title).slice(0, 10));
+          // Ensure animation starts after content is loaded
+          setTimeout(() => this.ensureAnimation(), 100);
         } else {
           // Fallback to hardcoded if no news found
           this.trendingNews = [
@@ -144,6 +191,8 @@ export class NewsTickerComponent implements OnInit {
             { id: 5, title: 'Breaking: Major policy changes announced for digital infrastructure' }
           ];
           this.scrollingNews = [...this.trendingNews, ...this.trendingNews];
+          // Ensure animation starts after fallback content is loaded
+          setTimeout(() => this.ensureAnimation(), 100);
         }
         this.loading = false;
       },
@@ -158,6 +207,8 @@ export class NewsTickerComponent implements OnInit {
           { id: 5, title: 'Breaking: Major policy changes announced for digital infrastructure' }
         ];
         this.scrollingNews = [...this.trendingNews, ...this.trendingNews];
+        // Ensure animation starts after error fallback content is loaded
+        setTimeout(() => this.ensureAnimation(), 100);
         this.loading = false;
       }
     });
