@@ -5,6 +5,7 @@ import { NewsArticle } from '../../services/news.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ModalService } from '../../services/modal.service';
+import { ScrollRestorationService } from '../../services/scroll-restoration.service';
 import { LanguageService } from '../../services/language.service';
 import { Subscription } from 'rxjs';
 
@@ -17,7 +18,8 @@ import { Subscription } from 'rxjs';
       <!-- Backdrop -->
       <div 
         id="modal-backdrop"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in"
+        class="fixed left-0 right-0 bottom-0 bg-black/60 backdrop-blur-sm z-[10000] animate-fade-in"
+        [style.top.px]="getModalTop()"
         (click)="close()"
         (touchend)="onBackdropTouch($event)"
         style="touch-action: none;">
@@ -25,10 +27,11 @@ import { Subscription } from 'rxjs';
 
       <!-- Modal -->
       <div 
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 pointer-events-none"
+        class="modal-container fixed left-0 right-0 bottom-0 z-[10000] flex items-center justify-center p-2 sm:p-4 pointer-events-none overflow-y-auto"
+        [style.top.px]="getModalTop()"
         (click)="close()">
         <div 
-          class="glass-card max-w-4xl w-full h-full sm:h-auto max-h-[100vh] sm:max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
+          class="glass-card max-w-4xl w-full h-full sm:h-auto max-h-[calc(100vh-64px)] sm:max-h-[calc(90vh-64px)] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
           (click)="$event.stopPropagation()"
           (touchstart)="$event.stopPropagation()"
           (touchmove)="$event.stopPropagation()">
@@ -205,6 +208,13 @@ import { Subscription } from 'rxjs';
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
     }
+    /* Modal positioning - below navigation bar on desktop */
+    @media (min-width: 1024px) {
+      .modal-container {
+        align-items: flex-start !important;
+        padding-top: 1rem !important;
+      }
+    }
     @media (max-width: 640px) {
       .news-content {
         font-size: 0.95rem;
@@ -242,6 +252,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   constructor(
     private http: HttpClient,
     private modalService: ModalService,
+    private scrollRestorationService: ScrollRestorationService,
     private languageService: LanguageService,
     private router: Router,
     private cdr: ChangeDetectorRef
@@ -476,6 +487,16 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     return this.fullContent || this.news.excerpt || '';
   }
 
+  getModalTop(): number {
+    // On desktop/web view, account for navigation bar height
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      // Navigation bar height is approximately 64px (reduced by 20%)
+      return 64;
+    }
+    // On mobile, start from top
+    return 0;
+  }
+
   @HostListener('document:keydown.escape', ['$event'])
   handleEscapeKey(event: KeyboardEvent) {
     if (this.isOpen) {
@@ -507,6 +528,10 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
     // Use requestAnimationFrame to ensure DOM updates are complete before scrolling
     requestAnimationFrame(() => {
+      // Restore scroll position using scroll restoration service
+      this.scrollRestorationService.restoreScrollPosition();
+      
+      // Also restore directly as fallback
       window.scrollTo({
         top: scrollPosition,
         behavior: 'auto' // Use 'auto' instead of 'smooth' for instant restoration
@@ -608,10 +633,9 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
       console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
       
-      // Save current scroll position before navigation
-      const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      sessionStorage.setItem('homeScrollPosition', scrollPosition.toString());
-      console.log('[NewsDetailModal] Saved scroll position:', scrollPosition);
+      // Save current scroll position before navigation using scroll restoration service
+      this.scrollRestorationService.saveScrollPosition();
+      console.log('[NewsDetailModal] Saved scroll position via scroll restoration service');
       
       // Close modal first
       this.close();

@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
@@ -27,11 +28,11 @@ interface Category {
 @Component({
   selector: 'app-category-section',
   standalone: true,
-  imports: [CommonModule, NewsDetailModalComponent],
+  imports: [CommonModule, RouterLink, NewsDetailModalComponent],
   template: `
     <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
       <div class="container mx-auto px-4">
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
           @for (category of categories; track category.title) {
             <div>
               <!-- Category Header -->
@@ -43,7 +44,7 @@ interface Category {
                   </h2>
                 </div>
                 <a
-                  href="#"
+                  [routerLink]="'/category/' + getCategorySlug(category.title)"
                   class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
                   {{ t.more }}
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,6 +128,18 @@ interface Category {
                                 <svg class="w-6 h-6 text-orange-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(251,146,60,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
                               } @else if (category.title === 'Entertainment') {
                                 <svg class="w-6 h-6 text-pink-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(236,72,153,0.4)); vertical-align: baseline;"><path d="M8 5v14l11-7z"/></svg>
+                              } @else if (category.title === 'National') {
+                                <svg class="w-6 h-6 text-blue-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(59,130,246,0.4)); vertical-align: baseline;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                              } @else if (category.title === 'International') {
+                                <svg class="w-6 h-6 text-purple-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(168,85,247,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                              } @else if (category.title === 'Politics') {
+                                <svg class="w-6 h-6 text-red-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(239,68,68,0.4)); vertical-align: baseline;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                              } @else if (category.title === 'Health') {
+                                <svg class="w-6 h-6 text-green-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(34,197,94,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                              } @else if (category.title === 'Business') {
+                                <svg class="w-6 h-6 text-blue-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(59,130,246,0.4)); vertical-align: baseline;"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                              } @else if (category.title === 'Technology') {
+                                <svg class="w-6 h-6 text-cyan-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(6,182,212,0.4)); vertical-align: baseline;"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
                               } @else if (category.title === 'Religious') {
                                 <svg class="w-6 h-6 text-indigo-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(99,102,241,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                               } @else {
@@ -230,6 +243,41 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
       accentColor: 'from-orange-500 to-amber-500',
       articles: [],
     },
+    {
+      title: 'National',
+      accentColor: 'from-blue-500 to-blue-600',
+      articles: [],
+    },
+    {
+      title: 'International',
+      accentColor: 'from-purple-500 to-purple-600',
+      articles: [],
+    },
+    {
+      title: 'Politics',
+      accentColor: 'from-red-500 to-red-600',
+      articles: [],
+    },
+    {
+      title: 'Health',
+      accentColor: 'from-green-500 to-green-600',
+      articles: [],
+    },
+    {
+      title: 'Business',
+      accentColor: 'from-cyan-500 to-blue-500',
+      articles: [],
+    },
+    {
+      title: 'Technology',
+      accentColor: 'from-indigo-500 to-purple-500',
+      articles: [],
+    },
+    {
+      title: 'Religious',
+      accentColor: 'from-violet-500 to-indigo-500',
+      articles: [],
+    },
   ];
 
   isLoading = true;
@@ -269,111 +317,133 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     this.t = this.languageService.getTranslations();
   }
 
+  getCategorySlug(categoryTitle: string): string {
+    // Map category titles to their route slugs
+    const slugMap: Record<string, string> = {
+      'Entertainment': 'entertainment',
+      'Sports': 'sports',
+      'National': 'national',
+      'International': 'international',
+      'Politics': 'politics',
+      'Health': 'health',
+      'Business': 'business',
+      'Technology': 'technology',
+      'Religious': 'religious',
+    };
+    // Try to find exact match first
+    if (slugMap[categoryTitle]) {
+      return slugMap[categoryTitle];
+    }
+    // Fallback: convert to lowercase
+    return categoryTitle.toLowerCase();
+  }
+
   updateCategoryTitles() {
-    this.categories[0].title = this.languageService.translateCategory('Entertainment');
-    this.categories[1].title = this.languageService.translateCategory('Sports');
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    this.categories.forEach((category, index) => {
+      if (index < categoryKeys.length) {
+        category.title = this.languageService.translateCategory(categoryKeys[index]);
+      }
+    });
   }
 
   async updateArticleTitles() {
     // Update article titles based on language with real-time translation
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    
     for (const category of this.categories) {
       const catIndex = this.categories.indexOf(category);
-      const categoryKey = catIndex === 0 ? 'Entertainment' : 'Sports';
-      const originalNews = this.originalNewsItems[categoryKey];
-      if (originalNews) {
-        // Translate titles in parallel
-        const translatedArticles = await Promise.all(originalNews.map(async (n, index) => {
-          let translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
-          // If titleEn doesn't exist or we need real-time translation, use Google Translate
-          if (!n.titleEn || this.languageService.getCurrentLanguage() === 'hi') {
-            try {
-              translatedTitle = await this.languageService.translateToCurrentLanguage(n.title);
-            } catch (error) {
-              console.warn('Failed to translate title:', error);
-              translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
+      if (catIndex < categoryKeys.length) {
+        const categoryKey = categoryKeys[catIndex];
+        const originalNews = this.originalNewsItems[categoryKey];
+        if (originalNews) {
+          // Translate titles in parallel
+          const translatedArticles = await Promise.all(originalNews.map(async (n, index) => {
+            let translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
+            // If titleEn doesn't exist or we need real-time translation, use Google Translate
+            if (!n.titleEn || this.languageService.getCurrentLanguage() === 'hi') {
+              try {
+                translatedTitle = await this.languageService.translateToCurrentLanguage(n.title);
+              } catch (error) {
+                console.warn(`Failed to translate title for ${categoryKey}:`, error);
+                translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
+              }
             }
-          }
-          return {
-            title: translatedTitle,
-            image: n.image || '',
-            time: n.time,
-            date: n.date,
-            hasVideo: index === 0,
-            imageLoading: !n.image || n.image.trim() === '',
-            isTrending: n.isTrending || false,
-            isBreaking: n.isBreaking || false,
-            isFeatured: n.isFeatured || false
-          };
-        }));
-        category.articles = translatedArticles;
+            return {
+              title: translatedTitle,
+              image: n.image || '',
+              time: n.time,
+              date: n.date,
+              hasVideo: index === 0,
+              imageLoading: !n.image || n.image.trim() === '',
+              isTrending: n.isTrending || false,
+              isBreaking: n.isBreaking || false,
+              isFeatured: n.isFeatured || false
+            };
+          }));
+          category.articles = translatedArticles;
+        }
       }
     }
   }
 
   loadCategoryNews() {
-    // Load Entertainment news - use fetchNewsByPage to respect "Pages to Display" field
-    this.newsService.fetchNewsByPage('entertainment', 4).subscribe({
-      next: async (news) => {
-        this.originalNewsItems['Entertainment'] = news;
-        // Translate titles after loading
-        const translatedArticles = await Promise.all(news.map(async (n, index) => {
-          let translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
-          try {
-            translatedTitle = await this.languageService.translateToCurrentLanguage(n.title);
-          } catch (error) {
-            console.warn('Failed to translate title:', error);
-          }
-          return {
-            title: translatedTitle,
-            image: n.image || '',
-            time: n.time,
-            date: n.date,
-            hasVideo: index === 0,
-            imageLoading: !n.image || n.image.trim() === ''
-          };
-        }));
-        this.categories[0].articles = translatedArticles;
-        this.isLoading = false;
-        // Fetch images for Entertainment articles
-        this.fetchImagesForCategory(0, news);
-      },
-      error: (error) => {
-        console.error('Error loading Entertainment news:', error);
-        this.isLoading = false;
-      }
-    });
+    const categoryConfigs = [
+      { index: 0, key: 'Entertainment', slug: 'entertainment' },
+      { index: 1, key: 'Sports', slug: 'sports' },
+      { index: 2, key: 'National', slug: 'national' },
+      { index: 3, key: 'International', slug: 'international' },
+      { index: 4, key: 'Politics', slug: 'politics' },
+      { index: 5, key: 'Health', slug: 'health' },
+      { index: 6, key: 'Business', slug: 'business' },
+      { index: 7, key: 'Technology', slug: 'technology' },
+      { index: 8, key: 'Religious', slug: 'religious' },
+    ];
 
-    // Load Sports news - use fetchNewsByPage to respect "Pages to Display" field
-    this.newsService.fetchNewsByPage('sports', 4).subscribe({
-      next: async (news) => {
-        this.originalNewsItems['Sports'] = news;
-        // Translate titles after loading
-        const translatedArticles = await Promise.all(news.map(async (n, index) => {
-          let translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
-          try {
-            translatedTitle = await this.languageService.translateToCurrentLanguage(n.title);
-          } catch (error) {
-            console.warn('Failed to translate title:', error);
+    let loadedCount = 0;
+    const totalCategories = categoryConfigs.length;
+
+    categoryConfigs.forEach((config) => {
+      this.newsService.fetchNewsByPage(config.slug, 4).subscribe({
+        next: async (news) => {
+          this.originalNewsItems[config.key] = news;
+          // Translate titles after loading
+          const translatedArticles = await Promise.all(news.map(async (n, index) => {
+            let translatedTitle = this.languageService.getDisplayTitle(n.title, n.titleEn);
+            try {
+              translatedTitle = await this.languageService.translateToCurrentLanguage(n.title);
+            } catch (error) {
+              console.warn(`Failed to translate title for ${config.key}:`, error);
+            }
+            return {
+              title: translatedTitle,
+              image: n.image || '',
+              time: n.time,
+              date: n.date,
+              hasVideo: index === 0,
+              imageLoading: !n.image || n.image.trim() === '',
+              isTrending: n.isTrending || false,
+              isBreaking: n.isBreaking || false,
+              isFeatured: n.isFeatured || false
+            };
+          }));
+          this.categories[config.index].articles = translatedArticles;
+          // Fetch images for articles
+          this.fetchImagesForCategory(config.index, news);
+          
+          loadedCount++;
+          if (loadedCount === totalCategories) {
+            this.isLoading = false;
           }
-          return {
-            title: translatedTitle,
-            image: n.image || '',
-            time: n.time,
-            date: n.date,
-            hasVideo: index === 0,
-            imageLoading: !n.image || n.image.trim() === '',
-            isTrending: n.isTrending || false,
-            isBreaking: n.isBreaking || false,
-            isFeatured: n.isFeatured || false
-          };
-        }));
-        this.categories[1].articles = translatedArticles;
-        // Fetch images for Sports articles
-        this.fetchImagesForCategory(1, news);
-      },
-      error: (error) => {
-        console.error('Error loading Sports news:', error);
-      }
+        },
+        error: (error) => {
+          console.error(`Error loading ${config.key} news:`, error);
+          loadedCount++;
+          if (loadedCount === totalCategories) {
+            this.isLoading = false;
+          }
+        }
+      });
     });
   }
 
@@ -463,6 +533,15 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     this.touchTarget = null;
   }
 
+  getOriginalCategoryKey(translatedTitle: string): string {
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    const categoryIndex = this.categories.findIndex(c => c.title === translatedTitle);
+    if (categoryIndex >= 0 && categoryIndex < categoryKeys.length) {
+      return categoryKeys[categoryIndex];
+    }
+    return translatedTitle; // Fallback
+  }
+
   openNewsModal(categoryTitle: string, articleIndex: number) {
     const category = this.categories.find(c => c.title === categoryTitle);
     if (!category || !category.articles || articleIndex >= category.articles.length) {
@@ -470,7 +549,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     }
 
     const article = category.articles[articleIndex];
-    const originalNews = this.originalNewsItems[categoryTitle];
+    const originalCategoryKey = this.getOriginalCategoryKey(categoryTitle);
+    const originalNews = this.originalNewsItems[originalCategoryKey];
 
     if (originalNews && originalNews[articleIndex]) {
       // Use the original NewsArticle from the service
@@ -480,7 +560,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
       // Fallback: create a NewsArticle from the Article interface
       const newsArticle: NewsArticle = {
         id: articleIndex + 10000, // Temporary ID
-        category: categoryTitle,
+        category: originalCategoryKey,
         title: article.title,
         titleEn: article.title,
         excerpt: article.title, // Use title as excerpt
@@ -508,6 +588,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
       'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
       'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
       'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Religious': 'bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }

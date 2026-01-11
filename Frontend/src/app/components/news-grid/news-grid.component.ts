@@ -1,10 +1,12 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 // Using NewsArticle from service
 
@@ -13,7 +15,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, NewsDetailModalComponent],
   template: `
-    <section class="py-12 lg:py-16 news-grid-container">
+    <section [class]="'py-12 lg:py-16 news-grid-container ' + (isHomePage ? 'home-page' : '')">
       <div class="container mx-auto px-4">
         <!-- Section Header -->
         <div class="flex items-center justify-between mb-8">
@@ -57,12 +59,12 @@ import { Subscription } from 'rxjs';
 
         <!-- News Grid - Only show when all images are loaded -->
         @if (!isLoading && newsItems.length > 0) {
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div [class]="'grid sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 lg:gap-6' : 'gap-6')">
             @for (news of newsItems; track news.id; let i = $index) {
-              <article
-                class="news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col"
-                [style.animation-delay]="i * 100 + 'ms'">
-              <div class="relative flex-[0_0_40%] sm:flex-none sm:aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300">
+            <article
+              [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
+              [style.animation-delay]="i * 100 + 'ms'">
+            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'flex-[0_0_45%] sm:flex-none sm:aspect-[16/10]' : 'flex-[0_0_40%] sm:flex-none sm:aspect-[16/10]')">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -79,30 +81,38 @@ import { Subscription } from 'rxjs';
                     [alt]="news.title"
                     class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in" />
                 }
-                <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap">
+                <div [class]="'absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap ' + (isHomePage ? 'hidden lg:flex' : '')">
                   @if (news.isTrending) {
                     <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
-                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                      </svg>
-                      <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
+                      @if (!isHomePage) {
+                        <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
+                      }
                       <span>TRENDING</span>
-                      <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
+                      @if (!isHomePage) {
+                        <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
+                      }
                     </span>
                   }
                   @if (news.isBreaking) {
                     <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
-                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                      </svg>
+                      @if (!isHomePage) {
+                        <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                      }
                       <span>BREAKING</span>
                     </span>
                   }
                   @if (news.isFeatured) {
                     <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                      </svg>
+                      @if (!isHomePage) {
+                        <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                      }
                       <span>FEATURED</span>
                     </span>
                   }
@@ -112,26 +122,34 @@ import { Subscription } from 'rxjs';
                 </div>
               </div>
 
-              <!-- Border Line with Gradient -->
-              <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
+              <!-- Border Line with Gradient - Hidden on mobile home page -->
+              <div [class]="'h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 ' + (isHomePage ? 'hidden lg:block' : '')"></div>
 
-              <div class="p-5 pt-6 pb-6 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col h-full">
+              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-1 pt-1 pb-1 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-5 pt-6 pb-6')">
                 <h3 
-                  [class]="'font-display text-base sm:text-lg font-bold dark:font-normal leading-snug group-hover:opacity-90 transition-all duration-300 mb-1 sm:mb-4 cursor-pointer hover:opacity-80 hover:scale-[1.02] flex-grow ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
+                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'text-base lg:text-lg lg:mb-1 lg:flex-grow' : 'text-base sm:text-lg mb-1 sm:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
                   (click)="openNewsModal(news)"
                   (touchstart)="onTouchStart($event, news)"
                   (touchend)="onTouchEnd($event, news)"
                   (touchmove)="onTouchMove($event)"
                   style="touch-action: pan-y;">
-                  @if (news.isTrending) {
+                  @if (news.isTrending && !isHomePage) {
                     <span class="inline-block mr-2 text-lg leading-none">🔥</span>
                   }
                   {{ getDisplayTitle(news) }}
                 </h3>
-                <div class="flex items-center mt-auto">
-                  <span class="flex items-center gap-1.5 text-xs font-medium">
-                    <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                    <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
+                <div [class]="'flex items-center justify-between text-xs text-muted-foreground ' + (isHomePage ? 'mt-0 lg:mt-2' : 'mt-2')">
+                  <span [class]="'flex items-center ' + (isHomePage ? 'gap-1 lg:gap-1.5' : 'gap-1.5')">
+                    <svg [class]="'fill-none stroke-currentColor ' + (isHomePage ? 'w-3 h-3 lg:w-3.5 lg:h-3.5' : 'w-3.5 h-3.5')" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>{{ news.author || 'News Adda India' }}</span>
+                  </span>
+                  <span [class]="'flex items-center ' + (isHomePage ? 'gap-1 lg:gap-1.5' : 'gap-1.5')">
+                    <svg [class]="'fill-none stroke-currentColor ' + (isHomePage ? 'w-3 h-3 lg:w-3.5 lg:h-3.5' : 'w-3.5 h-3.5')" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ news.date || news.time }}</span>
                   </span>
                 </div>
               </div>
@@ -177,6 +195,66 @@ import { Subscription } from 'rxjs';
         gap: 1.5rem;
       }
     }
+    /* Mobile home page: reduce card size and spacing */
+    @media (max-width: 1023px) {
+      .news-grid-container.home-page .news-card.home-page-card {
+        min-height: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        align-items: stretch !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .relative {
+        flex: 0 0 45% !important;
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child {
+        padding: 0.125rem 0.375rem !important;
+        border-radius: 0 0 0.5rem 0.5rem !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(h3):not(.flex.items-center) {
+        display: none !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card h3 {
+        margin: 0 !important;
+        line-height: 1.15 !important;
+        font-size: 1rem !important;
+        min-height: auto !important;
+        padding: 0 !important;
+        flex-grow: 0 !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center {
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span {
+        font-size: 0.7rem !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center svg {
+        width: 0.7rem !important;
+        height: 0.7rem !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span {
+        gap: 0.25rem !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span svg {
+        flex-shrink: 0 !important;
+      }
+    }
   `]
 })
 export class NewsGridComponent implements OnInit, OnDestroy {
@@ -185,6 +263,7 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   private languageSubscription?: Subscription;
   newsItems: NewsArticle[] = [];
   isLoading = true;
+  isHomePage = false;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -194,7 +273,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   constructor(
     private newsService: NewsService,
     private modalService: ModalService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private router: Router
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -206,6 +286,16 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     console.log('[NewsGrid] Component initialized');
     this.updateTranslations();
     this.loadNews();
+
+    // Check if we're on the home page
+    this.checkIfHomePage();
+    
+    // Subscribe to route changes
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.checkIfHomePage();
+    });
 
     // Subscribe to language changes
     console.log('[NewsGrid] Subscribing to language changes...');
@@ -222,6 +312,11 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       }
     });
     console.log('[NewsGrid] Language subscription set up');
+  }
+
+  private checkIfHomePage() {
+    const url = this.router.url;
+    this.isHomePage = url === '/' || url === '' || url === '/home';
   }
 
   ngOnDestroy() {
@@ -432,6 +527,25 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
+  }
+
+  getHeadlineColorForLatestStories(category: string, index: number): string {
+    // Array of varied color gradients for Latest Stories section
+    const colorPalette = [
+      'bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:bg-none dark:text-blue-400',
+      'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent dark:bg-none dark:text-purple-400',
+      'bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
+      'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-green-400',
+      'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-400',
+      'bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent dark:bg-none dark:text-violet-400',
+      'bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent dark:bg-none dark:text-rose-400',
+      'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-400',
+      'bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-teal-400',
+      'bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-indigo-400',
+    ];
+    
+    // Cycle through colors based on index
+    return colorPalette[index % colorPalette.length];
   }
 
   // Touch handling to prevent accidental opens on mobile

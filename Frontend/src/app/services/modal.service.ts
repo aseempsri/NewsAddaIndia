@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { NewsArticle } from './news.service';
+import { ScrollRestorationService } from './scroll-restoration.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,9 +14,13 @@ export class ModalService {
   });
   private scrollPosition: number = 0;
 
+  constructor(private scrollRestorationService: ScrollRestorationService) {}
+
   openModal(news: NewsArticle, isBreaking: boolean = false): void {
     // Save scroll position BEFORE opening modal
     this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    // Also save to scroll restoration service for route-based restoration
+    this.scrollRestorationService.saveScrollPosition();
     
     this.modalState$.next({
       isOpen: true,
