@@ -12,23 +12,23 @@ import { LanguageService } from '../../services/language.service';
   template: `
     <div class="bg-gradient-to-r from-purple-600/30 via-pink-500/20 to-orange-500/30 border-y-2 border-purple-500/50 overflow-hidden w-full max-w-full shadow-lg">
       <div class="w-full max-w-full overflow-hidden">
-        <div class="flex items-center py-2 md:py-3 overflow-hidden">
-          <!-- Label - 20% width on mobile, auto on desktop, touches left edge on mobile -->
-          <div class="flex items-center justify-center gap-0.5 md:gap-2 border-r-2 border-purple-400/60 shrink-0 bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 pl-1 md:pl-5 pr-1.5 md:pr-6 py-1.5 md:py-2.5 rounded-r-lg md:rounded-r-xl shadow-xl w-[20%] md:w-auto overflow-hidden">
-            <!-- Lightning Bolt Icon -->
-            <svg class="w-2.5 h-2.5 md:w-5 md:h-5 text-white drop-shadow-lg flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+        <div class="flex items-center py-1.5 md:py-3 overflow-hidden">
+          <!-- Label - Minimal width on mobile for fire icon only, auto on desktop -->
+          <div class="flex items-center justify-center gap-0.5 md:gap-2 md:border-r-2 md:border-purple-400/60 shrink-0 md:bg-gradient-to-r md:from-purple-600 md:via-pink-500 md:to-fuchsia-600 px-1 md:pl-5 md:pr-6 py-0.5 md:py-2.5 md:rounded-r-lg md:rounded-r-xl md:shadow-xl w-auto md:w-auto overflow-hidden">
+            <!-- Lightning Bolt Icon - Hidden on mobile -->
+            <svg class="hidden md:block w-2.5 h-2.5 md:w-5 md:h-5 text-white drop-shadow-lg flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
               <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            <!-- Fire Emoji -->
-            <span class="text-[9px] md:text-lg leading-none flex-shrink-0 inline-block">🔥</span>
-            <!-- TRENDING Text -->
-            <span class="text-[9px] md:text-sm font-black text-white uppercase whitespace-nowrap drop-shadow-lg flex-shrink-0" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; letter-spacing: 0.04em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+            <!-- Fire Emoji - Bigger on mobile, centered -->
+            <span class="text-base md:text-lg leading-none flex-shrink-0 inline-flex items-center justify-center">🔥</span>
+            <!-- TRENDING Text - Hidden on mobile -->
+            <span class="hidden md:inline text-[9px] md:text-sm font-black text-white uppercase whitespace-nowrap drop-shadow-lg flex-shrink-0" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; letter-spacing: 0.04em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
               TRENDING
             </span>
           </div>
 
           <!-- Scrolling News - 80% width on mobile -->
-          <div class="overflow-hidden flex-1 min-w-0 py-1 md:py-1 ml-2 md:ml-4 pr-4 md:pr-0 w-[80%] md:w-auto">
+          <div class="overflow-hidden flex-1 min-w-0 py-0.5 md:py-1 md:ml-4 pr-4 md:pr-0 w-[80%] md:w-auto">
             @if (loading) {
               <div class="text-sm md:text-sm text-purple-600 font-semibold">Loading trending news...</div>
             } @else if (scrollingNews.length === 0) {

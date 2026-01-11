@@ -16,6 +16,8 @@ import { Subscription } from 'rxjs';
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
+      <!-- Spacer for fixed header on desktop - accounts for navigation bar only (~64px, reduced by 20%) -->
+      <div class="lg:h-[64px]"></div>
       
       <!-- Reading Progress Bar -->
       <div class="fixed top-0 left-0 w-full h-1 bg-secondary z-[10000]">

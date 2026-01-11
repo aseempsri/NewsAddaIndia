@@ -16,21 +16,23 @@ import { Subscription } from 'rxjs';
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
+      <!-- Spacer for fixed header on desktop - accounts for navigation bar only (~64px, reduced by 20%) -->
+      <div class="lg:h-[64px]"></div>
       
       <main>
-        <section class="py-12 lg:py-16">
+        <section class="py-6 lg:py-8">
           <div class="container mx-auto px-4">
             <!-- Category Header -->
             <div class="mb-8">
               <div class="flex items-center gap-3 mb-4">
-                <div [class]="'w-1 h-12 rounded-full bg-gradient-to-b ' + getCategoryAccentColor(categoryName)"></div>
-                <div>
-                  <h1 class="font-display text-3xl lg:text-4xl font-bold leading-relaxed pt-3 pb-2">
+                <div [class]="'w-1 h-12 rounded-full bg-gradient-to-b flex-shrink-0 ' + getCategoryAccentColor(categoryName)"></div>
+                <div class="flex items-center h-12">
+                  <h1 class="font-display text-3xl lg:text-4xl font-bold leading-tight">
                     {{ getCategoryDisplayName() }} <span class="gradient-text">{{ t.news }}</span>
                   </h1>
-                  <p class="text-muted-foreground mt-2">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
                 </div>
               </div>
+              <p class="text-muted-foreground mt-2 ml-4">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
             </div>
 
             <!-- News Grid -->
@@ -144,10 +146,18 @@ import { Subscription } from 'rxjs';
                     <p class="text-muted-foreground text-sm line-clamp-3 mb-4 mt-3 pt-1 min-h-[3.5rem] leading-relaxed">
                       {{ news.excerpt }}
                     </p>
-                    <div class="flex items-center">
-                      <span class="flex items-center gap-1.5 text-xs font-medium">
-                        <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                        <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
+                    <div class="flex items-center justify-between text-xs text-muted-foreground">
+                      <span class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>{{ news.author || 'News Adda India' }}</span>
+                      </span>
+                      <span class="flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{{ news.date || news.time }}</span>
                       </span>
                     </div>
                   </div>
