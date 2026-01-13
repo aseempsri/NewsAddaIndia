@@ -5,23 +5,30 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { environment } from '../../../../environments/environment';
+import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 interface LiveNews {
   _id: string;
   title: string;
   titleEn: string;
   excerpt: string;
+  excerptEn: string;
   summary: string;
+  summaryEn: string;
   content: string;
+  contentEn: string;
   category: string;
   icon?: string;
   tags: string[];
   pages: string[];
   author: string;
   image: string;
+  images?: string[];
   isBreaking: boolean;
   isFeatured: boolean;
   isTrending: boolean;
+  trendingTitle?: string;
   date: string;
   createdAt: string;
   updatedAt: string;
@@ -30,7 +37,7 @@ interface LiveNews {
 @Component({
   selector: 'app-admin-edit-live-post',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CKEditorModule],
   template: `
     <div class="min-h-screen bg-background py-8">
       <div class="container mx-auto px-4 max-w-7xl">
@@ -78,12 +85,21 @@ interface LiveNews {
                   <!-- Title (English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Title (English)</label>
-                    <input
-                      type="text"
-                      [(ngModel)]="newsData.titleEn"
-                      name="titleEn"
-                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                    />
+                    <div class="flex gap-2">
+                      <input
+                        type="text"
+                        [(ngModel)]="newsData.titleEn"
+                        name="titleEn"
+                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      />
+                      <button
+                        type="button"
+                        (click)="convertToEnglish('title')"
+                        [disabled]="isTranslating"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium">
+                        {{ isTranslating ? 'Translating...' : 'Translate' }}
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Excerpt -->
@@ -96,6 +112,26 @@ interface LiveNews {
                       class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
                       required
                     ></textarea>
+                  </div>
+
+                  <!-- Excerpt (English) -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Excerpt (English)</label>
+                    <div class="flex gap-2">
+                      <textarea
+                        [(ngModel)]="newsData.excerptEn"
+                        name="excerptEn"
+                        rows="3"
+                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      ></textarea>
+                      <button
+                        type="button"
+                        (click)="convertToEnglish('excerpt')"
+                        [disabled]="isTranslating"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                        {{ isTranslating ? 'Translating...' : 'Translate' }}
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Summary (60 words) -->
@@ -114,17 +150,75 @@ interface LiveNews {
                     <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsData.summary) }} / 60 words</p>
                   </div>
 
-                  <!-- Detailed Content -->
+                  <!-- Summary (60 words in English) -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Summary (60 words in English)</label>
+                    <div class="flex gap-2">
+                      <textarea
+                        [(ngModel)]="newsData.summaryEn"
+                        name="summaryEn"
+                        rows="4"
+                        maxlength="400"
+                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                        placeholder="Enter a concise summary in English (approximately 60 words)..."
+                      ></textarea>
+                      <button
+                        type="button"
+                        (click)="convertToEnglish('summary')"
+                        [disabled]="isTranslating"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                        {{ isTranslating ? 'Translating...' : 'Translate' }}
+                      </button>
+                    </div>
+                    <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsData.summaryEn) }} / 60 words</p>
+                  </div>
+
+                  <!-- Detailed Content (Full Article) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Detailed Content (Full Article) *</label>
                     <p class="text-xs text-muted-foreground mb-2">Enter the complete article content that will be displayed on the news detail page</p>
-                    <textarea
+                    <ckeditor
                       [(ngModel)]="newsData.content"
+                      [editor]="Editor"
+                      [config]="editorConfig"
                       name="content"
-                      rows="12"
-                      placeholder="Write the full detailed article content here..."
-                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground resize-y"
-                    ></textarea>
+                      class="ckeditor-custom">
+                    </ckeditor>
+                  </div>
+
+                  <!-- Detailed Content (Full Article in English) -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Detailed Content (Full Article in English)</label>
+                    <div class="flex gap-2">
+                      <div class="flex-1">
+                        <ckeditor
+                          [(ngModel)]="newsData.contentEn"
+                          [editor]="Editor"
+                          [config]="editorConfig"
+                          name="contentEn"
+                          class="ckeditor-custom">
+                        </ckeditor>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="convertToEnglish('content')"
+                        [disabled]="isTranslating"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                        {{ isTranslating ? 'Translating...' : 'Translate' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Convert All to English Button -->
+                  <div class="border-t-2 border-primary/30 pt-4">
+                    <button
+                      type="button"
+                      (click)="convertAllToEnglish()"
+                      [disabled]="isTranslating || !newsData.title || !newsData.excerpt"
+                      class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl">
+                      {{ isTranslating ? 'Translating All Fields...' : '🔄 Convert All to English' }}
+                    </button>
+                    <p class="text-xs text-muted-foreground mt-2 text-center">This will translate Title, Excerpt, Summary, and Content to English</p>
                   </div>
 
                   <!-- Category -->
@@ -216,54 +310,94 @@ interface LiveNews {
                   </div>
 
                   <!-- Breaking News, Featured & Trending -->
-                  <div class="grid grid-cols-3 gap-4">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        [(ngModel)]="newsData.isBreaking"
-                        name="isBreaking"
-                        class="rounded"
-                      />
-                      <span class="text-sm font-medium">Breaking News</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        [(ngModel)]="newsData.isFeatured"
-                        name="isFeatured"
-                        class="rounded"
-                      />
-                      <span class="text-sm font-medium">Featured</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        [(ngModel)]="newsData.isTrending"
-                        name="isTrending"
-                        class="rounded"
-                      />
-                      <span class="text-sm font-medium">Trending</span>
-                    </label>
+                  <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-4">
+                      <label class="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="newsData.isBreaking"
+                          name="isBreaking"
+                          class="rounded"
+                        />
+                        <span class="text-sm font-medium">Breaking News</span>
+                      </label>
+                      <label class="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="newsData.isFeatured"
+                          name="isFeatured"
+                          class="rounded"
+                        />
+                        <span class="text-sm font-medium">Featured</span>
+                      </label>
+                      <label class="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="newsData.isTrending"
+                          name="isTrending"
+                          class="rounded"
+                        />
+                        <span class="text-sm font-medium">Trending</span>
+                      </label>
+                    </div>
+                    
+                    <!-- Trending Title (shown only when Trending is checked) -->
+                    @if (newsData.isTrending) {
+                      <div>
+                        <label class="block text-sm font-medium mb-2">
+                          Trending Title <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          [(ngModel)]="newsData.trendingTitle"
+                          name="trendingTitle"
+                          required
+                          placeholder="Enter a catchy title for trending news..."
+                          class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          [class.border-red-500]="newsData.isTrending && !newsData.trendingTitle"
+                        />
+                        <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                      </div>
+                    }
                   </div>
 
                   <!-- Image Upload -->
                   <div>
-                    <label class="block text-sm font-medium mb-2">Image</label>
-                    @if (currentImageUrl) {
-                      <div class="mb-2">
-                        <img [src]="currentImageUrl" alt="Current image" class="w-32 h-32 object-cover rounded-lg" />
+                    <label class="block text-sm font-medium mb-2">Images (Max 3)</label>
+                    @if (currentImages.length > 0) {
+                      <div class="mb-3">
+                        <p class="text-xs text-muted-foreground mb-2 font-semibold">Current images ({{ currentImages.length }}):</p>
+                        <div class="flex flex-wrap gap-3">
+                          @for (img of currentImages; track $index) {
+                            <div class="relative">
+                              <img [src]="img" [alt]="'Current image ' + ($index + 1)" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
+                              <span class="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full font-semibold">{{ $index + 1 }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    } @else if (currentImageUrl) {
+                      <div class="mb-3">
+                        <p class="text-xs text-muted-foreground mb-2 font-semibold">Current image:</p>
+                        <img [src]="currentImageUrl" alt="Current image" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
                       </div>
                     }
                     <input
                       type="file"
                       accept="image/*"
-                      (change)="onFileSelected($event)"
+                      multiple
+                      (change)="onFilesSelected($event)"
                       class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
                     />
-                    @if (newImage) {
-                      <div class="mt-2">
-                        <p class="text-sm text-muted-foreground">New image selected: {{ newImage.name }}</p>
+                    @if (newImages.length > 0) {
+                      <div class="mt-2 space-y-1">
+                        @for (img of newImages; track $index) {
+                          <p class="text-sm text-muted-foreground">New image {{ $index + 1 }}: {{ img.name }}</p>
+                        }
+                        <p class="text-xs text-muted-foreground mt-2">{{ newImages.length }} / 3 images selected</p>
                       </div>
+                    } @else {
+                      <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images. The first image will be shown on the card.</p>
                     }
                   </div>
 
@@ -297,9 +431,14 @@ interface LiveNews {
                     <article class="news-card group">
                       <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                         <!-- Image Preview -->
-                        @if (previewImageUrl || currentImageUrl) {
+                        @if (previewImageUrl || (currentImages.length > 0 && currentImages[0])) {
                           <img
-                            [src]="previewImageUrl || currentImageUrl"
+                            [src]="previewImageUrl || currentImages[0]"
+                            [alt]="newsData.title || 'Preview'"
+                            class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
+                        } @else if (currentImageUrl) {
+                          <img
+                            [src]="currentImageUrl"
                             [alt]="newsData.title || 'Preview'"
                             class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
                         } @else {
@@ -368,19 +507,37 @@ interface LiveNews {
       </div>
     </div>
   `,
-  styles: []
+  styles: [`
+    ::ng-deep .ckeditor-custom .ck-editor__editable {
+      min-height: 400px;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    ::ng-deep .ckeditor-custom .ck-toolbar {
+      background: hsl(var(--secondary));
+      border-color: hsl(var(--border));
+    }
+    ::ng-deep .ckeditor-custom .ck-content {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+  `]
 })
 export class AdminEditLivePostComponent implements OnInit {
   isAuthenticated = false;
   authToken = '';
   newsId = '';
+  isTranslating = false;
   newsData: LiveNews = {
     _id: '',
     title: '',
     titleEn: '',
     excerpt: '',
+    excerptEn: '',
     summary: '',
+    summaryEn: '',
     content: '',
+    contentEn: '',
     category: '',
     tags: [],
     pages: ['home'],
@@ -389,6 +546,7 @@ export class AdminEditLivePostComponent implements OnInit {
     isBreaking: false,
     isFeatured: false,
     isTrending: false,
+    trendingTitle: '',
     date: '',
     createdAt: '',
     updatedAt: ''
@@ -400,9 +558,45 @@ export class AdminEditLivePostComponent implements OnInit {
   tagsInput = '';
   previewImageUrl: string | null = null;
   currentImageUrl: string | null = null;
-  newImage: File | null = null;
+  currentImages: string[] = [];
+  newImages: File[] = [];
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
+
+  // CKEditor Configuration
+  public Editor = ClassicEditor;
+  public editorConfig = {
+    toolbar: {
+      items: [
+        'heading', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+        'bulletedList', 'numberedList', '|',
+        'alignment', '|',
+        'outdent', 'indent', '|',
+        'link', 'blockQuote', 'insertTable', 'imageUpload', '|',
+        'undo', 'redo'
+      ],
+      shouldNotGroupWhenFull: true
+    },
+    language: 'en',
+    image: {
+      toolbar: [
+        'imageTextAlternative',
+        'toggleImageCaption',
+        'imageStyle:inline',
+        'imageStyle:block',
+        'imageStyle:side'
+      ]
+    },
+    table: {
+      contentToolbar: [
+        'tableColumn',
+        'tableRow',
+        'mergeTableCells'
+      ]
+    }
+  };
 
   availableIcons = [
     { id: 'star', name: 'Star', path: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>' },
@@ -479,6 +673,19 @@ export class AdminEditLivePostComponent implements OnInit {
         if (this.newsData.image) {
           this.currentImageUrl = this.getImageUrl(this.newsData.image);
         }
+        // Load current images array
+        console.log('[AdminEditLivePost] Loading images from sessionStorage:', {
+          images: this.newsData.images,
+          image: this.newsData.image
+        });
+        if (this.newsData.images && Array.isArray(this.newsData.images) && this.newsData.images.length > 0) {
+          this.currentImages = this.newsData.images.map(img => this.getImageUrl(img));
+          console.log('[AdminEditLivePost] Loaded images from sessionStorage:', this.currentImages);
+        } else if (this.newsData.image) {
+          this.currentImages = [this.currentImageUrl!];
+        } else {
+          this.currentImages = [];
+        }
         sessionStorage.removeItem('editLiveNews');
         return;
       } catch (e) {
@@ -488,15 +695,60 @@ export class AdminEditLivePostComponent implements OnInit {
 
     // Otherwise fetch from API
     this.isLoading = true;
+    console.log('[AdminEditLivePost] Fetching news from API:', this.newsId);
     this.http.get<{ success: boolean; data: LiveNews; error?: string }>(
       `${this.getApiUrl()}/api/news/${this.newsId}`
     ).subscribe({
       next: (response) => {
+        console.log('[AdminEditLivePost] API response received:', {
+          success: response.success,
+          hasData: !!response.data,
+          dataImage: response.data?.image,
+          dataImages: response.data?.images,
+          dataImagesCount: response.data?.images ? response.data.images.length : 0,
+          fullResponse: JSON.stringify(response.data, null, 2)
+        });
+        
         if (response.success) {
-          this.newsData = { ...response.data, summary: response.data.summary || '' };
+          this.newsData = { 
+            ...response.data, 
+            summary: response.data.summary || '',
+            summaryEn: response.data.summaryEn || '',
+            excerptEn: response.data.excerptEn || '',
+            contentEn: response.data.contentEn || '',
+            trendingTitle: response.data.trendingTitle || undefined
+          };
+          console.log('[AdminEditLivePost] Loaded news data:', {
+            id: this.newsData._id,
+            title: this.newsData.title,
+            isTrending: this.newsData.isTrending,
+            trendingTitle: this.newsData.trendingTitle
+          });
           this.tagsInput = this.newsData.tags.join(', ');
           if (this.newsData.image) {
             this.currentImageUrl = this.getImageUrl(this.newsData.image);
+          }
+          // Load current images array
+          console.log('[AdminEditLivePost] Loading images from API response:', {
+            images: this.newsData.images,
+            image: this.newsData.image,
+            imagesType: typeof this.newsData.images,
+            imagesIsArray: Array.isArray(this.newsData.images),
+            imagesLength: Array.isArray(this.newsData.images) ? this.newsData.images.length : 'N/A'
+          });
+          if (this.newsData.images && Array.isArray(this.newsData.images) && this.newsData.images.length > 0) {
+            this.currentImages = this.newsData.images.map(img => {
+              const url = this.getImageUrl(img);
+              console.log('[AdminEditLivePost] Mapping image:', img, '->', url);
+              return url;
+            });
+            console.log('[AdminEditLivePost] Final currentImages array:', this.currentImages);
+          } else if (this.newsData.image) {
+            this.currentImages = [this.currentImageUrl!];
+            console.log('[AdminEditLivePost] Using single image (fallback):', this.currentImages);
+          } else {
+            this.currentImages = [];
+            console.log('[AdminEditLivePost] No images found in response');
           }
         } else {
           this.submitError = response.error || 'Failed to load news';
@@ -510,15 +762,32 @@ export class AdminEditLivePostComponent implements OnInit {
     });
   }
 
-  onFileSelected(event: Event) {
+
+  onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.newImage = input.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.previewImageUrl = e.target?.result as string;
-      };
-      reader.readAsDataURL(this.newImage);
+      // Limit to max 3 images
+      const filesArray = Array.from(input.files).slice(0, 3);
+      this.newImages = filesArray;
+      
+      console.log('[AdminEditLivePost] Files selected:', {
+        count: filesArray.length,
+        files: filesArray.map(f => ({ name: f.name, size: f.size, type: f.type }))
+      });
+      
+      // Create preview URL for first image
+      if (filesArray.length > 0) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.previewImageUrl = e.target?.result as string;
+        };
+        reader.readAsDataURL(filesArray[0]);
+      } else {
+        this.previewImageUrl = null;
+      }
+    } else {
+      this.newImages = [];
+      this.previewImageUrl = null;
     }
   }
 
@@ -630,17 +899,112 @@ export class AdminEditLivePostComponent implements OnInit {
     }
   }
 
+  async convertToEnglish(field: 'title' | 'excerpt' | 'summary' | 'content') {
+    if (!this.newsData[field] || !this.newsData[field].trim()) {
+      this.submitError = `Please enter ${field} first`;
+      return;
+    }
+
+    this.isTranslating = true;
+    this.submitError = '';
+
+    try {
+      const response = await this.http.post<{ translatedText: string }>(
+        `${this.getApiUrl()}/api/translation/translate-text`,
+        {
+          text: this.newsData[field],
+          sourceLang: 'hi',
+          targetLang: 'en'
+        },
+        {
+          headers: new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`)
+        }
+      ).toPromise();
+
+      if (response && response.translatedText) {
+        if (field === 'title') {
+          this.newsData.titleEn = response.translatedText;
+        } else if (field === 'excerpt') {
+          this.newsData.excerptEn = response.translatedText;
+        } else if (field === 'summary') {
+          this.newsData.summaryEn = response.translatedText;
+        } else if (field === 'content') {
+          this.newsData.contentEn = response.translatedText;
+        }
+        this.submitSuccess = `${field} translated successfully!`;
+      }
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      this.submitError = `Failed to translate ${field}: ${error.error?.message || error.message || 'Unknown error'}`;
+    } finally {
+      this.isTranslating = false;
+    }
+  }
+
+  async convertAllToEnglish() {
+    if (!this.newsData.title || !this.newsData.excerpt) {
+      this.submitError = 'Please enter title and excerpt first';
+      return;
+    }
+
+    this.isTranslating = true;
+    this.submitError = '';
+    this.submitSuccess = '';
+
+    try {
+      // Translate title
+      if (this.newsData.title && !this.newsData.titleEn) {
+        await this.convertToEnglish('title');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Translate excerpt
+      if (this.newsData.excerpt && !this.newsData.excerptEn) {
+        await this.convertToEnglish('excerpt');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Translate summary
+      if (this.newsData.summary && !this.newsData.summaryEn) {
+        await this.convertToEnglish('summary');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Translate content
+      if (this.newsData.content && !this.newsData.contentEn) {
+        await this.convertToEnglish('content');
+      }
+
+      this.submitSuccess = 'All fields translated successfully!';
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      this.submitError = `Failed to translate: ${error.error?.message || error.message || 'Unknown error'}`;
+    } finally {
+      this.isTranslating = false;
+    }
+  }
+
   updateNews() {
     this.isSubmitting = true;
     this.submitError = '';
     this.submitSuccess = '';
 
+    // Validate trending title if trending is checked
+    if (this.newsData.isTrending && !this.newsData.trendingTitle?.trim()) {
+      this.submitError = 'Trending Title is required when Trending is checked';
+      this.isSubmitting = false;
+      return;
+    }
+
     const formData = new FormData();
     formData.append('title', this.newsData.title);
     formData.append('titleEn', this.newsData.titleEn || this.newsData.title);
     formData.append('excerpt', this.newsData.excerpt);
+    formData.append('excerptEn', this.newsData.excerptEn || '');
     formData.append('summary', this.newsData.summary || '');
+    formData.append('summaryEn', this.newsData.summaryEn || '');
     formData.append('content', this.newsData.content || this.newsData.excerpt);
+    formData.append('contentEn', this.newsData.contentEn || '');
     formData.append('category', this.newsData.category);
     if (this.newsData.icon) {
       formData.append('icon', this.newsData.icon);
@@ -651,10 +1015,39 @@ export class AdminEditLivePostComponent implements OnInit {
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
     formData.append('isTrending', this.newsData.isTrending.toString());
+    // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
+    if (this.newsData.isTrending) {
+      // If trending is checked, send trendingTitle (even if empty, backend will validate)
+      formData.append('trendingTitle', this.newsData.trendingTitle || '');
+      console.log('[AdminEditLivePost] Sending trendingTitle (isTrending=true):', {
+        isTrending: this.newsData.isTrending,
+        trendingTitle: this.newsData.trendingTitle || '(empty string)',
+        trendingTitleType: typeof this.newsData.trendingTitle,
+        trendingTitleUndefined: this.newsData.trendingTitle === undefined
+      });
+    } else {
+      // If trending is unchecked, send empty string to clear it
+      formData.append('trendingTitle', '');
+      console.log('[AdminEditLivePost] Sending empty trendingTitle (isTrending=false)');
+    }
     formData.append('published', 'true'); // Keep it published
     
-    if (this.newImage) {
-      formData.append('image', this.newImage);
+    // Append all new images (max 3)
+    console.log('[AdminEditLivePost] Preparing to update news:', {
+      newsId: this.newsId,
+      currentImages: this.currentImages,
+      newImagesCount: this.newImages.length,
+      newImages: this.newImages.map(img => ({ name: img.name, size: img.size, type: img.type }))
+    });
+    
+    if (this.newImages.length > 0) {
+      console.log('[AdminEditLivePost] Appending', this.newImages.length, 'new images to FormData');
+      this.newImages.forEach((image, index) => {
+        formData.append('images', image);
+        console.log(`[AdminEditLivePost] Appended image ${index + 1}:`, image.name, image.size, 'bytes');
+      });
+    } else {
+      console.log('[AdminEditLivePost] No new images to upload');
     }
 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
@@ -665,6 +1058,20 @@ export class AdminEditLivePostComponent implements OnInit {
       { headers }
     ).subscribe({
       next: (response) => {
+        console.log('[AdminEditLivePost] Update response received:', {
+          success: response.success,
+          message: response.message,
+          data: response.data ? {
+            _id: response.data._id,
+            image: response.data.image,
+            images: response.data.images,
+            imagesCount: response.data.images ? response.data.images.length : 0,
+            isTrending: response.data.isTrending,
+            trendingTitle: response.data.trendingTitle,
+            trendingTitleType: typeof response.data.trendingTitle
+          } : null
+        });
+        
         if (response.success) {
           this.submitSuccess = response.message || 'Post updated successfully!';
           setTimeout(() => {
@@ -676,6 +1083,7 @@ export class AdminEditLivePostComponent implements OnInit {
         this.isSubmitting = false;
       },
       error: (error) => {
+        console.error('[AdminEditLivePost] Update error:', error);
         this.submitError = error.error?.error || 'Failed to update post. Please try again.';
         this.isSubmitting = false;
       }

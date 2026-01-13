@@ -35,7 +35,8 @@
             "allowedCommonJsDependencies": [
               "clsx",
               "tailwind-merge",
-              "class-variance-authority"
+              "class-variance-authority",
+              "@ckeditor/ckeditor5-build-classic"
             ]
           },
           "configurations": {

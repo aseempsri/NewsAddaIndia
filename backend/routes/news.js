@@ -27,35 +27,66 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
   fileFilter: (req, file, cb) => {
-    const allowedExtensions = /jpeg|jpg|jfif|png|webp|gif/;
-    const allowedMimeTypes = /image\/(jpeg|jpg|png|webp|gif)/;
-    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedMimeTypes.test(file.mimetype) || file.mimetype === 'image/jpeg'; // jfif files might have image/jpeg mimetype
+    // Accept all image types - check if it's an image MIME type
+    const isImage = file.mimetype.startsWith('image/');
     
-    if (mimetype && extname) {
+    if (isImage) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed (jpeg, jpg, jfif, png, webp, gif)'));
+      cb(new Error('Only image files are allowed'));
     }
   }
 });
 
-// Helper function to resize image
+// Middleware to limit number of files (max 3)
+const limitFiles = (req, res, next) => {
+  if (req.files && req.files.length > 3) {
+    return res.status(400).json({
+      success: false,
+      error: 'Maximum 3 images allowed'
+    });
+  }
+  next();
+};
+
+// Helper function to resize image while preserving format
 async function resizeImage(inputPath, outputPath) {
   try {
-    await sharp(inputPath)
+    const metadata = await sharp(inputPath).metadata();
+    const format = metadata.format; // jpeg, png, webp, gif, heic, avif, etc.
+    
+    // Determine output format and adjust path if needed
+    let finalOutputPath = outputPath;
+    let sharpInstance = sharp(inputPath)
       .resize(800, 600, {
         fit: 'cover',
         position: 'center'
-      })
-      .jpeg({ quality: 85 })
-      .toFile(outputPath);
-    return true;
+      });
+    
+    // Preserve original format when possible, otherwise convert to jpeg
+    if (format === 'png') {
+      sharpInstance = sharpInstance.png({ quality: 90 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg)$/i, '.png');
+    } else if (format === 'webp') {
+      sharpInstance = sharpInstance.webp({ quality: 85 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+    } else if (format === 'gif') {
+      // GIFs are converted to PNG to preserve transparency
+      sharpInstance = sharpInstance.png({ quality: 90 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg|gif)$/i, '.png');
+    } else {
+      // Default to JPEG for jpeg, jpg, heic, avif, tiff, bmp, etc.
+      sharpInstance = sharpInstance.jpeg({ quality: 85 });
+      finalOutputPath = outputPath.replace(/\.(png|webp|gif|heic|avif|tiff|bmp)$/i, '.jpg');
+    }
+    
+    await sharpInstance.toFile(finalOutputPath);
+    return { success: true, outputPath: finalOutputPath };
   } catch (error) {
     console.error('Error resizing image:', error);
-    return false;
+    return { success: false, outputPath: outputPath };
   }
 }
 
@@ -64,12 +95,20 @@ const handleMulterError = (err, req, res, next) => {
   if (err) {
     // Handle multer errors
     if (err instanceof multer.MulterError) {
+      console.error('[Multer Error]', err.code, err.message, err.field);
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ success: false, error: 'File too large. Maximum size is 10MB.' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Unexpected field: ${err.field}. Expected field name: 'images'` 
+        });
       }
       return res.status(400).json({ success: false, error: err.message });
     }
     // Handle fileFilter errors (like unsupported file types)
+    console.error('[File Filter Error]', err.message);
     return res.status(400).json({ success: false, error: err.message });
   }
   next();
@@ -137,21 +176,49 @@ router.get('/', async (req, res) => {
 // GET /api/news/:id - Get single news article
 router.get('/:id', async (req, res) => {
   try {
+    console.log('[Backend GET /api/news/:id] Fetching news:', req.params.id);
     const news = await News.findById(req.params.id);
     
     if (!news) {
+      console.log('[Backend GET /api/news/:id] News not found:', req.params.id);
       return res.status(404).json({
         success: false,
         error: 'News article not found'
       });
     }
 
+    // Convert to plain object to ensure all fields are included
+    const newsData = news.toObject ? news.toObject() : news;
+    
+    // Ensure images array exists
+    if (!newsData.images || !Array.isArray(newsData.images)) {
+      if (newsData.image) {
+        newsData.images = [newsData.image];
+        console.log('[Backend GET /api/news/:id] Created images array from single image');
+      } else {
+        newsData.images = [];
+        console.log('[Backend GET /api/news/:id] Initialized empty images array');
+      }
+    }
+    
+    console.log('[Backend GET /api/news/:id] News found:', {
+      id: newsData._id,
+      image: newsData.image,
+      images: newsData.images,
+      imagesCount: newsData.images ? newsData.images.length : 0,
+      imagesType: typeof newsData.images,
+      imagesIsArray: Array.isArray(newsData.images),
+      isTrending: newsData.isTrending,
+      trendingTitle: newsData.trendingTitle,
+      trendingTitleType: typeof newsData.trendingTitle
+    });
+
     res.json({
       success: true,
-      data: news
+      data: newsData
     });
   } catch (error) {
-    console.error('Error fetching news:', error);
+    console.error('[Backend GET /api/news/:id] Error fetching news:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch news'
@@ -159,10 +226,30 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Helper function to generate 60-word summary
+function generateSummary(content, maxWords = 60) {
+  if (!content || !content.trim()) {
+    return '';
+  }
+  // Remove HTML tags if present
+  const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Split into words
+  const words = textContent.split(/\s+/);
+  // Take first maxWords words
+  const summaryWords = words.slice(0, maxWords);
+  // Join and ensure it ends properly
+  let summary = summaryWords.join(' ');
+  // If original content was longer, add ellipsis
+  if (words.length > maxWords) {
+    summary += '...';
+  }
+  return summary.trim();
+}
+
 // POST /api/news - Create new news (Admin only)
-router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
+router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, content, category, tags, pages, author, isBreaking, isFeatured, isTrending } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
     
     // Validate required fields
     if (!title || !excerpt || !category) {
@@ -173,22 +260,39 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
     }
 
     let imagePath = '';
+    let imagePaths = [];
     
-    // Process image if uploaded
-    if (req.file) {
-      const resizedFilename = 'resized-' + req.file.filename;
-      const resizedPath = path.join(uploadsDir, resizedFilename);
-      
-      // Resize image
-      const resizeSuccess = await resizeImage(req.file.path, resizedPath);
-      
-      if (resizeSuccess) {
-        // Delete original and keep resized
-        fs.unlinkSync(req.file.path);
-        imagePath = `/uploads/${resizedFilename}`;
-      } else {
-        // Use original if resize fails
-        imagePath = `/uploads/${req.file.filename}`;
+    // Process multiple images if uploaded (max 3)
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const resizedFilename = 'resized-' + file.filename;
+        const resizedPath = path.join(uploadsDir, resizedFilename);
+        
+        // Resize image
+        const resizeResult = await resizeImage(file.path, resizedPath);
+        
+        if (resizeResult.success) {
+          // Delete original and keep resized
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+          // Use the actual output filename (may have different extension)
+          const actualFilename = path.basename(resizeResult.outputPath);
+          const processedPath = `/uploads/${actualFilename}`;
+          imagePaths.push(processedPath);
+          
+          // Set first image as the main image for backward compatibility
+          if (imagePath === '') {
+            imagePath = processedPath;
+          }
+        } else {
+          // Use original if resize fails
+          const originalPath = `/uploads/${file.filename}`;
+          imagePaths.push(originalPath);
+          if (imagePath === '') {
+            imagePath = originalPath;
+          }
+        }
       }
     }
 
@@ -205,19 +309,30 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
       parsedPages = typeof pages === 'string' ? pages.split(',').map(p => p.trim()) : (pages || []);
     }
 
+    // Generate summaries if not provided
+    const finalContent = content || excerpt;
+    const hindiSummary = summary || generateSummary(finalContent, 60);
+    const englishSummary = summaryEn || (contentEn ? generateSummary(contentEn, 60) : '');
+
     const news = new News({
       title,
       titleEn: titleEn || title,
       excerpt,
-      content: content || excerpt,
+      excerptEn: excerptEn || '',
+      summary: hindiSummary,
+      summaryEn: englishSummary,
+      content: finalContent,
+      contentEn: contentEn || '',
       category,
       tags: parsedTags,
       pages: parsedPages.length > 0 ? parsedPages : ['home'], // Default to home if no pages specified
       author: author || 'News Adda India',
-      image: imagePath,
+      image: imagePath, // First image for backward compatibility
+      images: imagePaths, // All images array
       isBreaking: isBreaking === 'true' || isBreaking === true,
       isFeatured: isFeatured === 'true' || isFeatured === true,
-      isTrending: isTrending === 'true' || isTrending === true
+      isTrending: isTrending === 'true' || isTrending === true,
+      trendingTitle: trendingTitle || undefined
     });
 
     await news.save();
@@ -230,9 +345,13 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
   } catch (error) {
     console.error('Error creating news:', error);
     
-    // Clean up uploaded file if error occurred
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    // Clean up uploaded files if error occurred
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      });
     }
     
     res.status(500).json({
@@ -244,9 +363,25 @@ router.post('/', authenticateAdmin, upload.single('image'), handleMulterError, a
 });
 
 // PUT /api/news/:id - Update news (Admin only)
-router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError, async (req, res) => {
+router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount: 3 }]), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, content, category, tags, pages, author, published, isBreaking, isFeatured, isTrending } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
+    
+    // Extract files from req.files.images (when using upload.fields)
+    const imageFiles = req.files && req.files.images ? req.files.images : [];
+    
+    console.log('[Backend PUT /api/news/:id] Update request received:', {
+      id: req.params.id,
+      filesCount: imageFiles.length,
+      files: imageFiles.map(f => ({ fieldname: f.fieldname, name: f.filename, size: f.size, mimetype: f.mimetype })),
+      hasFiles: imageFiles.length > 0,
+      bodyKeys: Object.keys(req.body),
+      allFilesKeys: req.files ? Object.keys(req.files) : [],
+      trendingTitle: req.body.trendingTitle,
+      trendingTitleType: typeof req.body.trendingTitle,
+      isTrending: req.body.isTrending,
+      fullBody: JSON.stringify(req.body, null, 2)
+    });
     
     const news = await News.findById(req.params.id);
     
@@ -256,18 +391,65 @@ router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError,
         error: 'News article not found'
       });
     }
+    
+    console.log('[Backend PUT /api/news/:id] Current news in DB:', {
+      id: news._id,
+      currentImage: news.image,
+      currentImages: news.images,
+      currentImagesCount: news.images ? news.images.length : 0
+    });
 
     // Update fields
     if (title) news.title = title;
-    if (titleEn) news.titleEn = titleEn;
+    if (titleEn !== undefined) news.titleEn = titleEn;
     if (excerpt) news.excerpt = excerpt;
+    if (excerptEn !== undefined) news.excerptEn = excerptEn;
     if (content !== undefined) news.content = content;
+    if (contentEn !== undefined) news.contentEn = contentEn;
+    
+    // Generate summaries if content changed and summary not provided
+    if (content !== undefined && !summary) {
+      news.summary = generateSummary(content || news.excerpt, 60);
+    } else if (summary !== undefined) {
+      news.summary = summary;
+    }
+    
+    if (contentEn !== undefined && !summaryEn) {
+      news.summaryEn = generateSummary(contentEn, 60);
+    } else if (summaryEn !== undefined) {
+      news.summaryEn = summaryEn;
+    }
+    
     if (category) news.category = category;
     if (author) news.author = author;
     if (published !== undefined) news.published = published === 'true' || published === true;
     if (isBreaking !== undefined) news.isBreaking = isBreaking === 'true' || isBreaking === true;
     if (isFeatured !== undefined) news.isFeatured = isFeatured === 'true' || isFeatured === true;
     if (isTrending !== undefined) news.isTrending = isTrending === 'true' || isTrending === true;
+    // Handle trendingTitle: set it if provided, clear it if trending is unchecked
+    console.log('[Backend PUT /api/news/:id] Processing trendingTitle:', {
+      trendingTitleReceived: trendingTitle,
+      trendingTitleType: typeof trendingTitle,
+      trendingTitleUndefined: trendingTitle === undefined,
+      isTrending: isTrending,
+      currentTrendingTitle: news.trendingTitle
+    });
+    
+    if (trendingTitle !== undefined && trendingTitle !== null) {
+      const trimmedTitle = typeof trendingTitle === 'string' ? trendingTitle.trim() : String(trendingTitle).trim();
+      news.trendingTitle = trimmedTitle || undefined;
+      console.log('[Backend PUT /api/news/:id] Set trendingTitle:', {
+        original: trendingTitle,
+        trimmed: trimmedTitle,
+        final: news.trendingTitle
+      });
+    } else if (isTrending === 'false' || isTrending === false) {
+      // Clear trendingTitle if trending is unchecked
+      news.trendingTitle = undefined;
+      console.log('[Backend PUT /api/news/:id] Cleared trendingTitle (trending unchecked)');
+    } else {
+      console.log('[Backend PUT /api/news/:id] Keeping existing trendingTitle:', news.trendingTitle);
+    }
 
     // Parse tags and pages
     if (tags !== undefined) {
@@ -286,36 +468,130 @@ router.put('/:id', authenticateAdmin, upload.single('image'), handleMulterError,
       }
     }
 
-    // Handle image update
-    if (req.file) {
-      // Delete old image if exists
+    // Handle multiple images update
+    if (imageFiles && imageFiles.length > 0) {
+      console.log('[Backend PUT /api/news/:id] Processing', imageFiles.length, 'new image(s)');
+      
+      // Delete old images if they exist
+      if (news.images && news.images.length > 0) {
+        console.log('[Backend PUT /api/news/:id] Deleting', news.images.length, 'old image(s)');
+        news.images.forEach(oldImagePath => {
+          const fullPath = path.join(__dirname, '..', oldImagePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            console.log('[Backend PUT /api/news/:id] Deleted old image:', oldImagePath);
+          } else {
+            console.log('[Backend PUT /api/news/:id] Old image not found:', oldImagePath);
+          }
+        });
+      }
+      // Also delete old single image if exists
       if (news.image) {
         const oldImagePath = path.join(__dirname, '..', news.image);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
+          console.log('[Backend PUT /api/news/:id] Deleted old single image:', news.image);
         }
       }
 
-      const resizedFilename = 'resized-' + req.file.filename;
-      const resizedPath = path.join(uploadsDir, resizedFilename);
+      let imagePaths = [];
+      let imagePath = '';
       
-      const resizeSuccess = await resizeImage(req.file.path, resizedPath);
+      for (const file of imageFiles) {
+        console.log('[Backend PUT /api/news/:id] Processing file:', file.filename, file.size, 'bytes');
+        const resizedFilename = 'resized-' + file.filename;
+        const resizedPath = path.join(uploadsDir, resizedFilename);
+        
+        const resizeResult = await resizeImage(file.path, resizedPath);
+        
+        if (resizeResult.success) {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+          const actualFilename = path.basename(resizeResult.outputPath);
+          const processedPath = `/uploads/${actualFilename}`;
+          imagePaths.push(processedPath);
+          console.log('[Backend PUT /api/news/:id] Processed image:', processedPath);
+          
+          // Set first image as the main image for backward compatibility
+          if (imagePath === '') {
+            imagePath = processedPath;
+          }
+        } else {
+          const originalPath = `/uploads/${file.filename}`;
+          imagePaths.push(originalPath);
+          console.log('[Backend PUT /api/news/:id] Using original image:', originalPath);
+          if (imagePath === '') {
+            imagePath = originalPath;
+          }
+        }
+      }
       
-      if (resizeSuccess) {
-        fs.unlinkSync(req.file.path);
-        news.image = `/uploads/${resizedFilename}`;
+      news.images = imagePaths;
+      news.image = imagePath; // First image for backward compatibility
+      console.log('[Backend PUT /api/news/:id] Updated images:', {
+        image: news.image,
+        images: news.images,
+        imagesCount: news.images.length
+      });
+    } else {
+      console.log('[Backend PUT /api/news/:id] No new images uploaded, keeping existing images');
+      // Ensure images array exists even if no new images are uploaded
+      if (!news.images || !Array.isArray(news.images)) {
+        // If images array doesn't exist but image field does, create array from it
+        if (news.image) {
+          news.images = [news.image];
+          console.log('[Backend PUT /api/news/:id] Created images array from single image:', news.images);
+        } else {
+          news.images = [];
+          console.log('[Backend PUT /api/news/:id] Initialized empty images array');
+        }
       } else {
-        news.image = `/uploads/${req.file.filename}`;
+        console.log('[Backend PUT /api/news/:id] Keeping existing images array:', news.images);
       }
     }
 
     await news.save();
+    
+    // Reload from DB to ensure we have the latest data
+    const savedNews = await News.findById(req.params.id).lean();
+    console.log('[Backend PUT /api/news/:id] News saved to DB:', {
+      id: savedNews._id,
+      image: savedNews.image,
+      images: savedNews.images,
+      imagesCount: savedNews.images ? savedNews.images.length : 0,
+      imagesType: typeof savedNews.images,
+      imagesIsArray: Array.isArray(savedNews.images),
+      isTrending: savedNews.isTrending,
+      trendingTitle: savedNews.trendingTitle,
+      trendingTitleType: typeof savedNews.trendingTitle
+    });
 
-    res.json({
+    // Ensure images array exists in response
+    if (!savedNews.images || !Array.isArray(savedNews.images)) {
+      if (savedNews.image) {
+        savedNews.images = [savedNews.image];
+        console.log('[Backend PUT /api/news/:id] Created images array from single image for response');
+      } else {
+        savedNews.images = [];
+        console.log('[Backend PUT /api/news/:id] Initialized empty images array for response');
+      }
+    }
+
+    const responseData = {
       success: true,
       message: 'News article updated successfully',
-      data: news
+      data: savedNews
+    };
+    
+    console.log('[Backend PUT /api/news/:id] Sending response:', {
+      success: responseData.success,
+      image: responseData.data.image,
+      images: responseData.data.images,
+      imagesCount: responseData.data.images ? responseData.data.images.length : 0
     });
+    
+    res.json(responseData);
   } catch (error) {
     console.error('Error updating news:', error);
     res.status(500).json({

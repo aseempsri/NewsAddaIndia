@@ -5,28 +5,34 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { environment } from '../../../../environments/environment';
+import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
 interface NewsForm {
   title: string;
   titleEn: string;
   excerpt: string;
+  excerptEn: string;
   summary: string;
+  summaryEn: string;
   content: string;
+  contentEn: string;
   category: string;
   icon?: string;
   tags: string[];
   pages: string[];
   author: string;
-  image: File | null;
+  images: File[];
   isBreaking: boolean;
   isFeatured: boolean;
   isTrending: boolean;
+  trendingTitle: string;
 }
 
 @Component({
   selector: 'app-admin-create-post',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, CKEditorModule],
   template: `
     <div class="min-h-screen bg-background py-8">
       <div class="container mx-auto px-4 max-w-7xl">
@@ -68,12 +74,21 @@ interface NewsForm {
                 <!-- Title (English) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Title (English)</label>
-                  <input
-                    type="text"
-                    [(ngModel)]="newsForm.titleEn"
-                    name="titleEn"
-                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                  />
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      [(ngModel)]="newsForm.titleEn"
+                      name="titleEn"
+                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    />
+                    <button
+                      type="button"
+                      (click)="convertToEnglish('title')"
+                      [disabled]="isTranslating"
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium">
+                      {{ isTranslating ? 'Translating...' : 'Translate' }}
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Excerpt -->
@@ -86,6 +101,26 @@ interface NewsForm {
                     class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
                     required
                   ></textarea>
+                </div>
+
+                <!-- Excerpt (English) -->
+                <div>
+                  <label class="block text-sm font-medium mb-2">Excerpt (English)</label>
+                  <div class="flex gap-2">
+                    <textarea
+                      [(ngModel)]="newsForm.excerptEn"
+                      name="excerptEn"
+                      rows="3"
+                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    ></textarea>
+                    <button
+                      type="button"
+                      (click)="convertToEnglish('excerpt')"
+                      [disabled]="isTranslating"
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                      {{ isTranslating ? 'Translating...' : 'Translate' }}
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Summary (60 words) -->
@@ -104,17 +139,75 @@ interface NewsForm {
                   <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsForm.summary) }} / 60 words</p>
                 </div>
 
-                <!-- Detailed Content -->
+                <!-- Summary (60 words in English) -->
+                <div>
+                  <label class="block text-sm font-medium mb-2">Summary (60 words in English)</label>
+                  <div class="flex gap-2">
+                    <textarea
+                      [(ngModel)]="newsForm.summaryEn"
+                      name="summaryEn"
+                      rows="4"
+                      maxlength="400"
+                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      placeholder="Enter a concise summary in English (approximately 60 words)..."
+                    ></textarea>
+                    <button
+                      type="button"
+                      (click)="convertToEnglish('summary')"
+                      [disabled]="isTranslating"
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                      {{ isTranslating ? 'Translating...' : 'Translate' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsForm.summaryEn) }} / 60 words</p>
+                </div>
+
+                <!-- Detailed Content (Full Article) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Detailed Content (Full Article) *</label>
                   <p class="text-xs text-muted-foreground mb-2">Enter the complete article content that will be displayed on the news detail page</p>
-                  <textarea
+                  <ckeditor
                     [(ngModel)]="newsForm.content"
+                    [editor]="Editor"
+                    [config]="editorConfig"
                     name="content"
-                    rows="12"
-                    placeholder="Write the full detailed article content here..."
-                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground resize-y"
-                  ></textarea>
+                    class="ckeditor-custom">
+                  </ckeditor>
+                </div>
+
+                <!-- Detailed Content (Full Article in English) -->
+                <div>
+                  <label class="block text-sm font-medium mb-2">Detailed Content (Full Article in English)</label>
+                  <div class="flex gap-2">
+                    <div class="flex-1">
+                      <ckeditor
+                        [(ngModel)]="newsForm.contentEn"
+                        [editor]="Editor"
+                        [config]="editorConfig"
+                        name="contentEn"
+                        class="ckeditor-custom">
+                      </ckeditor>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="convertToEnglish('content')"
+                      [disabled]="isTranslating"
+                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
+                      {{ isTranslating ? 'Translating...' : 'Translate' }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Convert All to English Button -->
+                <div class="border-t-2 border-primary/30 pt-4">
+                  <button
+                    type="button"
+                    (click)="convertAllToEnglish()"
+                    [disabled]="isTranslating || !newsForm.title || !newsForm.excerpt"
+                    class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl">
+                    {{ isTranslating ? 'Translating All Fields...' : '🔄 Convert All to English' }}
+                  </button>
+                  <p class="text-xs text-muted-foreground mt-2 text-center">This will translate Title, Excerpt, Summary, and Content to English</p>
                 </div>
 
                 <!-- Category -->
@@ -212,49 +305,76 @@ interface NewsForm {
                 </div>
 
                 <!-- Breaking News, Featured & Trending -->
-                <div class="grid grid-cols-3 gap-4">
-                  <label class="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="newsForm.isBreaking"
-                      name="isBreaking"
-                      class="rounded"
-                    />
-                    <span class="text-sm font-medium">Breaking News</span>
-                  </label>
-                  <label class="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="newsForm.isFeatured"
-                      name="isFeatured"
-                      class="rounded"
-                    />
-                    <span class="text-sm font-medium">Featured</span>
-                  </label>
-                  <label class="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="newsForm.isTrending"
-                      name="isTrending"
-                      class="rounded"
-                    />
-                    <span class="text-sm font-medium">Trending</span>
-                  </label>
+                <div class="space-y-4">
+                  <div class="grid grid-cols-3 gap-4">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="newsForm.isBreaking"
+                        name="isBreaking"
+                        class="rounded"
+                      />
+                      <span class="text-sm font-medium">Breaking News</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="newsForm.isFeatured"
+                        name="isFeatured"
+                        class="rounded"
+                      />
+                      <span class="text-sm font-medium">Featured</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="newsForm.isTrending"
+                        name="isTrending"
+                        class="rounded"
+                      />
+                      <span class="text-sm font-medium">Trending</span>
+                    </label>
+                  </div>
+                  
+                  <!-- Trending Title (shown only when Trending is checked) -->
+                  @if (newsForm.isTrending) {
+                    <div>
+                      <label class="block text-sm font-medium mb-2">
+                        Trending Title <span class="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        [(ngModel)]="newsForm.trendingTitle"
+                        name="trendingTitle"
+                        required
+                        placeholder="Enter a catchy title for trending news..."
+                        class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        [class.border-red-500]="newsForm.isTrending && !newsForm.trendingTitle"
+                      />
+                      <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                    </div>
+                  }
                 </div>
 
-                <!-- Image Upload -->
+                <!-- Image Upload (Max 3) -->
                 <div>
-                  <label class="block text-sm font-medium mb-2">Image</label>
+                  <label class="block text-sm font-medium mb-2">Images (Max 3)</label>
                   <input
                     type="file"
                     accept="image/*"
-                    (change)="onFileSelected($event)"
+                    multiple
+                    (change)="onFilesSelected($event)"
                     class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
                   />
-                  @if (newsForm.image) {
-                    <div class="mt-2">
-                      <p class="text-sm text-muted-foreground">Selected: {{ newsForm.image.name }}</p>
+                  @if (newsForm.images.length > 0) {
+                    <div class="mt-2 space-y-1">
+                      @for (img of newsForm.images; track $index) {
+                        <p class="text-sm text-muted-foreground">Image {{ $index + 1 }}: {{ img.name }}</p>
+                      }
+                      <p class="text-xs text-muted-foreground mt-2">{{ newsForm.images.length }} / 3 images selected</p>
                     </div>
+                  } @else {
+                    <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images. The first image will be shown on the card.</p>
                   }
                 </div>
 
@@ -385,12 +505,27 @@ interface NewsForm {
       </div>
     </div>
   `,
-  styles: []
+  styles: [`
+    ::ng-deep .ckeditor-custom .ck-editor__editable {
+      min-height: 400px;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    ::ng-deep .ckeditor-custom .ck-toolbar {
+      background: hsl(var(--secondary));
+      border-color: hsl(var(--border));
+    }
+    ::ng-deep .ckeditor-custom .ck-content {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+  `]
 })
 export class AdminCreatePostComponent implements OnInit {
   isAuthenticated = false;
   authToken = '';
   isSubmitting = false;
+  isTranslating = false;
   submitError = '';
   submitSuccess = '';
   tagsInput = '';
@@ -400,20 +535,59 @@ export class AdminCreatePostComponent implements OnInit {
     title: '',
     titleEn: '',
     excerpt: '',
+    excerptEn: '',
     summary: '',
+    summaryEn: '',
     content: '',
+    contentEn: '',
     category: '',
     icon: undefined,
     tags: [],
     pages: ['home'],
     author: 'News Adda India',
-    image: null,
+    images: [],
     isBreaking: false,
     isFeatured: false,
-    isTrending: false
+    isTrending: false,
+    trendingTitle: ''
   };
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
+
+  // CKEditor Configuration
+  public Editor = ClassicEditor;
+  public editorConfig = {
+    toolbar: {
+      items: [
+        'heading', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+        'bulletedList', 'numberedList', '|',
+        'alignment', '|',
+        'outdent', 'indent', '|',
+        'link', 'blockQuote', 'insertTable', 'imageUpload', '|',
+        'undo', 'redo'
+      ],
+      shouldNotGroupWhenFull: true
+    },
+    language: 'en',
+    image: {
+      toolbar: [
+        'imageTextAlternative',
+        'toggleImageCaption',
+        'imageStyle:inline',
+        'imageStyle:block',
+        'imageStyle:side'
+      ]
+    },
+    table: {
+      contentToolbar: [
+        'tableColumn',
+        'tableRow',
+        'mergeTableCells'
+      ]
+    }
+  };
 
   availableIcons = [
     { id: 'star', name: 'Star', path: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>' },
@@ -478,17 +652,25 @@ export class AdminCreatePostComponent implements OnInit {
     this.router.navigate(['/admin']);
   }
 
-  onFileSelected(event: Event) {
+  onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.newsForm.image = input.files[0];
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.previewImageUrl = e.target?.result as string;
-      };
-      reader.readAsDataURL(this.newsForm.image);
+      // Limit to max 3 images
+      const filesArray = Array.from(input.files).slice(0, 3);
+      this.newsForm.images = filesArray;
+      
+      // Create preview URL for first image
+      if (filesArray.length > 0) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.previewImageUrl = e.target?.result as string;
+        };
+        reader.readAsDataURL(filesArray[0]);
+      } else {
+        this.previewImageUrl = null;
+      }
     } else {
+      this.newsForm.images = [];
       this.previewImageUrl = null;
     }
   }
@@ -545,17 +727,112 @@ export class AdminCreatePostComponent implements OnInit {
     }
   }
 
+  async convertToEnglish(field: 'title' | 'excerpt' | 'summary' | 'content') {
+    if (!this.newsForm[field] || !this.newsForm[field].trim()) {
+      this.submitError = `Please enter ${field} first`;
+      return;
+    }
+
+    this.isTranslating = true;
+    this.submitError = '';
+
+    try {
+      const response = await this.http.post<{ translatedText: string }>(
+        `${this.getApiUrl()}/api/translation/translate-text`,
+        {
+          text: this.newsForm[field],
+          sourceLang: 'hi',
+          targetLang: 'en'
+        },
+        {
+          headers: new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`)
+        }
+      ).toPromise();
+
+      if (response && response.translatedText) {
+        if (field === 'title') {
+          this.newsForm.titleEn = response.translatedText;
+        } else if (field === 'excerpt') {
+          this.newsForm.excerptEn = response.translatedText;
+        } else if (field === 'summary') {
+          this.newsForm.summaryEn = response.translatedText;
+        } else if (field === 'content') {
+          this.newsForm.contentEn = response.translatedText;
+        }
+        this.submitSuccess = `${field} translated successfully!`;
+      }
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      this.submitError = `Failed to translate ${field}: ${error.error?.message || error.message || 'Unknown error'}`;
+    } finally {
+      this.isTranslating = false;
+    }
+  }
+
+  async convertAllToEnglish() {
+    if (!this.newsForm.title || !this.newsForm.excerpt) {
+      this.submitError = 'Please enter title and excerpt first';
+      return;
+    }
+
+    this.isTranslating = true;
+    this.submitError = '';
+    this.submitSuccess = '';
+
+    try {
+      // Translate title
+      if (this.newsForm.title && !this.newsForm.titleEn) {
+        await this.convertToEnglish('title');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Delay to avoid rate limiting
+      }
+
+      // Translate excerpt
+      if (this.newsForm.excerpt && !this.newsForm.excerptEn) {
+        await this.convertToEnglish('excerpt');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Translate summary
+      if (this.newsForm.summary && !this.newsForm.summaryEn) {
+        await this.convertToEnglish('summary');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Translate content
+      if (this.newsForm.content && !this.newsForm.contentEn) {
+        await this.convertToEnglish('content');
+      }
+
+      this.submitSuccess = 'All fields translated successfully!';
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      this.submitError = `Failed to translate: ${error.error?.message || error.message || 'Unknown error'}`;
+    } finally {
+      this.isTranslating = false;
+    }
+  }
+
   submitNews() {
     this.isSubmitting = true;
     this.submitError = '';
     this.submitSuccess = '';
 
+    // Validate trending title if trending is checked
+    if (this.newsForm.isTrending && !this.newsForm.trendingTitle?.trim()) {
+      this.submitError = 'Trending Title is required when Trending is checked';
+      this.isSubmitting = false;
+      return;
+    }
+
     const formData = new FormData();
     formData.append('title', this.newsForm.title);
     formData.append('titleEn', this.newsForm.titleEn || this.newsForm.title);
     formData.append('excerpt', this.newsForm.excerpt);
+    formData.append('excerptEn', this.newsForm.excerptEn || '');
     formData.append('summary', this.newsForm.summary || '');
+    formData.append('summaryEn', this.newsForm.summaryEn || '');
     formData.append('content', this.newsForm.content || this.newsForm.excerpt);
+    formData.append('contentEn', this.newsForm.contentEn || '');
     formData.append('category', this.newsForm.category);
     if (this.newsForm.icon) {
       formData.append('icon', this.newsForm.icon);
@@ -566,9 +843,15 @@ export class AdminCreatePostComponent implements OnInit {
     formData.append('isBreaking', this.newsForm.isBreaking.toString());
     formData.append('isFeatured', this.newsForm.isFeatured.toString());
     formData.append('isTrending', this.newsForm.isTrending.toString());
+    if (this.newsForm.isTrending && this.newsForm.trendingTitle) {
+      formData.append('trendingTitle', this.newsForm.trendingTitle);
+    }
     
-    if (this.newsForm.image) {
-      formData.append('image', this.newsForm.image);
+    // Append all images (max 3)
+    if (this.newsForm.images.length > 0) {
+      this.newsForm.images.forEach((image, index) => {
+        formData.append('images', image);
+      });
     }
 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
@@ -586,17 +869,21 @@ export class AdminCreatePostComponent implements OnInit {
             title: '',
             titleEn: '',
             excerpt: '',
+            excerptEn: '',
             summary: '',
+            summaryEn: '',
             content: '',
+            contentEn: '',
             category: '',
             icon: undefined,
             tags: [],
             pages: ['home'],
             author: 'News Adda India',
-            image: null,
+            images: [],
             isBreaking: false,
             isFeatured: false,
-            isTrending: false
+            isTrending: false,
+            trendingTitle: ''
           };
           this.tagsInput = '';
           this.previewImageUrl = null;

@@ -30,32 +30,73 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedExtensions = /jpeg|jpg|jfif|png|webp|gif/;
-    const allowedMimeTypes = /image\/(jpeg|jpg|png|webp|gif)/;
-    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedMimeTypes.test(file.mimetype) || file.mimetype === 'image/jpeg'; // jfif files might have image/jpeg mimetype
+    // Accept all image types - check if it's an image MIME type
+    const isImage = file.mimetype.startsWith('image/');
     
-    if (mimetype && extname) {
+    if (isImage) {
       return cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed (jpeg, jpg, jfif, png, webp, gif)'));
+      cb(new Error('Only image files are allowed'));
     }
   }
 });
 
-// Helper function to resize image
+// Helper function to generate 60-word summary
+function generateSummary(content, maxWords = 60) {
+  if (!content || !content.trim()) {
+    return '';
+  }
+  // Remove HTML tags if present
+  const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Split into words
+  const words = textContent.split(/\s+/);
+  // Take first maxWords words
+  const summaryWords = words.slice(0, maxWords);
+  // Join and ensure it ends properly
+  let summary = summaryWords.join(' ');
+  // If original content was longer, add ellipsis
+  if (words.length > maxWords) {
+    summary += '...';
+  }
+  return summary.trim();
+}
+
+// Helper function to resize image while preserving format
 async function resizeImage(inputPath, outputPath) {
   try {
-    await sharp(inputPath)
+    const metadata = await sharp(inputPath).metadata();
+    const format = metadata.format; // jpeg, png, webp, gif, heic, avif, etc.
+    
+    // Determine output format and adjust path if needed
+    let finalOutputPath = outputPath;
+    let sharpInstance = sharp(inputPath)
       .resize(800, 600, {
         fit: 'cover',
         position: 'center'
-      })
-      .toFile(outputPath);
-    return true;
+      });
+    
+    // Preserve original format when possible, otherwise convert to jpeg
+    if (format === 'png') {
+      sharpInstance = sharpInstance.png({ quality: 90 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg)$/i, '.png');
+    } else if (format === 'webp') {
+      sharpInstance = sharpInstance.webp({ quality: 85 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+    } else if (format === 'gif') {
+      // GIFs are converted to PNG to preserve transparency
+      sharpInstance = sharpInstance.png({ quality: 90 });
+      finalOutputPath = outputPath.replace(/\.(jpg|jpeg|gif)$/i, '.png');
+    } else {
+      // Default to JPEG for jpeg, jpg, heic, avif, tiff, bmp, etc.
+      sharpInstance = sharpInstance.jpeg({ quality: 85 });
+      finalOutputPath = outputPath.replace(/\.(png|webp|gif|heic|avif|tiff|bmp)$/i, '.jpg');
+    }
+    
+    await sharpInstance.toFile(finalOutputPath);
+    return { success: true, outputPath: finalOutputPath };
   } catch (error) {
     console.error('Error resizing image:', error);
-    return false;
+    return { success: false, outputPath: outputPath };
   }
 }
 
@@ -136,7 +177,7 @@ router.get('/:id', authenticateAdmin, async (req, res) => {
 
 // PUT update pending news (Admin only)
 router.put('/:id', authenticateAdmin, (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  upload.array('images', 3)(req, res, (err) => {
     if (err) {
       // Handle multer errors
       if (err instanceof multer.MulterError) {
@@ -183,22 +224,39 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
     // Update fields
     const updateData = {
       title: req.body.title || pendingNews.title,
-      titleEn: req.body.titleEn || req.body.title || pendingNews.titleEn,
+      titleEn: req.body.titleEn !== undefined ? req.body.titleEn : (pendingNews.titleEn || req.body.title || pendingNews.title),
       excerpt: req.body.excerpt || pendingNews.excerpt,
+      excerptEn: req.body.excerptEn !== undefined ? req.body.excerptEn : (pendingNews.excerptEn || ''),
+      summary: req.body.summary !== undefined ? req.body.summary : (pendingNews.summary || generateSummary(req.body.content !== undefined ? req.body.content : pendingNews.content, 60)),
+      summaryEn: req.body.summaryEn !== undefined ? req.body.summaryEn : (pendingNews.summaryEn || (req.body.contentEn ? generateSummary(req.body.contentEn, 60) : '')),
       content: req.body.content !== undefined ? req.body.content : pendingNews.content,
+      contentEn: req.body.contentEn !== undefined ? req.body.contentEn : (pendingNews.contentEn || ''),
       category: req.body.category || pendingNews.category,
       tags: tags,
       pages: pages,
       author: req.body.author || pendingNews.author,
       isBreaking: req.body.isBreaking === 'true' || req.body.isBreaking === true,
       isFeatured: req.body.isFeatured === 'true' || req.body.isFeatured === true,
+      isTrending: req.body.isTrending === 'true' || req.body.isTrending === true,
+      trendingTitle: req.body.trendingTitle !== undefined ? req.body.trendingTitle : pendingNews.trendingTitle,
       updatedAt: Date.now()
     };
     
-    // Handle image upload
-    if (req.file) {
+    // Handle multiple images upload (max 3)
+    if (req.files && req.files.length > 0) {
       try {
-        // Delete old image if it exists
+        // Delete old images if they exist
+        if (pendingNews.images && pendingNews.images.length > 0) {
+          pendingNews.images.forEach(oldImagePath => {
+            const fullPath = path.join(uploadsDir, path.basename(oldImagePath));
+            if (fs.existsSync(fullPath)) {
+              fs.unlink(fullPath, (err) => {
+                if (err) console.error('Error deleting old image:', err);
+              });
+            }
+          });
+        }
+        // Also delete old single image if exists
         if (pendingNews.image) {
           const oldImagePath = path.join(uploadsDir, path.basename(pendingNews.image));
           if (fs.existsSync(oldImagePath)) {
@@ -208,28 +266,47 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
           }
         }
         
-        const inputPath = req.file.path;
-        const resizedFileName = `resized-${req.file.filename}`;
-        const outputPath = path.join(uploadsDir, resizedFileName);
+        let imagePaths = [];
+        let imagePath = '';
         
-        // Resize image
-        const resized = await resizeImage(inputPath, outputPath);
-        
-        if (resized) {
-          // Delete original uploaded file
-          if (fs.existsSync(inputPath)) {
-            fs.unlink(inputPath, (err) => {
-              if (err) console.error('Error deleting original file:', err);
-            });
+        for (const file of req.files) {
+          const inputPath = file.path;
+          const resizedFileName = `resized-${file.filename}`;
+          const outputPath = path.join(uploadsDir, resizedFileName);
+          
+          // Resize image
+          const resizeResult = await resizeImage(inputPath, outputPath);
+          
+          if (resizeResult.success) {
+            // Delete original uploaded file
+            if (fs.existsSync(inputPath)) {
+              fs.unlink(inputPath, (err) => {
+                if (err) console.error('Error deleting original file:', err);
+              });
+            }
+            // Use the actual output filename (may have different extension)
+            const actualFilename = path.basename(resizeResult.outputPath);
+            const processedPath = `/uploads/${actualFilename}`;
+            imagePaths.push(processedPath);
+            
+            // Set first image as the main image for backward compatibility
+            if (imagePath === '') {
+              imagePath = processedPath;
+            }
+          } else {
+            const originalPath = `/uploads/${file.filename}`;
+            imagePaths.push(originalPath);
+            if (imagePath === '') {
+              imagePath = originalPath;
+            }
           }
-          updateData.image = `/uploads/${resizedFileName}`;
-        } else {
-          // If resize failed, use original but still try to clean up
-          updateData.image = `/uploads/${req.file.filename}`;
         }
+        
+        updateData.images = imagePaths;
+        updateData.image = imagePath; // First image for backward compatibility
       } catch (imageError) {
-        console.error('Error processing image:', imageError);
-        // Continue without updating image if processing fails
+        console.error('Error processing images:', imageError);
+        // Continue without updating images if processing fails
       }
     }
     
@@ -292,16 +369,23 @@ router.post('/:id/publish', authenticateAdmin, async (req, res) => {
       // Create news article from pending news
       const newsData = {
         title: pendingNews.title,
-        titleEn: pendingNews.titleEn,
+        titleEn: pendingNews.titleEn || pendingNews.title,
         excerpt: pendingNews.excerpt,
+        excerptEn: pendingNews.excerptEn || '',
+        summary: pendingNews.summary || '',
+        summaryEn: pendingNews.summaryEn || '',
         content: pendingNews.content,
+        contentEn: pendingNews.contentEn || '',
         image: pendingNews.image,
+        images: pendingNews.images || (pendingNews.image ? [pendingNews.image] : []),
         category: pendingNews.category,
         tags: pendingNews.tags,
         pages: pendingNews.pages,
         author: pendingNews.author,
         isBreaking: pendingNews.isBreaking,
         isFeatured: pendingNews.isFeatured,
+        isTrending: pendingNews.isTrending,
+        trendingTitle: pendingNews.trendingTitle,
         published: true,
         date: new Date()
       };

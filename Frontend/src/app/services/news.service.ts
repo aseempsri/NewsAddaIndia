@@ -11,9 +11,13 @@ export interface NewsArticle {
   title: string;
   titleEn?: string;
   excerpt: string;
-  summary?: string; // 60-word summary
-  content?: string; // Full article content
+  excerptEn?: string;
+  summary?: string; // 60-word summary in Hindi
+  summaryEn?: string; // 60-word summary in English
+  content?: string; // Full article content in Hindi
+  contentEn?: string; // Full article content in English
   image: string;
+  images?: string[]; // Array of images (max 3)
   time: string;
   author?: string;
   date?: string;
@@ -21,6 +25,8 @@ export interface NewsArticle {
   isTrending?: boolean;
   isBreaking?: boolean;
   isFeatured?: boolean;
+  trendingTitle?: string;
+  tags?: string[];
 }
 
 @Injectable({
@@ -524,13 +530,35 @@ export class NewsService {
               imageUrl = '';
             }
 
-            return {
+            // Get images array or fallback to single image
+            let imagesArray: string[] = [];
+            if (article.images && Array.isArray(article.images) && article.images.length > 0) {
+              // Construct full URLs for images array
+              imagesArray = article.images.map((img: string) => {
+                if (img && img.trim() !== '' && !img.startsWith('http')) {
+                  const imgPath = img.startsWith('/') ? img : '/' + img;
+                  return `${this.backendApiUrl}${imgPath}`;
+                }
+                return img;
+              });
+            } else if (imageUrl) {
+              // Fallback to single image
+              imagesArray = [imageUrl];
+            }
+
+            const newsArticle = {
               id: article._id || index + 1,
               category: article.category,
               title: article.title,
               titleEn: article.titleEn || article.title,
               excerpt: this.filterPaidVersionText(article.excerpt) || article.title || 'No description available',
-              image: imageUrl,
+              excerptEn: article.excerptEn || '',
+              summary: article.summary || '',
+              summaryEn: article.summaryEn || '',
+              content: article.content || article.excerpt || '',
+              contentEn: article.contentEn || '',
+              image: imageUrl, // First image for backward compatibility
+              images: imagesArray, // All images array
               imageLoading: !imageUrl || imageUrl.trim() === '',
               time: this.getTimeAgo(index),
               author: article.author || 'News Adda India',
@@ -541,8 +569,49 @@ export class NewsService {
               }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
               isTrending: article.isTrending || false,
               isBreaking: article.isBreaking || false,
-              isFeatured: article.isFeatured || false
+              isFeatured: article.isFeatured || false,
+              trendingTitle: article.trendingTitle || undefined,
+              tags: article.tags || []
             } as NewsArticle;
+            
+            // Log trending news
+            if (newsArticle.isTrending) {
+              console.log('🔥 TRENDING NEWS FETCHED:', {
+                id: newsArticle.id,
+                title: newsArticle.title,
+                trendingTitle: newsArticle.trendingTitle || 'N/A',
+                category: newsArticle.category,
+                isTrending: newsArticle.isTrending
+              });
+            }
+            
+            // Include tags if available - handle different formats
+            if (article.tags) {
+              if (Array.isArray(article.tags)) {
+                (newsArticle as any).tags = article.tags.filter((t: any) => t && (typeof t === 'string' ? t.trim().length > 0 : true));
+              } else if (typeof article.tags === 'string') {
+                // Try to parse JSON string
+                try {
+                  const parsed = JSON.parse(article.tags);
+                  if (Array.isArray(parsed)) {
+                    (newsArticle as any).tags = parsed.filter((t: any) => t && (typeof t === 'string' ? t.trim().length > 0 : true));
+                  } else {
+                    (newsArticle as any).tags = [];
+                  }
+                } catch {
+                  // Treat as comma-separated string
+                  (newsArticle as any).tags = article.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+                }
+              } else {
+                (newsArticle as any).tags = [];
+              }
+            } else {
+              (newsArticle as any).tags = [];
+            }
+            
+            console.log(`[NewsService] Article ${article._id || article.title?.substring(0, 30)} tags:`, (newsArticle as any).tags);
+            
+            return newsArticle;
           });
           
           // Translate news if Hindi is selected
@@ -624,7 +693,8 @@ export class NewsService {
             }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
             isTrending: article.isTrending || false,
             isBreaking: article.isBreaking || false,
-            isFeatured: article.isFeatured || false
+            isFeatured: article.isFeatured || false,
+            trendingTitle: article.trendingTitle || undefined
           } as NewsArticle;
           
           // Translate if Hindi is selected
@@ -695,9 +765,27 @@ export class NewsService {
               }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
               isTrending: article.isTrending || false,
               isBreaking: article.isBreaking || false,
-              isFeatured: article.isFeatured || false
+              isFeatured: article.isFeatured || false,
+              trendingTitle: article.trendingTitle || undefined
             } as NewsArticle;
           });
+
+          // Log all trending news fetched
+          const trendingNews = newsArticles.filter(n => n.isTrending);
+          if (trendingNews.length > 0) {
+            console.log('🔥 TRENDING NEWS GRID - Total Trending News:', trendingNews.length);
+            trendingNews.forEach((news, index) => {
+              console.log(`🔥 Trending News ${index + 1}:`, {
+                id: news.id,
+                title: news.title,
+                trendingTitle: news.trendingTitle || 'N/A',
+                category: news.category,
+                isTrending: news.isTrending
+              });
+            });
+          } else {
+            console.log('📰 No trending news found in fetchTrendingNews');
+          }
 
           // Translate if Hindi is selected
           return this.translateNewsIfNeeded(newsArticles);

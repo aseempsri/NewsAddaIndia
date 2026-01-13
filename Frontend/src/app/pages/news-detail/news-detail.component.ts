@@ -38,15 +38,38 @@ import { Subscription } from 'rxjs';
         }
         
         @if (!isLoading && news) {
-          <!-- Sticky Image Header -->
-          <div class="sticky top-0 z-40 w-full h-[50vh] sm:h-[60vh] overflow-hidden">
-            @if (news.image && news.image.trim() !== '' && !imageError) {
-              <img
-                [src]="news.image"
-                [alt]="news.title"
-                (error)="handleImageError($event)"
-                class="w-full h-full object-cover"
-              />
+          <!-- Sticky Image Header - Vertical Stack on Mobile, Horizontal on Desktop -->
+          <div class="sticky top-0 z-40 w-full h-[50vh] sm:h-[60vh] overflow-x-auto overflow-y-auto lg:overflow-y-hidden bg-black">
+            @if (getImagesArray().length > 0 && !imageError) {
+              <!-- Mobile: Vertical Stack -->
+              <div class="flex flex-col h-full lg:hidden">
+                @for (img of getImagesArray(); track $index) {
+                  <div class="flex-shrink-0 w-full flex items-center justify-center bg-black" style="min-height: 50vh;">
+                    <img
+                      [src]="img"
+                      [alt]="news.title + ' - Image ' + ($index + 1)"
+                      (error)="handleImageError($event)"
+                      class="max-w-full max-h-full w-auto h-auto object-contain"
+                      style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality; filter: none; -webkit-filter: none;"
+                    />
+                  </div>
+                }
+              </div>
+              
+              <!-- Desktop: Horizontal Stack -->
+              <div class="hidden lg:flex h-full w-max">
+                @for (img of getImagesArray(); track $index) {
+                  <div class="flex-shrink-0 h-full flex items-center justify-center bg-black" [style.width]="'calc(100vw / ' + getImagesArray().length + ')'">
+                    <img
+                      [src]="img"
+                      [alt]="news.title + ' - Image ' + ($index + 1)"
+                      (error)="handleImageError($event)"
+                      class="max-w-full max-h-full w-auto h-auto object-contain"
+                      style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality; filter: none; -webkit-filter: none;"
+                    />
+                  </div>
+                }
+              </div>
             } @else {
               <div class="w-full h-full bg-gradient-to-br from-primary/20 via-secondary/30 to-primary/10 flex items-center justify-center">
                 <div class="text-center">
@@ -107,19 +130,25 @@ import { Subscription } from 'rxjs';
               {{ getDisplayTitle(news) }}
             </h1>
             
+            <!-- Tags (if available) - Before Author and Date -->
+            @if (tags && tags.length > 0) {
+              <div class="mb-6 pb-6 border-b border-border/30">
+                <div class="flex flex-wrap gap-2">
+                  @for (tag of tags; track tag) {
+                    <span class="px-3 py-1.5 text-sm bg-secondary rounded-md text-muted-foreground border border-border/50">
+                      {{ tag }}
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+            
             <!-- Meta Information -->
             <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm mb-8 sm:mb-12 pb-6 border-b border-border/30">
               <span class="flex items-center gap-1.5 text-xs font-medium">
                 <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
                 <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
               </span>
-            </div>
-
-            <!-- Excerpt/Subheading -->
-            <div class="mb-8 sm:mb-12">
-              <p class="text-xl sm:text-2xl lg:text-3xl text-muted-foreground leading-relaxed font-light italic border-l-4 border-primary pl-4 sm:pl-6">
-                {{ getDisplayExcerpt() }}
-              </p>
             </div>
 
             <!-- WhatsApp Share Button -->
@@ -138,25 +167,6 @@ import { Subscription } from 'rxjs';
             <div class="prose prose-lg prose-headings:font-bold prose-headings:text-foreground prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-6 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-strong:font-semibold max-w-none mb-12">
               <div [innerHTML]="getFormattedContent()" class="news-content"></div>
             </div>
-
-            <!-- Tags Section -->
-            @if (tags && tags.length > 0) {
-              <div class="mb-12 p-6 bg-gradient-to-r from-secondary/50 to-secondary/30 rounded-2xl border border-border/50">
-                <h3 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  {{ t.tags || 'Tags' }}
-                </h3>
-                <div class="flex flex-wrap gap-2">
-                  @for (tag of tags; track tag) {
-                    <span class="px-4 py-2 text-sm bg-background rounded-full text-muted-foreground border border-border/50 hover:border-primary/50 transition-colors cursor-pointer">
-                      #{{ tag }}
-                    </span>
-                  }
-                </div>
-              </div>
-            }
 
             <!-- Author Card -->
             <div class="mb-12 p-6 bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl border border-primary/20">
@@ -509,7 +519,9 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     
     // Try to fetch from backend first
     if (newsId.length === 24 || newsId.match(/^[0-9a-fA-F]{24}$/)) {
-      this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}`).subscribe({
+      // Add cache-busting parameter to ensure fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}${cacheBuster}`).subscribe({
         next: (response) => {
           if (response.success && response.data) {
             // Construct full image URL if it's a relative path
@@ -542,6 +554,20 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
                     day: 'numeric' 
                   });
 
+            // Get images array or fallback to single image
+            let imagesArray: string[] = [];
+            if (response.data.images && Array.isArray(response.data.images) && response.data.images.length > 0) {
+              imagesArray = response.data.images.map((img: string) => {
+                if (img && img.trim() !== '' && !img.startsWith('http')) {
+                  const imgPath = img.startsWith('/') ? img : '/' + img;
+                  return `${this.apiUrl}${imgPath}`;
+                }
+                return img;
+              });
+            } else if (imageUrl) {
+              imagesArray = [imageUrl];
+            }
+
             this.news = {
               id: response.data._id || response.data.id,
               title: response.data.title,
@@ -549,7 +575,8 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
               excerpt: response.data.excerpt,
               content: response.data.content || response.data.excerpt,
               category: response.data.category,
-              image: imageUrl,
+              image: imageUrl, // First image for backward compatibility
+              images: imagesArray, // All images array
               time: response.data.time || response.data.createdAt,
               author: response.data.author,
               date: formattedDate,
@@ -566,10 +593,32 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
             if (response.data.excerptEn) {
               (this.news as any).excerptEn = response.data.excerptEn;
             }
-            this.tags = response.data.tags || [];
+            // Load tags - handle both array and string formats
+            if (response.data.tags) {
+              if (Array.isArray(response.data.tags)) {
+                this.tags = response.data.tags;
+              } else if (typeof response.data.tags === 'string') {
+                // Try to parse if it's a JSON string
+                try {
+                  this.tags = JSON.parse(response.data.tags);
+                } catch {
+                  // If not JSON, treat as comma-separated string
+                  this.tags = response.data.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+                }
+              } else {
+                this.tags = [];
+              }
+            } else {
+              this.tags = [];
+            }
+            console.log('[NewsDetailPage] Tags loaded:', this.tags);
+            // Also store tags in news object for consistency
+            (this.news as any).tags = this.tags;
             this.isBreaking = response.data.isBreaking || false;
             this.imageError = false; // Reset image error flag
             this.isLoading = false;
+            // Trigger change detection to update UI
+            this.cdr.detectChanges();
             // Translate content after loading
             setTimeout(() => this.translateContent(), 100);
           } else {
@@ -626,6 +675,26 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     // If image fails to load, show fallback
     this.imageError = true;
     console.warn('Image failed to load:', this.news?.image);
+  }
+
+  /**
+   * Get images array - check multiple sources
+   */
+  getImagesArray(): string[] {
+    if (!this.news) return [];
+    
+    // First check if images array exists in news object
+    if (this.news.images && Array.isArray(this.news.images) && this.news.images.length > 0) {
+      return this.news.images.filter(img => img && img.trim().length > 0);
+    }
+    
+    // Check if images array exists in news object (any type)
+    if ((this.news as any).images && Array.isArray((this.news as any).images)) {
+      return (this.news as any).images.filter((img: any) => img && typeof img === 'string' && img.trim().length > 0);
+    }
+    
+    // Fallback to single image
+    return this.news.image ? [this.news.image] : [];
   }
 
   getCategoryColor(category: string): string {

@@ -56,8 +56,8 @@ import { Subscription } from 'rxjs';
         
         <!-- Audio Toggle Button with Social Media Icons (Right side) -->
         <div class="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-3 group" [class.opacity-0]="isLoading">
-          <!-- Social Media Icons - Vertical Stack (shown on hover) -->
-          <div class="social-icons-container flex flex-col gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
+          <!-- Social Media Icons - Vertical Stack (shown on hover) - Hidden on mobile -->
+          <div class="social-icons-container hidden flex-col gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
             <a [href]="instagramUrl" target="_blank" rel="noopener noreferrer" 
                (click)="$event.stopPropagation()"
                class="w-[38px] h-[38px] rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center text-foreground hover:bg-background hover:border-primary transition-all duration-300 shadow-[0_0_15px_rgba(225,48,108,0.5)] hover:shadow-[0_0_20px_rgba(225,48,108,0.7)] hover:scale-110"
@@ -92,8 +92,8 @@ import { Subscription } from 'rxjs';
             </a>
           </div>
           
-          <!-- Indicator Dots (shows there are more buttons) -->
-          <div class="flex flex-col gap-1 mb-1 opacity-60 group-hover:opacity-0 transition-opacity duration-300">
+          <!-- Indicator Dots (shows there are more buttons) - Hidden on mobile -->
+          <div class="hidden flex-col gap-1 mb-1 opacity-60 group-hover:opacity-0 transition-opacity duration-300">
             <div class="w-1 h-1 rounded-full bg-primary/60 animate-pulse"></div>
             <div class="w-1 h-1 rounded-full bg-primary/60 animate-pulse" style="animation-delay: 0.2s;"></div>
             <div class="w-1 h-1 rounded-full bg-primary/60 animate-pulse" style="animation-delay: 0.4s;"></div>

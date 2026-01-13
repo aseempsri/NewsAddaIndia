@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
+import { DeletePasswordModalComponent } from '../../../components/delete-password-modal/delete-password-modal.component';
 
 interface PendingNews {
   _id: string;
@@ -28,7 +29,7 @@ interface PendingNews {
 @Component({
   selector: 'app-admin-review-posts',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, DeletePasswordModalComponent],
   template: `
     <div class="min-h-screen bg-background py-8">
       <div class="container mx-auto px-4 max-w-7xl">
@@ -175,6 +176,13 @@ interface PendingNews {
           </div>
         }
       </div>
+      
+      <!-- Delete Password Modal -->
+      <app-delete-password-modal
+        [isOpen]="showPasswordModal"
+        (confirmed)="onPasswordConfirmed()"
+        (cancelled)="showPasswordModal = false; pendingDeleteId = null">
+      </app-delete-password-modal>
     </div>
   `,
   styles: []
@@ -186,6 +194,8 @@ export class AdminReviewPostsComponent implements OnInit {
   isLoading = false;
   error = '';
   processingIds = new Set<string>();
+  showPasswordModal = false;
+  pendingDeleteId: string | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
     // Check if already authenticated
@@ -297,16 +307,32 @@ export class AdminReviewPostsComponent implements OnInit {
     const news = this.pendingNews.find(n => n._id === id);
     if (!news) return;
 
-    const source = news.source || 'pending';
-    const sourceText = source === 'unpublished' ? 'unpublished' : 'pending';
-    
-    if (!confirm(`Are you sure you want to delete this ${sourceText} post?`)) {
+    // Store the ID and show password modal
+    this.pendingDeleteId = id;
+    this.showPasswordModal = true;
+  }
+
+  onPasswordConfirmed() {
+    if (!this.pendingDeleteId) return;
+
+    const id = this.pendingDeleteId;
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) {
+      this.showPasswordModal = false;
+      this.pendingDeleteId = null;
       return;
     }
 
-    if (this.processingIds.has(id)) return;
+    const source = news.source || 'pending';
+
+    if (this.processingIds.has(id)) {
+      this.showPasswordModal = false;
+      this.pendingDeleteId = null;
+      return;
+    }
 
     this.processingIds.add(id);
+    this.showPasswordModal = false;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
 
     this.http.delete<{ success: boolean; message?: string; error?: string }>(
@@ -321,10 +347,12 @@ export class AdminReviewPostsComponent implements OnInit {
           this.error = response.error || 'Failed to delete news';
         }
         this.processingIds.delete(id);
+        this.pendingDeleteId = null;
       },
       error: (err) => {
         this.error = err.error?.error || 'Failed to delete news. Please try again.';
         this.processingIds.delete(id);
+        this.pendingDeleteId = null;
       }
     });
   }

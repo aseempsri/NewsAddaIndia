@@ -146,12 +146,12 @@ import { Subscription } from 'rxjs';
                     <p class="text-muted-foreground text-sm line-clamp-3 mb-4 mt-3 pt-1 min-h-[3.5rem] leading-relaxed">
                       {{ news.excerpt }}
                     </p>
-                    <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <div class="flex items-center justify-start gap-4 text-xs text-muted-foreground">
                       <span class="flex items-center gap-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                        <span>{{ news.author || 'News Adda India' }}</span>
+                        <span class="text-left">{{ news.author || 'News Adda India' }}</span>
                       </span>
                       <span class="flex items-center gap-1.5">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

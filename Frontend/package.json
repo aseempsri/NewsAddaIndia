@@ -20,6 +20,8 @@
     "@angular/platform-browser": "^18.0.0",
     "@angular/platform-browser-dynamic": "^18.0.0",
     "@angular/router": "^18.0.0",
+    "@ckeditor/ckeditor5-angular": "^10.0.0",
+    "@ckeditor/ckeditor5-build-classic": "^43.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "rxjs": "~7.8.0",
@@ -40,4 +42,3 @@
     "typescript": "~5.4.2"
   }
 }
-

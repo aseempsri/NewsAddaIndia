@@ -15,7 +15,23 @@ const newsSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  excerptEn: {
+    type: String,
+    trim: true
+  },
+  summary: {
+    type: String,
+    trim: true
+  },
+  summaryEn: {
+    type: String,
+    trim: true
+  },
   content: {
+    type: String,
+    default: ''
+  },
+  contentEn: {
     type: String,
     default: ''
   },
@@ -23,6 +39,10 @@ const newsSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  images: [{
+    type: String,
+    trim: true
+  }],
   category: {
     type: String,
     required: true,
@@ -64,6 +84,10 @@ const newsSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
     index: true
+  },
+  trendingTitle: {
+    type: String,
+    trim: true
   },
   createdAt: {
     type: Date,

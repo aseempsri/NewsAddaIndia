@@ -64,7 +64,7 @@ import { filter } from 'rxjs/operators';
             <article
               [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
               [style.animation-delay]="i * 100 + 'ms'">
-            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'flex-[0_0_45%] sm:flex-none sm:aspect-[16/10]' : 'flex-[0_0_40%] sm:flex-none sm:aspect-[16/10]')">
+            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'flex-[0_0_50%] sm:flex-none sm:aspect-[16/10]' : 'flex-[0_0_40%] sm:flex-none sm:aspect-[16/10]')">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -81,53 +81,47 @@ import { filter } from 'rxjs/operators';
                     [alt]="news.title"
                     class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in" />
                 }
-                <div [class]="'absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap ' + (isHomePage ? 'hidden lg:flex' : '')">
-                  @if (news.isTrending) {
-                    <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      @if (!isHomePage) {
+                @if (!isHomePage) {
+                  <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap">
+                    @if (news.isTrending) {
+                      <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
                         <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
                           <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
                         <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
-                      }
-                      <span>TRENDING</span>
-                      @if (!isHomePage) {
+                        <span>TRENDING</span>
                         <span class="text-[0.5rem] sm:text-xs leading-none">🔥</span>
-                      }
-                    </span>
-                  }
-                  @if (news.isBreaking) {
-                    <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      @if (!isHomePage) {
+                      </span>
+                    }
+                    @if (news.isBreaking) {
+                      <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
                         <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
                           <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
-                      }
-                      <span>BREAKING</span>
-                    </span>
-                  }
-                  @if (news.isFeatured) {
-                    <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
-                      @if (!isHomePage) {
+                        <span>BREAKING</span>
+                      </span>
+                    }
+                    @if (news.isFeatured) {
+                      <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
                         <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                         </svg>
-                      }
-                      <span>FEATURED</span>
+                        <span>FEATURED</span>
+                      </span>
+                    }
+                    <span [class]="'inline-flex items-center justify-center px-2 py-0.75 sm:px-3 sm:py-1 text-[0.525rem] sm:text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
+                      {{ getCategoryName(news.category) }}
                     </span>
-                  }
-                  <span [class]="'inline-flex items-center justify-center px-2 py-0.75 sm:px-3 sm:py-1 text-[0.525rem] sm:text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
-                    {{ getCategoryName(news.category) }}
-                  </span>
-                </div>
+                  </div>
+                }
               </div>
 
               <!-- Border Line with Gradient - Hidden on mobile home page -->
               <div [class]="'h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 ' + (isHomePage ? 'hidden lg:block' : '')"></div>
 
-              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-1 pt-1 pb-1 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-5 pt-6 pb-6')">
+              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-0.5 pt-0.5 pb-0.5 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-5 pt-6 pb-6')">
                 <h3 
-                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'text-base lg:text-lg lg:mb-1 lg:flex-grow' : 'text-base sm:text-lg mb-1 sm:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
+                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'mobile-headline lg:text-lg lg:mb-1 lg:flex-grow' : 'text-base sm:text-lg mb-1 sm:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
                   (click)="openNewsModal(news)"
                   (touchstart)="onTouchStart($event, news)"
                   (touchend)="onTouchEnd($event, news)"
@@ -138,19 +132,9 @@ import { filter } from 'rxjs/operators';
                   }
                   {{ getDisplayTitle(news) }}
                 </h3>
-                <div [class]="'flex items-center justify-between text-xs text-muted-foreground ' + (isHomePage ? 'mt-0 lg:mt-2' : 'mt-2')">
-                  <span [class]="'flex items-center ' + (isHomePage ? 'gap-1 lg:gap-1.5' : 'gap-1.5')">
-                    <svg [class]="'fill-none stroke-currentColor ' + (isHomePage ? 'w-3 h-3 lg:w-3.5 lg:h-3.5' : 'w-3.5 h-3.5')" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span>{{ news.author || 'News Adda India' }}</span>
-                  </span>
-                  <span [class]="'flex items-center ' + (isHomePage ? 'gap-1 lg:gap-1.5' : 'gap-1.5')">
-                    <svg [class]="'fill-none stroke-currentColor ' + (isHomePage ? 'w-3 h-3 lg:w-3.5 lg:h-3.5' : 'w-3.5 h-3.5')" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{{ news.date || news.time }}</span>
-                  </span>
+                <div [class]="'flex items-center justify-between text-xs text-muted-foreground ' + (isHomePage ? 'mt-auto lg:mt-2' : 'mt-2')">
+                  <span class="text-left">{{ news.author || 'News Adda India' }}</span>
+                  <span class="text-right">{{ news.date || news.time }}</span>
                 </div>
               </div>
             </article>
@@ -207,13 +191,14 @@ import { filter } from 'rxjs/operators';
         align-items: stretch !important;
       }
       .news-grid-container.home-page .news-card.home-page-card .relative {
-        flex: 0 0 45% !important;
+        flex: 0 0 50% !important;
         border-radius: 0.5rem 0.5rem 0 0 !important;
         margin: 0 !important;
         padding: 0 !important;
+        margin-bottom: 0.5rem !important;
       }
       .news-grid-container.home-page .news-card.home-page-card > div:last-child {
-        padding: 0.125rem 0.375rem !important;
+        padding: 0.25rem 0.375rem !important;
         border-radius: 0 0 0.5rem 0.5rem !important;
         margin: 0 !important;
         gap: 0 !important;
@@ -223,36 +208,41 @@ import { filter } from 'rxjs/operators';
         display: flex !important;
         flex-direction: column !important;
         align-items: stretch !important;
-        justify-content: flex-start !important;
+        justify-content: space-between !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(h3):not(.flex.items-center) {
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(h3):not(div.flex.items-center.justify-between) {
         display: none !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card h3 {
+      .news-grid-container.home-page .news-card.home-page-card h3.mobile-headline {
         margin: 0 !important;
-        line-height: 1.15 !important;
+        padding: 0 !important;
+        padding-top: 0.375rem !important;
         font-size: 1rem !important;
+        line-height: 1.35 !important;
         min-height: auto !important;
-        padding: 0 !important;
-        flex-grow: 0 !important;
+        flex-grow: 1 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        display: block !important;
+        overflow: visible !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center {
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between {
         margin: 0 !important;
         padding: 0 !important;
-        gap: 0 !important;
-      }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span {
+        margin-top: 0.5rem !important;
+        padding-top: 0.5rem !important;
         font-size: 0.7rem !important;
-      }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center svg {
-        width: 0.7rem !important;
-        height: 0.7rem !important;
-      }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span {
-        gap: 0.25rem !important;
-      }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center span svg {
         flex-shrink: 0 !important;
+        line-height: 1.2 !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+      }
+      
+      .dark .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+      }
+      .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between span {
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
       }
     }
   `]
@@ -355,6 +345,7 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   }
 
   getDisplayTitle(news: NewsArticle): string {
+    // Always use regular headline for cards (trendingTitle is only for ticker)
     // If translated title exists, use it
     if ((news as any).translatedTitle) {
       return (news as any).translatedTitle;
@@ -362,6 +353,7 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     // Otherwise use the language service method
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
   }
+
 
   getCategoryName(category: string): string {
     return this.languageService.translateCategory(category);
@@ -380,6 +372,22 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           // Remove duplicates by id
           const uniqueNews = this.removeDuplicates(news);
           this.newsItems = uniqueNews.slice(0, 6);
+          
+          // Log trending news in news grid
+          const trendingNews = this.newsItems.filter(n => n.isTrending);
+          if (trendingNews.length > 0) {
+            console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
+            trendingNews.forEach((item, index) => {
+              console.log(`🔥 News Grid Trending ${index + 1}:`, {
+                id: item.id,
+                title: item.title,
+                trendingTitle: item.trendingTitle || 'N/A',
+                category: item.category,
+                displayTitle: this.getDisplayTitle(item)
+              });
+            });
+          }
+          
           await this.translateNewsTitles();
           this.fetchImagesForAllItemsAndWait();
         } else {

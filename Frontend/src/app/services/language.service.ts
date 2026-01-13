@@ -265,6 +265,32 @@ export class LanguageService {
   }
 
   /**
+   * Get the appropriate summary based on current language
+   * Returns summaryEn for English, summary (Hindi) for Hindi
+   */
+  getDisplaySummary(summary: string, summaryEn?: string): string {
+    const lang = this.currentLanguageSubject.value;
+    if (lang === 'hi') {
+      return summary || ''; // Hindi summary
+    } else {
+      return summaryEn || summary || ''; // English summary, fallback to summary if summaryEn doesn't exist
+    }
+  }
+
+  /**
+   * Get the appropriate content based on current language
+   * Returns contentEn for English, content (Hindi) for Hindi
+   */
+  getDisplayContent(content: string, contentEn?: string): string {
+    const lang = this.currentLanguageSubject.value;
+    if (lang === 'hi') {
+      return content || ''; // Hindi content
+    } else {
+      return contentEn || content || ''; // English content, fallback to content if contentEn doesn't exist
+    }
+  }
+
+  /**
    * Translate category name based on current language
    */
   translateCategory(category: string): string {

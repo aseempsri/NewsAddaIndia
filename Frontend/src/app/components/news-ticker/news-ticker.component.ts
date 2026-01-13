@@ -34,15 +34,21 @@ import { LanguageService } from '../../services/language.service';
             } @else if (scrollingNews.length === 0) {
               <div class="text-sm md:text-sm text-purple-600 font-semibold">No trending news available</div>
             } @else {
-              <div #tickerContainer class="ticker-scroll-container flex gap-4 md:gap-12 whitespace-nowrap items-center" style="will-change: transform;">
+              <div #tickerContainer class="ticker-scroll-container flex gap-3 md:gap-6 whitespace-nowrap items-center" style="will-change: transform;">
                 @for (news of scrollingNews; track $index) {
                   <a
                     [routerLink]="['/news', news.id]"
-                    class="text-sm md:text-base font-semibold md:font-bold dark:font-normal text-purple-700 dark:text-purple-300 hover:text-pink-600 dark:hover:text-pink-400 transition-all duration-300 inline-flex items-center gap-2 md:gap-3 hover:scale-105 py-0.5 md:py-1 flex-shrink-0" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.8); line-height: 1.5; max-width: none;">
-                    <svg class="w-2.5 h-2.5 md:w-3 md:h-3 text-pink-500 shrink-0 animate-pulse" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(236,72,153,0.5));">
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap" style="font-family: 'Arial', 'Helvetica Neue', sans-serif; line-height: 1.5; display: inline-block;">{{ news.title }}</span>
+                    class="trending-news-box group flex-shrink-0 transition-all duration-300 hover:scale-105">
+                    <div class="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-fuchsia-500/20 dark:from-purple-600/30 dark:via-pink-600/30 dark:to-fuchsia-600/30 border-2 border-purple-400/50 dark:border-purple-500/50 backdrop-blur-sm shadow-lg hover:shadow-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300">
+                      <!-- Animated dot indicator -->
+                      <svg class="w-2.5 h-2.5 md:w-3 md:h-3 text-pink-500 dark:text-pink-400 shrink-0 animate-pulse group-hover:animate-none" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(236,72,153,0.5));">
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      <!-- Trending title in box -->
+                      <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap text-purple-800 dark:text-purple-200 group-hover:text-pink-700 dark:group-hover:text-pink-300 transition-colors duration-300" style="font-family: 'Arial', 'Helvetica Neue', sans-serif; line-height: 1.4; display: inline-block; text-shadow: 0 1px 2px rgba(255,255,255,0.5);">
+                        {{ getDisplayTitle(news) }}
+                      </span>
+                    </div>
                   </a>
                 }
               </div>
@@ -75,6 +81,52 @@ import { LanguageService } from '../../services/language.service';
       }
     }
     
+    /* Trending news box styling */
+    .trending-news-box {
+      display: inline-flex;
+      min-width: fit-content;
+    }
+    
+    .trending-news-box > div {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Animated gradient border effect on hover */
+    .trending-news-box > div::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, #a855f7, #ec4899, #d946ef, #a855f7);
+      background-size: 300% 300%;
+      border-radius: inherit;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      animation: gradient-shift 3s ease infinite;
+    }
+    
+    .trending-news-box:hover > div::before {
+      opacity: 1;
+    }
+    
+    @keyframes gradient-shift {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+    
+    /* Glow effect on hover */
+    .trending-news-box:hover > div {
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(236, 72, 153, 0.2);
+    }
+    
     /* Force hardware acceleration and ensure animation works */
     @media (max-width: 767px) {
       .ticker-scroll-container {
@@ -82,6 +134,11 @@ import { LanguageService } from '../../services/language.service';
         will-change: transform;
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
+      }
+      
+      .trending-news-box > div {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
       }
     }
     
@@ -150,14 +207,29 @@ export class NewsTickerComponent implements OnInit, AfterViewInit {
     }
   }
 
+  getDisplayTitle(news: any): string {
+    // If trending and trendingTitle exists, use it; otherwise use regular title
+    if (news.isTrending && news.trendingTitle) {
+      return news.trendingTitle;
+    }
+    return news.title || '';
+  }
+
   async translateTrendingTitles() {
     if (!this.trendingNews || this.trendingNews.length === 0) return;
     
-    // Translate titles in parallel
+    // Translate titles in parallel - translate the display title (trendingTitle if available, otherwise title)
     await Promise.all(this.trendingNews.map(async (article) => {
       try {
-        if (article.title) {
-          article.title = await this.languageService.translateToCurrentLanguage(article.title);
+        const titleToTranslate = this.getDisplayTitle(article);
+        if (titleToTranslate) {
+          const translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
+          // Update the appropriate field based on what was displayed
+          if (article.isTrending && article.trendingTitle) {
+            article.trendingTitle = translatedTitle;
+          } else {
+            article.title = translatedTitle;
+          }
         }
       } catch (error) {
         console.warn('Failed to translate trending title:', error);
@@ -171,14 +243,25 @@ export class NewsTickerComponent implements OnInit, AfterViewInit {
       next: async (news) => {
         if (news && news.length > 0) {
           console.log('[NewsTicker] Fetched', news.length, 'trending news items');
-          console.log('[NewsTicker] News titles:', news.map(n => n.title).slice(0, 5));
+          // Log display titles (trendingTitle if available, otherwise title)
+          console.log('[NewsTicker] News display titles:', news.map(n => this.getDisplayTitle(n)).slice(0, 5));
+          // Log trending titles specifically
+          const trendingWithCustomTitle = news.filter(n => n.isTrending && n.trendingTitle);
+          if (trendingWithCustomTitle.length > 0) {
+            console.log('[NewsTicker] News with custom trending titles:', trendingWithCustomTitle.map(n => ({
+              id: n.id,
+              title: n.title,
+              trendingTitle: n.trendingTitle,
+              displayTitle: this.getDisplayTitle(n)
+            })));
+          }
           this.trendingNews = news;
           // Translate titles after loading
           await this.translateTrendingTitles();
           // Duplicate for seamless scrolling
           this.scrollingNews = [...this.trendingNews, ...this.trendingNews];
           console.log('[NewsTicker] Total scrolling items:', this.scrollingNews.length);
-          console.log('[NewsTicker] Scrolling news titles:', this.scrollingNews.map(n => n.title).slice(0, 10));
+          console.log('[NewsTicker] Scrolling news display titles:', this.scrollingNews.map(n => this.getDisplayTitle(n)).slice(0, 10));
           // Ensure animation starts after content is loaded
           setTimeout(() => this.ensureAnimation(), 100);
         } else {

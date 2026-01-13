@@ -22,6 +22,11 @@ app.use('/api/news', require('./routes/news'));
 app.use('/api/pending-news', require('./routes/pendingNews'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/stats', require('./routes/stats'));
+app.use('/api/translation', require('./routes/translation'));
+
+// Initialize scheduled translation job (runs daily at 1 AM)
+const translationService = require('./services/translation.service');
+translationService.startScheduledTranslation();
 
 // Health check
 app.get('/health', (req, res) => {

@@ -31,7 +31,7 @@ import { Subscription } from 'rxjs';
         [style.top.px]="getModalTop()"
         (click)="close()">
         <div 
-          class="glass-card max-w-4xl w-full h-full sm:h-auto max-h-[calc(100vh-64px)] sm:max-h-[calc(90vh-64px)] overflow-hidden flex flex-col pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
+          class="glass-card max-w-4xl lg:max-w-6xl xl:max-w-7xl w-full h-full sm:h-auto max-h-[calc(100vh-64px)] sm:max-h-[calc(95vh-64px)] overflow-hidden flex flex-col lg:flex-row pointer-events-auto animate-scale-in rounded-lg sm:rounded-xl"
           (click)="$event.stopPropagation()"
           (touchstart)="$event.stopPropagation()"
           (touchmove)="$event.stopPropagation()">
@@ -40,7 +40,7 @@ import { Subscription } from 'rxjs';
           <button
             (click)="close()"
             (touchend)="onCloseButtonTouch($event)"
-            class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2.5 sm:p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow"
+            class="absolute top-2 right-2 sm:top-4 sm:right-4 lg:top-6 lg:right-6 z-10 p-2.5 sm:p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow"
             aria-label="Close modal"
             type="button">
             <svg class="w-6 h-6 sm:w-6 sm:h-6 text-gray-800 dark:text-white close-icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,47 +48,107 @@ import { Subscription } from 'rxjs';
             </svg>
           </button>
 
-          <!-- Image Header -->
-          <div class="relative w-full aspect-[16/9] bg-secondary/20 overflow-hidden flex-shrink-0">
-            @if (news.imageLoading || !news.image) {
-              <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
-                <div class="flex flex-col items-center gap-2">
-                  <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  <span class="text-sm text-muted-foreground">Loading image...</span>
+          <!-- Image Section - Side by side on desktop -->
+          <div class="relative w-full lg:w-2/5 xl:w-2/5 lg:h-[calc(95vh-64px)] lg:min-h-[calc(95vh-64px)] flex flex-col flex-shrink-0 lg:rounded-l-xl bg-gradient-to-br from-background via-secondary/20 to-background p-4 lg:p-6 xl:p-8 border-r border-border/30">
+            <!-- Image Frame Container -->
+            <div class="relative flex-1 bg-gradient-to-br from-primary/10 via-secondary/30 to-accent/10 rounded-2xl lg:rounded-3xl p-3 lg:p-4 xl:p-5 shadow-2xl border-2 border-primary/20 lg:border-4 lg:border-primary/30 overflow-hidden flex">
+              <!-- Inner Image Container - Landscape Format -->
+              <div class="relative w-full rounded-xl lg:rounded-2xl overflow-hidden bg-secondary/20 aspect-[16/10] lg:aspect-[16/9] flex items-center justify-center">
+                @if (news.imageLoading || getImagesArray().length === 0) {
+                  <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                    <div class="flex flex-col items-center gap-2">
+                      <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span class="text-sm text-muted-foreground">Loading image...</span>
+                    </div>
+                  </div>
+                }
+                @if (getImagesArray().length > 0 && !news.imageLoading) {
+                  @if (getImagesArray().length === 1) {
+                    <!-- Single Image - Centered Vertically -->
+                    <div class="w-full h-full flex items-center justify-center">
+                      <img
+                        [src]="getImagesArray()[0]"
+                        [alt]="news.title"
+                        class="max-w-full max-h-full w-auto h-auto object-contain"
+                        style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality; filter: none; -webkit-filter: none;" />
+                    </div>
+                  } @else if (getImagesArray().length === 2) {
+                    <!-- Two Images - Stacked Vertically and Evenly Spaced -->
+                    <div class="w-full h-full flex flex-col justify-between py-2 lg:py-4">
+                      @for (img of getImagesArray(); track $index) {
+                        <div class="flex-1 flex items-center justify-center min-h-0">
+                          <img
+                            [src]="img"
+                            [alt]="news.title + ' - Image ' + ($index + 1)"
+                            class="max-w-full max-h-full w-auto h-auto object-contain"
+                            style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality; filter: none; -webkit-filter: none;" />
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <!-- Multiple Images - Vertically Scrollable -->
+                    <div class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hide" style="scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;">
+                      <div class="flex flex-col h-full">
+                        @for (img of getImagesArray(); track $index) {
+                          <div class="flex-shrink-0 w-full flex items-center justify-center py-2" style="scroll-snap-align: start; min-height: 50%;">
+                            <img
+                              [src]="img"
+                              [alt]="news.title + ' - Image ' + ($index + 1)"
+                              class="max-w-full max-h-[80%] w-auto h-auto object-contain"
+                              style="image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality; filter: none; -webkit-filter: none;" />
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+                
+                <!-- Category Badge -->
+                <div class="absolute top-4 left-4 flex gap-2 z-10">
+                  @if (isBreaking) {
+                    <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse shadow-lg">
+                      BREAKING
+                    </span>
+                  }
+                  <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
+                    {{ news.category }}
+                  </span>
                 </div>
               </div>
-            }
-            @if (news.image && !news.imageLoading) {
-              <img
-                [src]="news.image"
-                [alt]="news.title"
-                class="w-full h-full object-cover" />
-            }
-            <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
-            
-            <!-- Category Badge -->
-            <div class="absolute top-4 left-4 flex gap-2 z-10">
-              @if (isBreaking) {
-                <span class="inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
-                  BREAKING
-                </span>
-              }
-              <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
-                {{ news.category }}
-              </span>
             </div>
+
+            <!-- Read More Button - Under Image -->
+            @if (news.id) {
+              <div class="mt-4 lg:mt-6 xl:mt-8">
+                <button
+                  (click)="navigateToFullArticle(); $event.stopPropagation()"
+                  (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
+                  type="button"
+                  class="w-full px-4 sm:px-6 py-3 lg:py-4 bg-primary text-primary-foreground rounded-xl lg:rounded-2xl hover:bg-primary/90 active:bg-primary/80 transition-all duration-300 font-semibold flex items-center justify-center gap-2 touch-manipulation min-h-[48px] lg:min-h-[52px] text-base lg:text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02]">
+                  <span>{{ t.readMore }}</span>
+                  <svg class="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
+            }
           </div>
 
           <!-- Content (Scrollable) -->
-          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0" style="touch-action: pan-y;">
-            <div class="p-4 sm:p-6 lg:p-8">
+          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0 lg:w-3/5 xl:w-3/5" style="touch-action: pan-y;">
+            <div class="p-4 sm:p-6 lg:p-8 xl:p-10">
               <!-- Title -->
-              <h1 [class]="'font-display text-xl sm:text-2xl lg:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
+              <h1 [class]="'font-display text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 lg:mb-6 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
                 {{ getDisplayTitle() }}
               </h1>
 
-              <!-- Meta Information -->
-              <div class="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground border-b border-border/30 pb-4">
+              <!-- Summary (60 words) -->
+              <div class="mb-6 text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
+                {{ getDisplaySummary() }}
+              </div>
+
+              <!-- Author and Date -->
+              <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-t border-border/30 pt-4">
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -102,35 +162,17 @@ import { Subscription } from 'rxjs';
                   {{ news.date || news.time }}
                 </span>
               </div>
-
-              <!-- Full Content -->
-              <div class="prose prose-lg max-w-none text-foreground mb-6">
-                <div [innerHTML]="getFormattedContent()" class="news-content"></div>
-              </div>
-
-              <!-- Tags (if available) -->
-              @if (tagsArray.length > 0) {
-                <div class="mt-8 pt-6 border-t border-border/30">
-                  <div class="flex flex-wrap gap-2">
-                    @for (tag of tagsArray; track tag) {
-                      <span class="px-3 py-1 text-xs bg-secondary rounded-md text-muted-foreground">
-                        {{ tag }}
-                      </span>
-                    }
-                  </div>
-                </div>
-              }
             </div>
           </div>
 
-          <!-- Footer Actions -->
-          <div class="p-4 sm:p-6 lg:p-8 border-t border-border/30 bg-secondary/20">
+          <!-- Footer Actions - Hidden on desktop, shown on mobile -->
+          <div class="lg:hidden p-4 sm:p-6 border-t border-border/30 bg-secondary/20 flex-shrink-0">
             @if (news.id) {
               <button
                 (click)="navigateToFullArticle(); $event.stopPropagation()"
                 (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
                 type="button"
-                class="w-full px-4 sm:px-6 py-3 sm:py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px]">
+                class="w-full px-4 sm:px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation min-h-[44px]">
                 <span>{{ t.readMore }}</span>
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -213,6 +255,85 @@ import { Subscription } from 'rxjs';
       .modal-container {
         align-items: flex-start !important;
         padding-top: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+      }
+      /* Improve readability on desktop */
+      .news-content {
+        font-size: 1.125rem;
+        line-height: 1.9;
+        max-width: 100%;
+      }
+      .news-content p {
+        margin-bottom: 1.75rem;
+        font-size: 1.125rem;
+        line-height: 1.9;
+        color: hsl(var(--foreground));
+      }
+      .news-content h2, .news-content h3 {
+        margin-top: 2.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.75rem;
+        line-height: 1.3;
+        font-weight: 700;
+        color: hsl(var(--foreground));
+      }
+      /* Ensure image section is properly sized */
+      .glass-card {
+        max-height: calc(95vh - 64px);
+      }
+      /* Image frame styling */
+      .glass-card .relative.flex.fflex-col {
+        box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
+      }
+      /* Ensure image is crisp and clear - no blur */
+      .glass-card img {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        image-rendering: high-quality;
+        filter: none !important;
+        -webkit-filter: none !important;
+        -moz-filter: none !important;
+        -ms-filter: none !important;
+        -o-filter: none !important;
+      }
+      /* Ensure single image is vertically centered */
+      .glass-card .aspect-\\[16\\/10\\] > div.absolute,
+      .glass-card .aspect-\\[16\\/9\\] > div.absolute {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      /* Ensure images are centered within their containers */
+      .glass-card .aspect-\\[16\\/10\\] img,
+      .glass-card .aspect-\\[16\\/9\\] img {
+        vertical-align: middle;
+      }
+      /* Hide scrollbar but keep functionality */
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+        scroll-behavior: smooth;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    }
+    @media (min-width: 1280px) {
+      .news-content {
+        font-size: 1.25rem;
+        line-height: 2;
+      }
+      .news-content p {
+        font-size: 1.25rem;
+        line-height: 2;
+        margin-bottom: 2rem;
+        color: hsl(var(--foreground));
+      }
+      .news-content h2, .news-content h3 {
+        font-size: 2rem;
+        margin-top: 3rem;
+        margin-bottom: 1.75rem;
       }
     }
     @media (max-width: 640px) {
@@ -240,13 +361,22 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   isTranslating: boolean = false;
   showFullContent: boolean = false;
   t: any = {};
+  images: string[] = []; // Array to hold multiple images
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
   private languageSubscription?: Subscription;
   private modalSubscription?: Subscription;
   
   // Initialize tags as empty array if not provided
   get tagsArray(): string[] {
-    return this.tags || [];
+    // Check multiple sources for tags
+    if (this.tags && Array.isArray(this.tags) && this.tags.length > 0) {
+      return this.tags;
+    }
+    // Also check if tags are in the news object
+    if (this.news && (this.news as any).tags && Array.isArray((this.news as any).tags) && (this.news as any).tags.length > 0) {
+      return (this.news as any).tags;
+    }
+    return [];
   }
 
   constructor(
@@ -293,11 +423,18 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
         if (this.isOpen && this.news) {
           this.preventBodyScroll();
           this.showFullContent = false;
-          this.tags = []; // Reset tags, will be loaded from API
+          // Always start with empty tags - will be loaded fresh from API
+          this.tags = [];
+          // Initialize images from news object
+          this.images = this.getImagesArray();
+          console.log('[NewsDetailModal] Modal opened, news ID:', this.news.id);
+          console.log('[NewsDetailModal] Modal opened, initial tags from news object:', (this.news as any).tags);
+          console.log('[NewsDetailModal] Modal opened, initial images:', this.images);
           // Reset translations
           this.translatedTitle = '';
           this.translatedExcerpt = '';
           this.translatedContent = '';
+          // Always fetch fresh data from API to get latest tags
           this.loadFullContent();
           // Translate after content is loaded
           setTimeout(() => this.translateContent(), 100);
@@ -305,6 +442,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
           this.restoreBodyScroll();
           this.showFullContent = false;
         this.tags = []; // Reset tags when modal closes
+        this.images = []; // Reset images when modal closes
       }
     });
   }
@@ -466,6 +604,14 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     return this.languageService.getDisplayTitle(this.news.title, this.news.titleEn);
   }
 
+  getDisplaySummary(): string {
+    if (!this.news) return '';
+    return this.languageService.getDisplaySummary(
+      (this.news as any).summary || this.news.excerpt || '',
+      (this.news as any).summaryEn || ''
+    );
+  }
+
   getDisplayContent(): string {
     if (!this.news) return '';
     const lang = this.languageService.getCurrentLanguage();
@@ -542,15 +688,75 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  /**
+   * Parse images from various formats (string, array, comma-separated)
+   */
+  private parseImages(imageData: any): string[] {
+    if (!imageData) return [];
+    
+    // If it's already an array
+    if (Array.isArray(imageData)) {
+      return imageData.filter(img => img && img.trim().length > 0);
+    }
+    
+    // If it's a string, check if it's comma-separated
+    if (typeof imageData === 'string') {
+      const images = imageData.split(',').map(img => img.trim()).filter(img => img.length > 0);
+      return images.length > 0 ? images : [imageData]; // Return single image if not comma-separated
+    }
+    
+    return [];
+  }
+
+  /**
+   * Get images array - check multiple sources
+   */
+  getImagesArray(): string[] {
+    if (!this.news) return [];
+    
+    // First check if images array exists in news object
+    if (this.news.images && Array.isArray(this.news.images) && this.news.images.length > 0) {
+      return this.news.images.filter(img => img && img.trim().length > 0);
+    }
+    
+    // Check if images array exists in news object (any type)
+    if ((this.news as any).images && Array.isArray((this.news as any).images)) {
+      return this.parseImages((this.news as any).images);
+    }
+    
+    // Check if image field contains multiple images (comma-separated)
+    if (this.news.image) {
+      const parsed = this.parseImages(this.news.image);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    }
+    
+    // Fallback to single image
+    return this.news.image ? [this.news.image] : [];
+  }
+
   loadFullContent() {
-    if (!this.news || !this.news.id) return;
+    if (!this.news || !this.news.id) {
+      console.log('[NewsDetailModal] loadFullContent: No news or news.id');
+      // Still try to parse images from news object
+      this.images = this.getImagesArray();
+      return;
+    }
 
     // Try to fetch full content from backend if news has an ID
     const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
+    console.log('[NewsDetailModal] loadFullContent: Fetching news ID:', newsId);
 
-    // Check if it's a MongoDB ObjectId format
-    if (newsId.length === 24 || newsId.match(/^[0-9a-fA-F]{24}$/)) {
-      this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}`).subscribe({
+    // Check if it's a MongoDB ObjectId format (24 hex characters)
+    const isMongoId = newsId.length === 24 && newsId.match(/^[0-9a-fA-F]{24}$/);
+    console.log('[NewsDetailModal] loadFullContent: Is MongoDB ID?', isMongoId, 'ID length:', newsId.length);
+    
+    if (isMongoId) {
+      console.log('[NewsDetailModal] loadFullContent: Making API call to fetch full content');
+      // Add cache-busting parameter to ensure fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}${cacheBuster}`).subscribe({
         next: (response) => {
           if (response.success && response.data) {
             // Store both Hindi and English content if available
@@ -571,19 +777,101 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
             if (response.data.excerpt) {
               (this.news as any).excerptHi = response.data.excerpt;
             }
-            this.tags = response.data.tags || [];
+            // Update tags from API response - handle both array and string formats
+            console.log('[NewsDetailModal] API response data:', response.data);
+            console.log('[NewsDetailModal] API response tags:', response.data.tags, 'Type:', typeof response.data.tags);
+            
+            if (response.data.tags) {
+              if (Array.isArray(response.data.tags)) {
+                this.tags = response.data.tags.filter((t: any) => t && t.trim && t.trim().length > 0);
+              } else if (typeof response.data.tags === 'string') {
+                // Try to parse if it's a JSON string
+                try {
+                  const parsed = JSON.parse(response.data.tags);
+                  this.tags = Array.isArray(parsed) ? parsed.filter((t: any) => t && t.trim && t.trim().length > 0) : [];
+                } catch {
+                  // If not JSON, treat as comma-separated string
+                  this.tags = response.data.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+                }
+              } else {
+                this.tags = [];
+              }
+            } else {
+              this.tags = [];
+            }
+            console.log('[NewsDetailModal] Tags loaded from API:', this.tags);
+            // Also update tags in news object for consistency
+            (this.news as any).tags = this.tags;
+            
+            // Parse images from API response
+            if (response.data.images && Array.isArray(response.data.images) && response.data.images.length > 0) {
+              // Construct full URLs for images array
+              this.images = response.data.images.map((img: string) => {
+                if (img && img.trim() !== '' && !img.startsWith('http')) {
+                  const imgPath = img.startsWith('/') ? img : '/' + img;
+                  return `${this.apiUrl}${imgPath}`;
+                }
+                return img;
+              }).filter((img: string) => img && img.trim().length > 0);
+            } else if (response.data.image) {
+              this.images = this.parseImages(response.data.image);
+            } else {
+              this.images = this.getImagesArray();
+            }
+            // Also update news object with images
+            (this.news as any).images = this.images;
+            console.log('[NewsDetailModal] Images loaded from API:', this.images);
+            
+            // Trigger change detection to update UI
+            this.cdr.detectChanges();
           } else {
             this.fullContent = this.news.excerpt;
+            console.log('[NewsDetailModal] API response not successful or no data');
           }
         },
-        error: () => {
+        error: (error) => {
+          console.error('[NewsDetailModal] Error loading full content:', error);
           // Fallback to excerpt if API fails
           this.fullContent = this.news?.excerpt || '';
+          // Try to get tags from news object if API fails
+          if ((this.news as any).tags) {
+            if (Array.isArray((this.news as any).tags)) {
+              this.tags = (this.news as any).tags;
+            } else if (typeof (this.news as any).tags === 'string') {
+              try {
+                this.tags = JSON.parse((this.news as any).tags);
+              } catch {
+                this.tags = (this.news as any).tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+              }
+            }
+            console.log('[NewsDetailModal] Tags from news object (after API error):', this.tags);
+            this.cdr.detectChanges();
+          }
         }
       });
     } else {
       // Use excerpt as content for non-backend news
       this.fullContent = this.news.excerpt || '';
+      // Parse images from news object
+      this.images = this.getImagesArray();
+      // For non-MongoDB IDs, try to get tags from the news object itself
+      console.log('[NewsDetailModal] Non-MongoDB ID, checking news object for tags:', (this.news as any).tags);
+      if ((this.news as any).tags) {
+        if (Array.isArray((this.news as any).tags)) {
+          this.tags = (this.news as any).tags.filter((t: any) => t && (typeof t === 'string' ? t.trim().length > 0 : true));
+        } else if (typeof (this.news as any).tags === 'string') {
+          try {
+            const parsed = JSON.parse((this.news as any).tags);
+            this.tags = Array.isArray(parsed) ? parsed.filter((t: any) => t && (typeof t === 'string' ? t.trim().length > 0 : true)) : [];
+          } catch {
+            this.tags = (this.news as any).tags.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+          }
+        }
+        console.log('[NewsDetailModal] Tags from news object (non-MongoDB):', this.tags);
+        this.cdr.detectChanges();
+      } else {
+        console.log('[NewsDetailModal] No tags found in news object');
+      }
     }
   }
 

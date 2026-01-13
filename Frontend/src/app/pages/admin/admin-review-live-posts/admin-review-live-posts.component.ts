@@ -8,6 +8,7 @@ import { ModalService } from '../../../services/modal.service';
 import { NewsDetailModalComponent } from '../../../components/news-detail-modal/news-detail-modal.component';
 import { NewsArticle } from '../../../services/news.service';
 import { Subscription } from 'rxjs';
+import { DeletePasswordModalComponent } from '../../../components/delete-password-modal/delete-password-modal.component';
 
 interface LiveNews {
   _id: string;
@@ -36,7 +37,7 @@ interface GroupedNews {
 @Component({
   selector: 'app-admin-review-live-posts',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NewsDetailModalComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NewsDetailModalComponent, DeletePasswordModalComponent],
   template: `
     <div class="min-h-screen bg-background py-8">
       <div class="container mx-auto px-4 max-w-7xl">
@@ -460,6 +461,13 @@ interface GroupedNews {
       
       <!-- News Detail Modal -->
       <app-news-detail-modal></app-news-detail-modal>
+      
+      <!-- Delete Password Modal -->
+      <app-delete-password-modal
+        [isOpen]="showPasswordModal"
+        (confirmed)="onPasswordConfirmed()"
+        (cancelled)="showPasswordModal = false; pendingDeleteId = null">
+      </app-delete-password-modal>
     </div>
   `,
   styles: []
@@ -475,6 +483,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
   isLoading = false;
   error = '';
   processingIds = new Set<string>();
+  showPasswordModal = false;
+  pendingDeleteId: string | null = null;
   private modalSubscription?: Subscription;
 
   // Filter properties
@@ -809,13 +819,24 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
   }
 
   permanentDelete(id: string) {
-    if (!confirm('Are you sure you want to permanently delete this post? This action cannot be undone and will remove it from both the website and database.')) {
+    // Store the ID and show password modal
+    this.pendingDeleteId = id;
+    this.showPasswordModal = true;
+  }
+
+  onPasswordConfirmed() {
+    if (!this.pendingDeleteId) return;
+
+    const id = this.pendingDeleteId;
+
+    if (this.processingIds.has(id)) {
+      this.showPasswordModal = false;
+      this.pendingDeleteId = null;
       return;
     }
 
-    if (this.processingIds.has(id)) return;
-
     this.processingIds.add(id);
+    this.showPasswordModal = false;
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
 
     this.http.delete<{ success: boolean; message?: string; error?: string }>(
@@ -830,10 +851,12 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
           this.error = response.error || 'Failed to delete news';
         }
         this.processingIds.delete(id);
+        this.pendingDeleteId = null;
       },
       error: (err) => {
         this.error = err.error?.error || 'Failed to delete news. Please try again.';
         this.processingIds.delete(id);
+        this.pendingDeleteId = null;
       }
     });
   }
