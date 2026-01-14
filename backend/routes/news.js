@@ -297,7 +297,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
           // Use the actual output filename (may have different extension)
           const actualFilename = path.basename(resizeResult.outputPath);
           const processedPath = `/uploads/${actualFilename}`;
-          
+
           // Verify the resized file actually exists
           const fullResizedPath = path.join(uploadsDir, actualFilename);
           if (!fs.existsSync(fullResizedPath)) {
@@ -543,7 +543,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
           }
           const actualFilename = path.basename(resizeResult.outputPath);
           const processedPath = `/uploads/${actualFilename}`;
-          
+
           // Verify the resized file actually exists
           const fullResizedPath = path.join(uploadsDir, actualFilename);
           if (!fs.existsSync(fullResizedPath)) {
