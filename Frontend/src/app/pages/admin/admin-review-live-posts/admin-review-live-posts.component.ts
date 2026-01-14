@@ -601,24 +601,46 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
   loadLiveNews() {
     this.isLoading = true;
     this.error = '';
-    // Fetch all published news without limit to get all live posts
-    this.http.get<{ success: boolean; data: LiveNews[]; error?: string }>(
-      `${this.getApiUrl()}/api/news?published=true&limit=1000`
+    
+    // Include Authorization header for consistency (even though GET endpoint doesn't require it)
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+    
+    // Use a reasonable limit (500 max) to prevent connection resets
+    // The backend enforces a max of 500, so requesting more won't help
+    this.http.get<{ success: boolean; data: LiveNews[]; total?: number; hasMore?: boolean; error?: string }>(
+      `${this.getApiUrl()}/api/news?published=true&limit=500`,
+      { headers }
     ).subscribe({
       next: (response) => {
-        if (response.success) {
+        if (response.success && response.data) {
           this.liveNews = response.data;
-          this.totalPosts = this.liveNews.length;
+          // Use total count from backend if available, otherwise use data length
+          this.totalPosts = response.total || this.liveNews.length;
           this.extractAvailableOptions();
           this.groupNewsByCategory();
           this.applyFilters();
+          this.error = ''; // Clear any previous errors
+          
+          // Log warning if there are more posts than loaded
+          if (response.hasMore) {
+            console.warn(`[AdminReviewLivePosts] Loaded ${this.liveNews.length} posts, but there are more (total: ${response.total}). Consider implementing pagination.`);
+          }
         } else {
           this.error = response.error || 'Failed to load live news';
+          this.liveNews = [];
+          this.totalPosts = 0;
+          this.filteredNews = [];
+          this.filteredGroupedNews = [];
         }
         this.isLoading = false;
       },
       error: (err) => {
-        this.error = err.error?.error || 'Failed to load live news. Please try again.';
+        console.error('[AdminReviewLivePosts] Error loading live news:', err);
+        this.error = err.error?.error || err.message || 'Failed to load live news. Please try again.';
+        this.liveNews = [];
+        this.totalPosts = 0;
+        this.filteredNews = [];
+        this.filteredGroupedNews = [];
         this.isLoading = false;
       }
     });
@@ -854,6 +876,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (response.success) {
+          // Clear any previous errors before reloading
+          this.error = '';
           // Reload the list
           this.loadLiveNews();
         } else {
@@ -862,7 +886,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
         this.processingIds.delete(id);
       },
       error: (err) => {
-        this.error = err.error?.error || 'Failed to remove post from website. Please try again.';
+        console.error('[AdminReviewLivePosts] Error updating news:', err);
+        this.error = err.error?.error || err.message || 'Failed to remove post from website. Please try again.';
         this.processingIds.delete(id);
       }
     });
@@ -895,6 +920,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (response.success) {
+          // Clear any previous errors before reloading
+          this.error = '';
           // Reload the list
           this.loadLiveNews();
         } else {
@@ -904,7 +931,8 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
         this.pendingDeleteId = null;
       },
       error: (err) => {
-        this.error = err.error?.error || 'Failed to delete news. Please try again.';
+        console.error('[AdminReviewLivePosts] Error deleting news:', err);
+        this.error = err.error?.error || err.message || 'Failed to delete news. Please try again.';
         this.processingIds.delete(id);
         this.pendingDeleteId = null;
       }

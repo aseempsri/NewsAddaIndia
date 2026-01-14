@@ -31,7 +31,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     // Accept all image types - check if it's an image MIME type
     const isImage = file.mimetype.startsWith('image/');
-    
+
     if (isImage) {
       return cb(null, true);
     } else {
@@ -56,7 +56,7 @@ async function resizeImage(inputPath, outputPath) {
   try {
     const metadata = await sharp(inputPath).metadata();
     const format = metadata.format; // jpeg, png, webp, gif, heic, avif, etc.
-    
+
     // Determine output format and adjust path if needed
     let finalOutputPath = outputPath;
     let sharpInstance = sharp(inputPath)
@@ -64,7 +64,7 @@ async function resizeImage(inputPath, outputPath) {
         fit: 'cover',
         position: 'center'
       });
-    
+
     // Preserve original format when possible, otherwise convert to jpeg
     if (format === 'png') {
       sharpInstance = sharpInstance.png({ quality: 90 });
@@ -81,7 +81,7 @@ async function resizeImage(inputPath, outputPath) {
       sharpInstance = sharpInstance.jpeg({ quality: 85 });
       finalOutputPath = outputPath.replace(/\.(png|webp|gif|heic|avif|tiff|bmp)$/i, '.jpg');
     }
-    
+
     await sharpInstance.toFile(finalOutputPath);
     return { success: true, outputPath: finalOutputPath };
   } catch (error) {
@@ -100,9 +100,9 @@ const handleMulterError = (err, req, res, next) => {
         return res.status(400).json({ success: false, error: 'File too large. Maximum size is 10MB.' });
       }
       if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-        return res.status(400).json({ 
-          success: false, 
-          error: `Unexpected field: ${err.field}. Expected field name: 'images'` 
+        return res.status(400).json({
+          success: false,
+          error: `Unexpected field: ${err.field}. Expected field name: 'images'`
         });
       }
       return res.status(400).json({ success: false, error: err.message });
@@ -118,13 +118,18 @@ const handleMulterError = (err, req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const { category, page, limit = 20, published = true, breaking, featured, trending, excludeBreaking } = req.query;
-    
+
+    // Enforce maximum limit to prevent connection resets and memory issues
+    const maxLimit = 500;
+    const requestedLimit = parseInt(limit);
+    const finalLimit = requestedLimit > maxLimit ? maxLimit : requestedLimit;
+
     const query = { published: published === 'true' || published === true };
-    
+
     if (category) {
       query.category = category;
     }
-    
+
     if (page) {
       query.pages = { $in: [page.toLowerCase()] };
     }
@@ -150,18 +155,24 @@ router.get('/', async (req, res) => {
     }
 
     // Sort: breaking news first, then by date
-    const sortOrder = breaking === 'true' || breaking === true 
+    const sortOrder = breaking === 'true' || breaking === true
       ? { isBreaking: -1, createdAt: -1 }
       : { createdAt: -1 };
 
+    // Get total count for pagination info
+    const totalCount = await News.countDocuments(query);
+
     const news = await News.find(query)
       .sort(sortOrder)
-      .limit(parseInt(limit))
+      .limit(finalLimit)
       .exec();
 
     res.json({
       success: true,
       count: news.length,
+      total: totalCount,
+      limit: finalLimit,
+      hasMore: totalCount > finalLimit,
       data: news
     });
   } catch (error) {
@@ -178,7 +189,7 @@ router.get('/:id', async (req, res) => {
   try {
     console.log('[Backend GET /api/news/:id] Fetching news:', req.params.id);
     const news = await News.findById(req.params.id);
-    
+
     if (!news) {
       console.log('[Backend GET /api/news/:id] News not found:', req.params.id);
       return res.status(404).json({
@@ -189,7 +200,7 @@ router.get('/:id', async (req, res) => {
 
     // Convert to plain object to ensure all fields are included
     const newsData = news.toObject ? news.toObject() : news;
-    
+
     // Ensure images array exists
     if (!newsData.images || !Array.isArray(newsData.images)) {
       if (newsData.image) {
@@ -200,7 +211,7 @@ router.get('/:id', async (req, res) => {
         console.log('[Backend GET /api/news/:id] Initialized empty images array');
       }
     }
-    
+
     console.log('[Backend GET /api/news/:id] News found:', {
       id: newsData._id,
       image: newsData.image,
@@ -250,7 +261,7 @@ function generateSummary(content, maxWords = 60) {
 router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError, async (req, res) => {
   try {
     const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
-    
+
     // Validate required fields
     if (!title || !excerpt || !category) {
       return res.status(400).json({
@@ -261,16 +272,16 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 
     let imagePath = '';
     let imagePaths = [];
-    
+
     // Process multiple images if uploaded (max 3)
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const resizedFilename = 'resized-' + file.filename;
         const resizedPath = path.join(uploadsDir, resizedFilename);
-        
+
         // Resize image
         const resizeResult = await resizeImage(file.path, resizedPath);
-        
+
         if (resizeResult.success) {
           // Delete original and keep resized
           if (fs.existsSync(file.path)) {
@@ -280,7 +291,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
           const actualFilename = path.basename(resizeResult.outputPath);
           const processedPath = `/uploads/${actualFilename}`;
           imagePaths.push(processedPath);
-          
+
           // Set first image as the main image for backward compatibility
           if (imagePath === '') {
             imagePath = processedPath;
@@ -299,7 +310,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
     // Parse tags and pages from JSON strings if needed
     let parsedTags = [];
     let parsedPages = [];
-    
+
     try {
       parsedTags = typeof tags === 'string' ? JSON.parse(tags) : (tags || []);
       parsedPages = typeof pages === 'string' ? JSON.parse(pages) : (pages || []);
@@ -344,7 +355,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
     });
   } catch (error) {
     console.error('Error creating news:', error);
-    
+
     // Clean up uploaded files if error occurred
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
@@ -353,7 +364,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
         }
       });
     }
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to create news article',
@@ -366,10 +377,10 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount: 3 }]), handleMulterError, async (req, res) => {
   try {
     const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
-    
+
     // Extract files from req.files.images (when using upload.fields)
     const imageFiles = req.files && req.files.images ? req.files.images : [];
-    
+
     console.log('[Backend PUT /api/news/:id] Update request received:', {
       id: req.params.id,
       filesCount: imageFiles.length,
@@ -382,16 +393,16 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
       isTrending: req.body.isTrending,
       fullBody: JSON.stringify(req.body, null, 2)
     });
-    
+
     const news = await News.findById(req.params.id);
-    
+
     if (!news) {
       return res.status(404).json({
         success: false,
         error: 'News article not found'
       });
     }
-    
+
     console.log('[Backend PUT /api/news/:id] Current news in DB:', {
       id: news._id,
       currentImage: news.image,
@@ -406,20 +417,20 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
     if (excerptEn !== undefined) news.excerptEn = excerptEn;
     if (content !== undefined) news.content = content;
     if (contentEn !== undefined) news.contentEn = contentEn;
-    
+
     // Generate summaries if content changed and summary not provided
     if (content !== undefined && !summary) {
       news.summary = generateSummary(content || news.excerpt, 60);
     } else if (summary !== undefined) {
       news.summary = summary;
     }
-    
+
     if (contentEn !== undefined && !summaryEn) {
       news.summaryEn = generateSummary(contentEn, 60);
     } else if (summaryEn !== undefined) {
       news.summaryEn = summaryEn;
     }
-    
+
     if (category) news.category = category;
     if (author) news.author = author;
     if (published !== undefined) news.published = published === 'true' || published === true;
@@ -434,7 +445,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
       isTrending: isTrending,
       currentTrendingTitle: news.trendingTitle
     });
-    
+
     if (trendingTitle !== undefined && trendingTitle !== null) {
       const trimmedTitle = typeof trendingTitle === 'string' ? trendingTitle.trim() : String(trendingTitle).trim();
       news.trendingTitle = trimmedTitle || undefined;
@@ -471,7 +482,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
     // Handle multiple images update
     if (imageFiles && imageFiles.length > 0) {
       console.log('[Backend PUT /api/news/:id] Processing', imageFiles.length, 'new image(s)');
-      
+
       // Delete old images if they exist
       if (news.images && news.images.length > 0) {
         console.log('[Backend PUT /api/news/:id] Deleting', news.images.length, 'old image(s)');
@@ -496,14 +507,14 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
 
       let imagePaths = [];
       let imagePath = '';
-      
+
       for (const file of imageFiles) {
         console.log('[Backend PUT /api/news/:id] Processing file:', file.filename, file.size, 'bytes');
         const resizedFilename = 'resized-' + file.filename;
         const resizedPath = path.join(uploadsDir, resizedFilename);
-        
+
         const resizeResult = await resizeImage(file.path, resizedPath);
-        
+
         if (resizeResult.success) {
           if (fs.existsSync(file.path)) {
             fs.unlinkSync(file.path);
@@ -512,7 +523,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
           const processedPath = `/uploads/${actualFilename}`;
           imagePaths.push(processedPath);
           console.log('[Backend PUT /api/news/:id] Processed image:', processedPath);
-          
+
           // Set first image as the main image for backward compatibility
           if (imagePath === '') {
             imagePath = processedPath;
@@ -526,7 +537,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
           }
         }
       }
-      
+
       news.images = imagePaths;
       news.image = imagePath; // First image for backward compatibility
       console.log('[Backend PUT /api/news/:id] Updated images:', {
@@ -552,7 +563,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
     }
 
     await news.save();
-    
+
     // Reload from DB to ensure we have the latest data
     const savedNews = await News.findById(req.params.id).lean();
     console.log('[Backend PUT /api/news/:id] News saved to DB:', {
@@ -583,14 +594,14 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
       message: 'News article updated successfully',
       data: savedNews
     };
-    
+
     console.log('[Backend PUT /api/news/:id] Sending response:', {
       success: responseData.success,
       image: responseData.data.image,
       images: responseData.data.images,
       imagesCount: responseData.data.images ? responseData.data.images.length : 0
     });
-    
+
     res.json(responseData);
   } catch (error) {
     console.error('Error updating news:', error);
@@ -605,7 +616,7 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    
+
     if (!news) {
       return res.status(404).json({
         success: false,

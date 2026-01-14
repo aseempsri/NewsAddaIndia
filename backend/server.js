@@ -15,6 +15,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded images
+// Note: routes/news.js uses path.join(__dirname, '../uploads') where __dirname is backend/routes
+// So files are saved to backend/uploads/. Server.js is in backend/, so use 'uploads' (same directory)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -35,12 +37,12 @@ app.get('/health', (req, res) => {
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newsaddaindia')
-.then(() => {
-  console.log('Connected to MongoDB');
-})
-.catch((error) => {
-  console.error('MongoDB connection error:', error);
-});
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+  });
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
