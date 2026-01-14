@@ -120,7 +120,8 @@ router.get('/', async (req, res) => {
     const { category, page, limit = 20, published = true, breaking, featured, trending, excludeBreaking } = req.query;
 
     // Enforce maximum limit to prevent connection resets and memory issues
-    const maxLimit = 500;
+    // Reduced to 200 to prevent large response sizes that cause connection resets
+    const maxLimit = 200;
     const requestedLimit = parseInt(limit);
     const finalLimit = requestedLimit > maxLimit ? maxLimit : requestedLimit;
 
@@ -162,9 +163,15 @@ router.get('/', async (req, res) => {
     // Get total count for pagination info
     const totalCount = await News.countDocuments(query);
 
+    // Select only necessary fields for list views to reduce response size
+    // Exclude large fields like full content unless specifically needed
+    const fieldsToSelect = '_id title titleEn excerpt excerptEn summary summaryEn category tags pages author image images isBreaking isFeatured isTrending trendingTitle date createdAt updatedAt published';
+
     const news = await News.find(query)
+      .select(fieldsToSelect)
       .sort(sortOrder)
       .limit(finalLimit)
+      .lean() // Use lean() for better performance with large datasets
       .exec();
 
     res.json({
