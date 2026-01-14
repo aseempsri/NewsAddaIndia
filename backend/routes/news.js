@@ -297,14 +297,29 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
           // Use the actual output filename (may have different extension)
           const actualFilename = path.basename(resizeResult.outputPath);
           const processedPath = `/uploads/${actualFilename}`;
-          imagePaths.push(processedPath);
-
-          // Set first image as the main image for backward compatibility
-          if (imagePath === '') {
-            imagePath = processedPath;
+          
+          // Verify the resized file actually exists
+          const fullResizedPath = path.join(uploadsDir, actualFilename);
+          if (!fs.existsSync(fullResizedPath)) {
+            console.error(`[Backend POST /api/news] ERROR: Resized image not found at ${fullResizedPath}`);
+            console.error(`[Backend POST /api/news] Expected outputPath: ${resizeResult.outputPath}`);
+            // Fall back to original if resized file doesn't exist
+            const originalPath = `/uploads/${file.filename}`;
+            imagePaths.push(originalPath);
+            if (imagePath === '') {
+              imagePath = originalPath;
+            }
+          } else {
+            console.log(`[Backend POST /api/news] Successfully saved image: ${fullResizedPath}`);
+            imagePaths.push(processedPath);
+            // Set first image as the main image for backward compatibility
+            if (imagePath === '') {
+              imagePath = processedPath;
+            }
           }
         } else {
           // Use original if resize fails
+          console.warn(`[Backend POST /api/news] Resize failed, using original: ${file.filename}`);
           const originalPath = `/uploads/${file.filename}`;
           imagePaths.push(originalPath);
           if (imagePath === '') {
@@ -528,12 +543,27 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
           }
           const actualFilename = path.basename(resizeResult.outputPath);
           const processedPath = `/uploads/${actualFilename}`;
-          imagePaths.push(processedPath);
-          console.log('[Backend PUT /api/news/:id] Processed image:', processedPath);
-
-          // Set first image as the main image for backward compatibility
-          if (imagePath === '') {
-            imagePath = processedPath;
+          
+          // Verify the resized file actually exists
+          const fullResizedPath = path.join(uploadsDir, actualFilename);
+          if (!fs.existsSync(fullResizedPath)) {
+            console.error(`[Backend PUT /api/news/:id] ERROR: Resized image not found at ${fullResizedPath}`);
+            console.error(`[Backend PUT /api/news/:id] Expected outputPath: ${resizeResult.outputPath}`);
+            // Fall back to original if resized file doesn't exist
+            const originalPath = `/uploads/${file.filename}`;
+            imagePaths.push(originalPath);
+            console.log('[Backend PUT /api/news/:id] Using original image:', originalPath);
+            if (imagePath === '') {
+              imagePath = originalPath;
+            }
+          } else {
+            console.log(`[Backend PUT /api/news/:id] Successfully saved image: ${fullResizedPath}`);
+            imagePaths.push(processedPath);
+            console.log('[Backend PUT /api/news/:id] Processed image:', processedPath);
+            // Set first image as the main image for backward compatibility
+            if (imagePath === '') {
+              imagePath = processedPath;
+            }
           }
         } else {
           const originalPath = `/uploads/${file.filename}`;
