@@ -605,10 +605,10 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     // Include Authorization header for consistency (even though GET endpoint doesn't require it)
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
     
-    // Use a reasonable limit (500 max) to prevent connection resets
-    // The backend enforces a max of 500, so requesting more won't help
+    // Use a reasonable limit (200 max) to prevent connection resets
+    // The backend enforces a max of 200, so requesting more won't help
     this.http.get<{ success: boolean; data: LiveNews[]; total?: number; hasMore?: boolean; error?: string }>(
-      `${this.getApiUrl()}/api/news?published=true&limit=500`,
+      `${this.getApiUrl()}/api/news?published=true&limit=200`,
       { headers }
     ).subscribe({
       next: (response) => {
@@ -623,7 +623,7 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
           
           // Log warning if there are more posts than loaded
           if (response.hasMore) {
-            console.warn(`[AdminReviewLivePosts] Loaded ${this.liveNews.length} posts, but there are more (total: ${response.total}). Consider implementing pagination.`);
+            console.warn(`[AdminReviewLivePosts] Loaded ${this.liveNews.length} posts, but there are more (total: ${response.total}). Showing first ${this.liveNews.length} posts. Use filters to narrow down results.`);
           }
         } else {
           this.error = response.error || 'Failed to load live news';
