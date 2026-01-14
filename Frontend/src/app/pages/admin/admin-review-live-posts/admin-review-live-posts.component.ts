@@ -948,9 +948,11 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
 
   getImageUrl(image: string): string {
     if (!image) return '';
+    // If already a full URL, return as is
     if (image.startsWith('http')) return image;
-    const apiUrl = this.getApiUrl();
-    return `${apiUrl}${image}`;
+    // Images are served from the same domain via Nginx, so use relative path
+    // This ensures images work regardless of API URL configuration
+    return image.startsWith('/') ? image : `/${image}`;
   }
 
   formatDate(dateString: string): string {
