@@ -366,8 +366,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     this.newsItems = [];
     this.isLoading = true;
     
-    // Try to fetch news specifically marked for 'home' page first
-    this.newsService.fetchNewsByPage('home', 6).subscribe({
+    // Fetch more articles initially to account for filtering (fetch 12 to ensure we get 6 after filtering)
+    this.newsService.fetchNewsByPage('home', 12).subscribe({
       next: async (news) => {
         // If we got news from backend for home page, use it
         if (news && news.length > 0) {
@@ -375,95 +375,113 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           const uniqueNews = this.removeDuplicates(news);
           const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
           
-          // Register displayed articles
-          const displayedIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
-          this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-          
-          this.newsItems = filteredNews.slice(0, 6);
-          
-          // Log trending news in news grid
-          const trendingNews = this.newsItems.filter(n => n.isTrending);
-          if (trendingNews.length > 0) {
-            console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
-            trendingNews.forEach((item, index) => {
-              console.log(`🔥 News Grid Trending ${index + 1}:`, {
-                id: item.id,
-                title: item.title,
-                trendingTitle: item.trendingTitle || 'N/A',
-                category: item.category,
-                displayTitle: this.getDisplayTitle(item)
+          // If we don't have 6 articles after filtering, fetch more from categories
+          if (filteredNews.length < 6) {
+            await this.fetchAdditionalNews(filteredNews, 6);
+          } else {
+            // Register displayed articles
+            const displayedIds = filteredNews.slice(0, 6).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+            this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+            
+            this.newsItems = filteredNews.slice(0, 6);
+            
+            // Log trending news in news grid
+            const trendingNews = this.newsItems.filter(n => n.isTrending);
+            if (trendingNews.length > 0) {
+              console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
+              trendingNews.forEach((item, index) => {
+                console.log(`🔥 News Grid Trending ${index + 1}:`, {
+                  id: item.id,
+                  title: item.title,
+                  trendingTitle: item.trendingTitle || 'N/A',
+                  category: item.category,
+                  displayTitle: this.getDisplayTitle(item)
+                });
               });
-            });
+            }
+            
+            await this.translateNewsTitles();
+            this.fetchImagesForAllItemsAndWait();
           }
-          
-          await this.translateNewsTitles();
-          this.fetchImagesForAllItemsAndWait();
         } else {
           // Fallback to category-based fetch
-          this.newsService.fetchNewsByCategory('National', 6).subscribe({
-            next: (categoryNews) => {
-              // Remove duplicates and filter out already displayed articles
-              const uniqueCategoryNews = this.removeDuplicates(categoryNews);
-              const filteredCategoryNews = this.displayedNewsService.filterDisplayed(uniqueCategoryNews);
-              
-              // Ensure we have enough news items
-              if (filteredCategoryNews.length < 6) {
-                // Fetch more from other categories
-                this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
-                  next: (sportsNews) => {
-                    const uniqueSportsNews = this.removeDuplicates(sportsNews);
-                    const filteredSportsNews = this.displayedNewsService.filterDisplayed(uniqueSportsNews);
-                    // Combine and remove any duplicates
-                    const combined = [...filteredCategoryNews, ...filteredSportsNews];
-                    const finalNews = this.removeDuplicates(combined);
-                    
-                    // Register displayed articles
-                    const displayedIds = finalNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
-                    this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-                    
-                    this.newsItems = finalNews.slice(0, 6);
-                    this.fetchImagesForAllItemsAndWait();
-                  }
-                });
-              } else {
-                // Register displayed articles
-                const displayedIds = filteredCategoryNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
-                this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-                
-                this.newsItems = filteredCategoryNews.slice(0, 6);
-                this.fetchImagesForAllItemsAndWait();
-              }
-            },
-            error: (error) => {
-              console.error('Error loading news:', error);
-              this.isLoading = false;
-            }
-          });
+          await this.fetchAdditionalNews([], 6);
         }
       },
       error: (error) => {
         console.error('Error loading home page news:', error);
         // Fallback to category-based fetch
-        this.newsService.fetchNewsByCategory('National', 6).subscribe({
-          next: async (news) => {
-            const uniqueNews = this.removeDuplicates(news);
-            const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
-            
-            // Register displayed articles
-            const displayedIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
-            this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-            
-            this.newsItems = filteredNews.slice(0, 6);
-            await this.translateNewsTitles();
-            this.fetchImagesForAllItemsAndWait();
-          },
-          error: (err) => {
-            console.error('Error loading news:', err);
-            this.isLoading = false;
-          }
-        });
+        this.fetchAdditionalNews([], 6);
       }
     });
+  }
+
+  /**
+   * Fetch additional news from categories to ensure we have enough articles
+   */
+  private async fetchAdditionalNews(existingNews: NewsArticle[], targetCount: number): Promise<void> {
+    const categories = ['National', 'Sports', 'Business', 'International', 'Entertainment', 'Health'];
+    let allNews = [...existingNews];
+    let categoryIndex = 0;
+    
+    const fetchNextCategory = (): void => {
+      if (allNews.length >= targetCount || categoryIndex >= categories.length) {
+        // We have enough articles or ran out of categories
+        const finalNews = this.removeDuplicates(allNews);
+        const filteredFinalNews = this.displayedNewsService.filterDisplayed(finalNews);
+        
+        // Register displayed articles
+        const displayedIds = filteredFinalNews.slice(0, targetCount).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+        this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+        
+        this.newsItems = filteredFinalNews.slice(0, targetCount);
+        
+        // Log trending news in news grid
+        const trendingNews = this.newsItems.filter(n => n.isTrending);
+        if (trendingNews.length > 0) {
+          console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
+          trendingNews.forEach((item, index) => {
+            console.log(`🔥 News Grid Trending ${index + 1}:`, {
+              id: item.id,
+              title: item.title,
+              trendingTitle: item.trendingTitle || 'N/A',
+              category: item.category,
+              displayTitle: this.getDisplayTitle(item)
+            });
+          });
+        }
+        
+        this.translateNewsTitles().then(() => {
+          this.fetchImagesForAllItemsAndWait();
+        });
+        return;
+      }
+      
+      const category = categories[categoryIndex];
+      const needed = targetCount - allNews.length;
+      const fetchCount = Math.min(needed + 2, 10); // Fetch a few extra to account for filtering
+      
+      this.newsService.fetchNewsByCategory(category, fetchCount).subscribe({
+        next: (categoryNews) => {
+          const uniqueCategoryNews = this.removeDuplicates(categoryNews);
+          const filteredCategoryNews = this.displayedNewsService.filterDisplayed(uniqueCategoryNews);
+          
+          // Add new articles to the collection
+          allNews = [...allNews, ...filteredCategoryNews];
+          allNews = this.removeDuplicates(allNews);
+          
+          categoryIndex++;
+          fetchNextCategory();
+        },
+        error: (error) => {
+          console.error(`Error loading news from ${category}:`, error);
+          categoryIndex++;
+          fetchNextCategory();
+        }
+      });
+    };
+    
+    fetchNextCategory();
   }
 
   private removeDuplicates(news: NewsArticle[]): NewsArticle[] {
