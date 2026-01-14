@@ -246,13 +246,36 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Frontend - all other routes (MUST come after /api and /health)
+    # Serve uploaded images from backend
+    location /uploads {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Cache images for 1 year
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Frontend - all other routes (MUST come after /api, /health, and /uploads)
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Cache static assets
+    # Serve static assets (JS, CSS, images) - MUST come before location /
+    location ~* ^/(polyfills|main|styles|runtime|vendor|common|favicon) {
+        root /var/www/html;
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Cache other static assets
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
+        root /var/www/html;
+        try_files $uri =404;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -391,6 +414,47 @@ node -e "require('dotenv').config(); console.log('MongoDB:', process.env.MONGODB
 3. Ensure only ONE config is enabled: `ls -la /etc/nginx/sites-enabled/`
 4. Test Nginx config: `sudo nginx -t`
 5. Reload Nginx: `sudo systemctl reload nginx`
+
+### Uploaded Images Not Showing
+
+**Symptoms:** Images uploaded via admin panel are not displaying on the website
+
+**Fix:**
+1. Verify Nginx has `/uploads` location block:
+   ```bash
+   sudo cat /etc/nginx/sites-available/news-adda | grep -A 10 "location /uploads"
+   ```
+   Should show a proxy_pass to localhost:3000
+
+2. If missing, add the `/uploads` location block to Nginx config (see Step 5.1)
+
+3. Verify backend serves images:
+   ```bash
+   curl http://localhost:3000/uploads/resized-news-*.jpg
+   # Replace * with actual filename from backend/uploads directory
+   ```
+
+4. Check if uploads directory exists and has files:
+   ```bash
+   ls -la /root/NewsAddaIndia/backend/uploads/
+   ```
+
+5. Verify image files have correct permissions:
+   ```bash
+   sudo chmod -R 755 /root/NewsAddaIndia/backend/uploads/
+   ```
+
+6. Test image access through Nginx:
+   ```bash
+   curl -I http://localhost/uploads/resized-news-*.jpg
+   # Should return 200 OK, not 404
+   ```
+
+7. Reload Nginx after config changes:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
 
 ### Admin Password Not Accepted
 
