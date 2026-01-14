@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { NewsArticle } from './news.service';
 import { ScrollRestorationService } from './scroll-restoration.service';
@@ -14,13 +15,30 @@ export class ModalService {
   });
   private scrollPosition: number = 0;
 
-  constructor(private scrollRestorationService: ScrollRestorationService) {}
+  constructor(
+    private scrollRestorationService: ScrollRestorationService,
+    private router: Router
+  ) {}
 
   openModal(news: NewsArticle, isBreaking: boolean = false): void {
     // Save scroll position BEFORE opening modal
     this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    // Also save to scroll restoration service for route-based restoration
-    this.scrollRestorationService.saveScrollPosition();
+    
+    // Also save to scroll restoration service for route-based restoration (save for current route)
+    const currentRoute = this.router.url || '/';
+    if (this.scrollPosition > 0) {
+      this.scrollRestorationService.saveScrollPosition(currentRoute);
+      // Also save to sessionStorage as backup
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          sessionStorage.setItem('modal_scroll_position', this.scrollPosition.toString());
+          sessionStorage.setItem('modal_scroll_route', currentRoute);
+        }
+      } catch (e) {
+        console.warn('[ModalService] Could not save to sessionStorage:', e);
+      }
+    }
+    console.log('[ModalService] Saved scroll position:', this.scrollPosition, 'for route:', currentRoute);
     
     this.modalState$.next({
       isOpen: true,

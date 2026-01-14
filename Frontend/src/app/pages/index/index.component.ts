@@ -128,14 +128,44 @@ export class IndexComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Restore scroll position if returning from detail page
-    // Use a longer delay to ensure it happens after router's scroll restoration
-    setTimeout(() => {
-      // Restore scroll position using scroll restoration service
-      this.scrollRestorationService.restoreScrollPosition();
-      // Hide scroll indicator if user has scrolled
-      this.checkScrollPosition();
-    }, 300);
+    // IMPORTANT: Don't restore scroll position here if we're just initializing
+    // Only restore if we're returning from another route
+    // The scroll restoration service handles this automatically via NavigationEnd events
+    
+    // Check if we have a saved scroll position for this route
+    const savedPosition = this.scrollRestorationService.getScrollPosition('/');
+    
+    // Only restore if we have a saved position (meaning we're returning, not first load)
+    if (savedPosition > 0) {
+      console.log('[IndexComponent] Restoring saved scroll position:', savedPosition);
+      
+      // Immediate restore attempt
+      requestAnimationFrame(() => {
+        this.scrollRestorationService.restoreScrollPosition('/');
+        this.checkScrollPosition();
+      });
+      
+      // Restore after short delay
+      setTimeout(() => {
+        this.scrollRestorationService.restoreScrollPosition('/');
+        this.checkScrollPosition();
+      }, 100);
+      
+      // Additional restore after longer delay to handle any layout shifts or lazy loading
+      setTimeout(() => {
+        this.scrollRestorationService.restoreScrollPosition('/');
+        this.checkScrollPosition();
+      }, 300);
+      
+      // Final restore attempt after content loads
+      setTimeout(() => {
+        this.scrollRestorationService.restoreScrollPosition('/');
+        this.checkScrollPosition();
+      }, 800);
+    } else {
+      // First load - ensure we're at top
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
     
     // Maximum wait time of 30 seconds as fallback
     setTimeout(() => {

@@ -259,25 +259,42 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Frontend - all other routes (MUST come after /api, /health, and /uploads)
+    # Serve Angular static assets (JS, CSS) - MUST come before location /
+    # Matches files like: polyfills-abc123.js, main-def456.js, styles-ghi789.css, etc.
+    location ~* ^/(polyfills|main|styles|runtime|vendor|common|favicon|assets).*\.(js|css)$ {
+        root /var/www/html;
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Serve other static assets (images, fonts, etc.)
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|mp4|webm)$ {
+        root /var/www/html;
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Don't cache index.html - Angular SPA needs fresh HTML
+    location = /index.html {
+        root /var/www/html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+        try_files $uri =404;
+    }
+
+    # Frontend - all other routes (MUST come after /api, /health, /uploads, and static assets)
     location / {
+        root /var/www/html;
         try_files $uri $uri/ /index.html;
-    }
-
-    # Serve static assets (JS, CSS, images) - MUST come before location /
-    location ~* ^/(polyfills|main|styles|runtime|vendor|common|favicon) {
-        root /var/www/html;
-        try_files $uri =404;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Cache other static assets
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
-        root /var/www/html;
-        try_files $uri =404;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
+        # Don't cache HTML files (for SPA routing)
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
     }
 }
 ```

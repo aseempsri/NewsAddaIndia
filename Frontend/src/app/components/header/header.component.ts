@@ -7,6 +7,7 @@ import { ButtonComponent } from '../../ui/button/button.component';
 import { LanguageService, Language } from '../../services/language.service';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { ModalService } from '../../services/modal.service';
+import { ScrollRestorationService } from '../../services/scroll-restoration.service';
 import { environment } from '../../../environments/environment';
 import { catchError, filter } from 'rxjs/operators';
 import { of, Subscription } from 'rxjs';
@@ -28,7 +29,7 @@ interface NavLink {
         <div class="container mx-auto px-4 py-3">
           <div class="flex items-center justify-between gap-2.5">
             <!-- Logo -->
-            <a [routerLink]="'/'" class="flex items-center gap-2.5 group shrink-0">
+            <a [routerLink]="'/'" (click)="onNavLinkClick('/')" class="flex items-center gap-2.5 group shrink-0">
               <div class="relative w-10 h-10 shrink-0">
                 <img 
                   [src]="logoPath" 
@@ -57,6 +58,7 @@ interface NavLink {
                   [routerLink]="link.route"
                   routerLinkActive="text-primary font-bold bg-primary/10"
                   [routerLinkActiveOptions]="{exact: link.route === '/'}"
+                  (click)="onNavLinkClick(link.route)"
                   class="nav-link px-3.5 py-1.5 rounded-lg text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
                   {{ link.name }}
                 </a>
@@ -133,6 +135,7 @@ interface NavLink {
                 [routerLink]="link.route"
                 routerLinkActive="text-primary font-bold bg-primary/15 border border-primary/30"
                 [routerLinkActiveOptions]="{exact: link.route === '/'}"
+                (click)="onNavLinkClick(link.route)"
                 class="px-2.5 py-0.75 rounded-md text-xs font-bold text-foreground hover:text-primary hover:bg-secondary/70 active:bg-secondary transition-all shrink-0 min-w-fit border border-transparent touch-manipulation">
                 {{ link.name }}
               </a>
@@ -335,7 +338,8 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private themeService: ThemeService,
     private modalService: ModalService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private scrollRestorationService: ScrollRestorationService
   ) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
@@ -472,6 +476,23 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     // 2. User hasn't scrolled all the way to the right
     this.showRightArrow = scrollWidth > clientWidth && !isAtRightEnd;
     this.cdr.detectChanges();
+  }
+
+  onNavLinkClick(route: string) {
+    // Clear any saved scroll position for the target route to ensure it always starts at top
+    this.scrollRestorationService.clearScrollPosition(route);
+    
+    // Scroll to top immediately
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // Also scroll to top after navigation completes
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 100);
   }
 
   onLanguageButtonMouseDown(event: MouseEvent) {

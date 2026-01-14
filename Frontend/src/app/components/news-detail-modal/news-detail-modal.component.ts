@@ -660,31 +660,113 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollPosition}px`;
     document.body.style.width = '100%';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
   }
 
   private restoreBodyScroll() {
-    // Get scroll position from modal service
-    const scrollPosition = this.modalService.getScrollPosition();
+    // Get scroll position from multiple sources BEFORE restoring body styles
+    let scrollPosition = this.modalService.getScrollPosition();
+    const bodyTop = document.body.style.top;
+    
+    // Try to get from sessionStorage as backup
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const storedPos = sessionStorage.getItem('modal_scroll_position');
+        const storedRoute = sessionStorage.getItem('modal_scroll_route');
+        const currentRoute = this.router.url || '/';
+        
+        if (storedPos && storedRoute === currentRoute) {
+          const parsedPos = parseInt(storedPos, 10);
+          if (!isNaN(parsedPos) && parsedPos > 0) {
+            scrollPosition = parsedPos;
+            console.log('[NewsDetailModal] Using scroll position from sessionStorage:', scrollPosition);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[NewsDetailModal] Could not read from sessionStorage:', e);
+    }
+    
+    // Extract scroll position from the negative top value if available
+    let savedScrollPos = scrollPosition;
+    if (bodyTop && bodyTop.startsWith('-')) {
+      const extractedPos = parseInt(bodyTop.replace('-', '').replace('px', ''), 10);
+      if (!isNaN(extractedPos) && extractedPos > 0) {
+        savedScrollPos = extractedPos;
+        console.log('[NewsDetailModal] Extracted scroll position from body.top:', savedScrollPos);
+      }
+    }
+
+    console.log('[NewsDetailModal] Restoring scroll position:', savedScrollPos);
 
     // Restore body scroll when modal is closed
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.top = '';
     document.body.style.width = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
 
-    // Use requestAnimationFrame to ensure DOM updates are complete before scrolling
+    // Use multiple delays to ensure DOM updates are complete before scrolling
+    // First restore immediately
     requestAnimationFrame(() => {
-      // Restore scroll position using scroll restoration service
-      this.scrollRestorationService.restoreScrollPosition();
+      // Restore scroll position using scroll restoration service (for route-based restoration)
+      const currentRoute = this.router.url || '/';
+      this.scrollRestorationService.restoreScrollPosition(currentRoute);
       
-      // Also restore directly as fallback
-      window.scrollTo({
-        top: scrollPosition,
-        behavior: 'auto' // Use 'auto' instead of 'smooth' for instant restoration
-      });
+      // Also restore directly as fallback with the saved position from modal
+      if (savedScrollPos > 0) {
+        console.log('[NewsDetailModal] Restoring to position:', savedScrollPos);
+        window.scrollTo({
+          top: savedScrollPos,
+          left: 0,
+          behavior: 'auto' // Use 'auto' instead of 'smooth' for instant restoration
+        });
+        
+        // Set directly as additional fallback
+        document.documentElement.scrollTop = savedScrollPos;
+        document.body.scrollTop = savedScrollPos;
+      }
 
-      // Reset scroll position after restoring
-      this.modalService.resetScrollPosition();
+      // Additional restore after a short delay to handle any layout shifts
+      setTimeout(() => {
+        if (savedScrollPos > 0) {
+          window.scrollTo({
+            top: savedScrollPos,
+            left: 0,
+            behavior: 'auto'
+          });
+          document.documentElement.scrollTop = savedScrollPos;
+          document.body.scrollTop = savedScrollPos;
+        }
+      }, 50);
+      
+      // Final restore after longer delay
+      setTimeout(() => {
+        if (savedScrollPos > 0) {
+          window.scrollTo({
+            top: savedScrollPos,
+            left: 0,
+            behavior: 'auto'
+          });
+          document.documentElement.scrollTop = savedScrollPos;
+          document.body.scrollTop = savedScrollPos;
+        }
+        
+        // Clear sessionStorage after restoring
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            sessionStorage.removeItem('modal_scroll_position');
+            sessionStorage.removeItem('modal_scroll_route');
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        // Reset scroll position after restoring (but keep it in scroll restoration service)
+        this.modalService.resetScrollPosition();
+      }, 200);
     });
   }
 
@@ -921,27 +1003,67 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
       console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
       
-      // Save current scroll position before navigation using scroll restoration service
-      this.scrollRestorationService.saveScrollPosition();
-      console.log('[NewsDetailModal] Saved scroll position via scroll restoration service');
+      // Get the scroll position from modal service (saved when modal was opened)
+      const scrollPosition = this.modalService.getScrollPosition();
       
-      // Close modal first
+      // Save current scroll position for home route ('/') before navigation
+      // This ensures when user comes back from /news/:id, scroll position is restored
+      this.scrollRestorationService.saveScrollPosition('/');
+      
+      // Clear any saved scroll position for the detail route to ensure it always starts at top
+      const detailRoute = `/news/${newsId}`;
+      this.scrollRestorationService.clearScrollPosition(detailRoute);
+      console.log('[NewsDetailModal] Saved scroll position for home route and cleared detail route');
+      
+      // Close modal first (this will restore body scroll)
       this.close();
       
-      // Use setTimeout to ensure modal closes before navigation
+      // Use setTimeout to ensure modal closes and scroll is restored before navigation
       setTimeout(() => {
-        // Navigate to full article page
+        // Navigate to full article page using Angular router (SPA navigation, no reload)
         this.router.navigate(['/news', newsId]).then(
           (success) => {
             console.log('[NewsDetailModal] Navigation successful:', success);
+            // Force scroll to top multiple times after navigation to ensure detail page always starts at top
+            // This overrides any scroll restoration that might happen
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+            }, 0);
+            
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+            }, 50);
+            
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+            }, 100);
+            
+            setTimeout(() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+            }, 200);
           },
           (error) => {
             console.error('[NewsDetailModal] Navigation error:', error);
-            // Fallback: use window.location if router navigation fails
-            window.location.href = `/news/${newsId}`;
+            // Retry navigation once more before giving up
+            setTimeout(() => {
+              this.router.navigate(['/news', newsId]).catch(err => {
+                console.error('[NewsDetailModal] Retry navigation also failed:', err);
+                // Only use window.location as last resort - this will cause full reload
+                // But it's better than nothing
+                window.location.href = `/news/${newsId}`;
+              });
+            }, 100);
           }
         );
-      }, 100);
+      }, 150);
     } else {
       console.warn('[NewsDetailModal] Cannot navigate: news or news.id is missing', this.news);
     }

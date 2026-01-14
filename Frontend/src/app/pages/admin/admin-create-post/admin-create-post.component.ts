@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -7,6 +7,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { environment } from '../../../../environments/environment';
 import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
+import { Subscription } from 'rxjs';
 
 interface NewsForm {
   title: string;
@@ -47,17 +49,49 @@ interface NewsForm {
                 </a>
                 <h1 class="text-3xl font-bold">Create Post</h1>
               </div>
-              <button
-                (click)="logout()"
-                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                Logout
-              </button>
+              <div class="flex items-center gap-3">
+                <!-- Theme Toggle Button -->
+                <button
+                  (click)="toggleAdminTheme()"
+                  [attr.aria-label]="currentAdminTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'"
+                  [class]="'relative w-12 h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shadow-lg ' + (currentAdminTheme === 'dark' ? 'bg-gradient-to-r from-gray-700 to-gray-900 shadow-gray-700/50' : 'bg-gradient-to-r from-yellow-400 to-orange-500 shadow-yellow-400/50')">
+                  <div
+                    [class]="'absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center ' + (currentAdminTheme === 'dark' ? 'translate-x-[22px]' : '')">
+                    @if (currentAdminTheme === 'dark') {
+                      <svg class="w-3.5 h-3.5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    } @else {
+                      <svg class="w-3.5 h-3.5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    }
+                  </div>
+                  <div class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-semibold text-white pointer-events-none">
+                    <span [class]="'transition-opacity duration-300 ' + (currentAdminTheme === 'light' ? 'opacity-100' : 'opacity-50')">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </span>
+                    <span [class]="'transition-opacity duration-300 ' + (currentAdminTheme === 'dark' ? 'opacity-100' : 'opacity-50')">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    </span>
+                  </div>
+                </button>
+                <button
+                  (click)="logout()"
+                  class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                  Logout
+                </button>
+              </div>
             </div>
 
             <!-- Form and Preview Layout -->
             <div class="grid lg:grid-cols-2 gap-6">
               <!-- Form Section -->
-              <div class="glass-card p-6 rounded-xl">
+              <div class="glass-card p-6 rounded-xl" #formSection>
               <form (ngSubmit)="submitNews()" enctype="multipart/form-data" class="space-y-6">
                 <!-- Title -->
                 <div>
@@ -395,9 +429,9 @@ interface NewsForm {
               </div>
 
               <!-- Preview Section -->
-              <div class="glass-card p-6 rounded-xl">
+              <div class="glass-card p-6 rounded-xl" #previewSection>
                 <h2 class="text-xl font-bold mb-4">Preview</h2>
-                <div class="sticky top-4">
+                <div>
                   <article class="news-card group">
                     <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                       <!-- Image Preview -->
@@ -508,20 +542,37 @@ interface NewsForm {
   styles: [`
     ::ng-deep .ckeditor-custom .ck-editor__editable {
       min-height: 400px;
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      background: white !important;
+      color: black !important;
     }
     ::ng-deep .ckeditor-custom .ck-toolbar {
       background: hsl(var(--secondary));
       border-color: hsl(var(--border));
     }
     ::ng-deep .ckeditor-custom .ck-content {
-      background: hsl(var(--background));
-      color: hsl(var(--foreground));
+      background: white !important;
+      color: black !important;
+    }
+    ::ng-deep .ckeditor-custom .ck-editor__editable p,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h1,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h2,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h3,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h4,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h5,
+    ::ng-deep .ckeditor-custom .ck-editor__editable h6,
+    ::ng-deep .ckeditor-custom .ck-editor__editable li,
+    ::ng-deep .ckeditor-custom .ck-editor__editable span,
+    ::ng-deep .ckeditor-custom .ck-editor__editable div,
+    ::ng-deep .ckeditor-custom .ck-editor__editable strong,
+    ::ng-deep .ckeditor-custom .ck-editor__editable em {
+      color: black !important;
     }
   `]
 })
-export class AdminCreatePostComponent implements OnInit {
+export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('formSection', { static: false }) formSection?: ElementRef;
+  @ViewChild('previewSection', { static: false }) previewSection?: ElementRef;
+  
   isAuthenticated = false;
   authToken = '';
   isSubmitting = false;
@@ -530,6 +581,9 @@ export class AdminCreatePostComponent implements OnInit {
   submitSuccess = '';
   tagsInput = '';
   previewImageUrl: string | null = null;
+  currentAdminTheme: AdminTheme = 'light';
+  private adminThemeSubscription?: Subscription;
+  private isScrolling = false;
 
   newsForm: NewsForm = {
     title: '',
@@ -614,7 +668,12 @@ export class AdminCreatePostComponent implements OnInit {
     { id: 'trophy', name: 'Trophy', path: '<path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.78 4.39 5.13A5.96 5.96 0 009 19c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.84-1.04-3.43-2.56-4.39C16.08 12.78 18 10.55 18 8V7c0-1.1-.9-2-2-2zM7 8V7h2v3.82C7.84 10.4 7 9.3 7 8zm7 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>' }
   ];
 
-  constructor(private http: HttpClient, private router: Router, private sanitizer: DomSanitizer) {
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private sanitizer: DomSanitizer,
+    private adminThemeService: AdminThemeService
+  ) {
     // Check if already authenticated
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -625,7 +684,86 @@ export class AdminCreatePostComponent implements OnInit {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    // Initialize admin theme
+    this.currentAdminTheme = this.adminThemeService.getCurrentTheme();
+    this.adminThemeService.checkAndApplyTheme();
+    
+    // Subscribe to theme changes
+    this.adminThemeSubscription = this.adminThemeService.theme$.subscribe(theme => {
+      this.currentAdminTheme = theme;
+    });
+  }
+
+  ngAfterViewInit() {
+    // Set up scroll synchronization after view initialization
+    setTimeout(() => {
+      if (this.formSection && this.previewSection) {
+        this.setupScrollSync();
+      }
+    }, 100);
+  }
+
+  ngOnDestroy() {
+    this.adminThemeSubscription?.unsubscribe();
+  }
+
+  toggleAdminTheme() {
+    this.adminThemeService.toggleTheme();
+  }
+
+  @HostListener('window:scroll', ['$event'])
+  onWindowScroll() {
+    if (!this.isScrolling && this.formSection && this.previewSection) {
+      this.syncPreviewScroll();
+    }
+  }
+
+  private setupScrollSync() {
+    // Sync preview scroll with form scroll
+    if (this.formSection?.nativeElement && this.previewSection?.nativeElement) {
+      const previewElement = this.previewSection.nativeElement;
+      
+      // Make preview scrollable with max height
+      previewElement.style.maxHeight = 'calc(100vh - 200px)';
+      previewElement.style.overflowY = 'auto';
+      previewElement.style.overflowX = 'hidden';
+    }
+  }
+
+  private syncPreviewScroll() {
+    if (!this.formSection?.nativeElement || !this.previewSection?.nativeElement) {
+      return;
+    }
+
+    const formElement = this.formSection.nativeElement;
+    const previewElement = this.previewSection.nativeElement;
+    
+    // Get scroll position relative to viewport
+    const formRect = formElement.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    
+    // Calculate scroll percentage based on form position
+    const formTop = formRect.top;
+    const formHeight = formRect.height;
+    const scrollableHeight = Math.max(0, formHeight - windowHeight + Math.max(0, formTop));
+    
+    if (scrollableHeight > 0 && formTop < windowHeight) {
+      const scrollPercent = Math.max(0, Math.min(1, (windowHeight - formTop) / (windowHeight + formHeight)));
+      
+      // Sync preview scroll
+      const previewScrollHeight = previewElement.scrollHeight - previewElement.clientHeight;
+      if (previewScrollHeight > 0) {
+        this.isScrolling = true;
+        previewElement.scrollTop = scrollPercent * previewScrollHeight;
+        
+        // Reset flag after a short delay
+        setTimeout(() => {
+          this.isScrolling = false;
+        }, 50);
+      }
+    }
+  }
 
   verifyToken() {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
@@ -864,6 +1002,11 @@ export class AdminCreatePostComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.submitSuccess = response.message || 'News submitted successfully!';
+          // Scroll to top immediately when news is created successfully
+          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+          
           // Reset form
           this.newsForm = {
             title: '',

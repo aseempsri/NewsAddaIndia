@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-news-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, FooterComponent],
+  imports: [CommonModule, HeaderComponent, FooterComponent],
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
@@ -113,14 +113,6 @@ import { Subscription } from 'rxjs';
               </span>
             </div>
 
-            <!-- Back Button -->
-            <button
-              (click)="goBack()"
-              class="absolute top-4 sm:top-6 right-4 sm:right-6 z-10 p-2.5 sm:p-3 rounded-full bg-background/90 hover:bg-background backdrop-blur-sm shadow-lg transition-all hover:scale-110">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
 
           <!-- Article Content -->
@@ -297,11 +289,48 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Scroll to top when component initializes (detail page should start at top)
+    // Always scroll to top when component initializes (detail page should start at top)
+    // Get current route and clear any saved scroll position
+    const currentRoute = this.router.url;
+
+    // Force scroll to top immediately - multiple methods to ensure it works
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-    
+
+    // Additional scroll to top after a short delay to override any restoration
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 0);
+
+    // Force scroll to top after render
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
+
+    // Multiple additional scroll attempts to override any scroll restoration
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 50);
+
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 100);
+
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 200);
+
     this.updateTranslations();
     this.route.params.subscribe(params => {
       const newsId = params['id'];
@@ -333,7 +362,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     this.languageSubscription?.unsubscribe();
   }
 
-  @HostListener('window:scroll', ['$event'])
+  @HostListener('window:scroll')
   onScroll() {
     this.updateReadingProgress();
   }
@@ -370,30 +399,30 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
    */
   private async translateHtmlContent(htmlContent: string): Promise<string> {
     if (!htmlContent) return '';
-    
+
     // Strip HTML to get plain text for translation
     const plainText = this.stripHtml(htmlContent);
     if (!plainText.trim()) return htmlContent;
-    
+
     // Translate the plain text
     const translatedText = await this.languageService.translateToCurrentLanguage(plainText);
-    
+
     // If translation didn't change (already in correct language), return original
     if (translatedText === plainText) {
       return htmlContent;
     }
-    
+
     // Parse HTML and translate text nodes while preserving structure
     const tmp = document.createElement('div');
     tmp.innerHTML = htmlContent;
-    
+
     // Extract all text nodes and translate them
     const walker = document.createTreeWalker(
       tmp,
       NodeFilter.SHOW_TEXT,
       null
     );
-    
+
     const textNodes: Text[] = [];
     let node;
     while (node = walker.nextNode()) {
@@ -401,17 +430,17 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
         textNodes.push(node as Text);
       }
     }
-    
+
     // Split translated text by paragraphs
     const translatedParagraphs = translatedText.split(/\n\n+/).filter(p => p.trim());
-    
+
     // Replace text nodes with translated content
     textNodes.forEach((textNode, index) => {
       if (index < translatedParagraphs.length) {
         textNode.textContent = translatedParagraphs[index].trim();
       }
     });
-    
+
     return tmp.innerHTML || htmlContent;
   }
 
@@ -421,9 +450,9 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
       console.log('[NewsDetailPage] Skipping translation - no news or already translating');
       return;
     }
-    
+
     this.isTranslating = true;
-    
+
     try {
       // Translate title
       if (this.news.title) {
@@ -431,14 +460,14 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
         this.translatedTitle = await this.languageService.translateToCurrentLanguage(this.news.title);
         console.log('[NewsDetailPage] Translated title:', this.translatedTitle.substring(0, 30) + '...');
       }
-      
+
       // Translate excerpt
       if (this.news.excerpt) {
         console.log('[NewsDetailPage] Translating excerpt:', this.news.excerpt.substring(0, 30) + '...');
         this.translatedExcerpt = await this.languageService.translateToCurrentLanguage(this.news.excerpt);
         console.log('[NewsDetailPage] Translated excerpt:', this.translatedExcerpt.substring(0, 30) + '...');
       }
-      
+
       // Translate content (handle HTML properly)
       const contentToTranslate = this.fullContent || this.news.excerpt || '';
       if (contentToTranslate) {
@@ -492,17 +521,17 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   getDisplayContent(): string {
     if (!this.news) return '';
     const lang = this.languageService.getCurrentLanguage();
-    
+
     // If translation is in progress, show loading or original
     if (this.isTranslating && !this.translatedContent) {
       return this.fullContent || this.news.excerpt || '';
     }
-    
+
     // If translation is available, use it
     if (this.translatedContent) {
       return this.translatedContent;
     }
-    
+
     // Otherwise fallback to original based on language
     if (lang === 'en') {
       return (this.news as any).contentEn || (this.news as any).excerptEn || this.fullContent || this.news.excerpt || '';
@@ -516,7 +545,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
 
   loadNews(newsId: string) {
     this.isLoading = true;
-    
+
     // Try to fetch from backend first
     if (newsId.length === 24 || newsId.match(/^[0-9a-fA-F]{24}$/)) {
       // Add cache-busting parameter to ensure fresh data
@@ -536,23 +565,23 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
             }
 
             // Format date the same way as home page
-            const formattedDate = response.data.date 
+            const formattedDate = response.data.date
               ? new Date(response.data.date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })
+              : response.data.createdAt
+                ? new Date(response.data.createdAt).toLocaleDateString('en-IN', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
                 })
-              : response.data.createdAt 
-                ? new Date(response.data.createdAt).toLocaleDateString('en-IN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })
-                : new Date().toLocaleDateString('en-IN', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  });
+                : new Date().toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
 
             // Get images array or fallback to single image
             let imagesArray: string[] = [];
@@ -647,7 +676,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     if (!content) {
       return '';
     }
-    
+
     // Convert line breaks to paragraphs
     return content
       .split('\n\n')
@@ -658,9 +687,23 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    // Navigate back to home page
-    // Scroll position will be restored by index component
-    this.router.navigate(['/']);
+    // Use browser back if available (preserves scroll position better)
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Fallback to router navigation if no history
+      this.router.navigate(['/']).then(() => {
+        // Give the page time to render, then restore scroll position
+        setTimeout(() => {
+          // The scroll restoration service should handle this automatically
+          if (typeof window !== 'undefined') {
+            requestAnimationFrame(() => {
+              // Scroll restoration service will handle this via NavigationEnd event
+            });
+          }
+        }, 100);
+      });
+    }
   }
 
   shareOnWhatsApp() {
@@ -682,17 +725,17 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
    */
   getImagesArray(): string[] {
     if (!this.news) return [];
-    
+
     // First check if images array exists in news object
     if (this.news.images && Array.isArray(this.news.images) && this.news.images.length > 0) {
       return this.news.images.filter(img => img && img.trim().length > 0);
     }
-    
+
     // Check if images array exists in news object (any type)
     if ((this.news as any).images && Array.isArray((this.news as any).images)) {
       return (this.news as any).images.filter((img: any) => img && typeof img === 'string' && img.trim().length > 0);
     }
-    
+
     // Fallback to single image
     return this.news.image ? [this.news.image] : [];
   }
