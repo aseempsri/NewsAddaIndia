@@ -117,9 +117,9 @@ import { Subscription } from 'rxjs';
               </div>
             </div>
 
-            <!-- Read More Button - Under Image -->
+            <!-- Read More Button - Under Image (Hidden on mobile, shown on desktop) -->
             @if (news.id) {
-              <div class="mt-4 lg:mt-6 xl:mt-8">
+              <div class="hidden lg:block mt-4 lg:mt-6 xl:mt-8">
                 <button
                   (click)="navigateToFullArticle(); $event.stopPropagation()"
                   (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
