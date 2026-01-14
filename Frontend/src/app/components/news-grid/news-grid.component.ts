@@ -4,6 +4,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
+import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -264,6 +265,7 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     private newsService: NewsService,
     private modalService: ModalService,
     private languageService: LanguageService,
+    private displayedNewsService: DisplayedNewsService,
     private router: Router
   ) {
     // Subscribe to modal state changes
@@ -369,9 +371,15 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       next: async (news) => {
         // If we got news from backend for home page, use it
         if (news && news.length > 0) {
-          // Remove duplicates by id
+          // Remove duplicates by id and filter out already displayed articles
           const uniqueNews = this.removeDuplicates(news);
-          this.newsItems = uniqueNews.slice(0, 6);
+          const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
+          
+          // Register displayed articles
+          const displayedIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+          this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+          
+          this.newsItems = filteredNews.slice(0, 6);
           
           // Log trending news in news grid
           const trendingNews = this.newsItems.filter(n => n.isTrending);
@@ -394,22 +402,35 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           // Fallback to category-based fetch
           this.newsService.fetchNewsByCategory('National', 6).subscribe({
             next: (categoryNews) => {
-              // Remove duplicates
+              // Remove duplicates and filter out already displayed articles
               const uniqueCategoryNews = this.removeDuplicates(categoryNews);
+              const filteredCategoryNews = this.displayedNewsService.filterDisplayed(uniqueCategoryNews);
+              
               // Ensure we have enough news items
-              if (uniqueCategoryNews.length < 6) {
+              if (filteredCategoryNews.length < 6) {
                 // Fetch more from other categories
                 this.newsService.fetchNewsByCategory('Sports', 2).subscribe({
                   next: (sportsNews) => {
                     const uniqueSportsNews = this.removeDuplicates(sportsNews);
+                    const filteredSportsNews = this.displayedNewsService.filterDisplayed(uniqueSportsNews);
                     // Combine and remove any duplicates
-                    const combined = [...uniqueCategoryNews, ...uniqueSportsNews];
-                    this.newsItems = this.removeDuplicates(combined).slice(0, 6);
+                    const combined = [...filteredCategoryNews, ...filteredSportsNews];
+                    const finalNews = this.removeDuplicates(combined);
+                    
+                    // Register displayed articles
+                    const displayedIds = finalNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                    this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                    
+                    this.newsItems = finalNews.slice(0, 6);
                     this.fetchImagesForAllItemsAndWait();
                   }
                 });
               } else {
-                this.newsItems = uniqueCategoryNews.slice(0, 6);
+                // Register displayed articles
+                const displayedIds = filteredCategoryNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                
+                this.newsItems = filteredCategoryNews.slice(0, 6);
                 this.fetchImagesForAllItemsAndWait();
               }
             },
@@ -426,7 +447,13 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         this.newsService.fetchNewsByCategory('National', 6).subscribe({
           next: async (news) => {
             const uniqueNews = this.removeDuplicates(news);
-            this.newsItems = uniqueNews.slice(0, 6);
+            const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
+            
+            // Register displayed articles
+            const displayedIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+            this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+            
+            this.newsItems = filteredNews.slice(0, 6);
             await this.translateNewsTitles();
             this.fetchImagesForAllItemsAndWait();
           },

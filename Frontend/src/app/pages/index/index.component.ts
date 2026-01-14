@@ -4,6 +4,7 @@ import { HeaderComponent } from '../../components/header/header.component';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { LanguageService, Language } from '../../services/language.service';
 import { ScrollRestorationService } from '../../services/scroll-restoration.service';
+import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { VideoBannerComponent } from '../../components/video-banner/video-banner.component';
@@ -16,6 +17,8 @@ import { FooterComponent } from '../../components/footer/footer.component';
 import { environment } from '../../../environments/environment';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-index',
@@ -124,10 +127,26 @@ export class IndexComponent implements OnInit, OnDestroy {
     private themeService: ThemeService,
     private languageService: LanguageService,
     private scrollRestorationService: ScrollRestorationService,
+    private displayedNewsService: DisplayedNewsService,
+    private router: Router,
     private http: HttpClient
   ) {}
 
   ngOnInit() {
+    // Clear displayed news when entering home page to start fresh
+    this.displayedNewsService.clear();
+    
+    // Subscribe to route changes to clear displayed news when leaving home page
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      const url = event.urlAfterRedirects || event.url;
+      // Clear displayed news when navigating away from home page
+      if (url !== '/' && url !== '/home' && !url.startsWith('/?')) {
+        this.displayedNewsService.clear();
+      }
+    });
+    
     // IMPORTANT: Don't restore scroll position here if we're just initializing
     // Only restore if we're returning from another route
     // The scroll restoration service handles this automatically via NavigationEnd events

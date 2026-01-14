@@ -4,6 +4,7 @@ import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
+import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -264,6 +265,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     private newsService: NewsService,
     private modalService: ModalService,
     private languageService: LanguageService,
+    private displayedNewsService: DisplayedNewsService,
     private router: Router
   ) {
     // Subscribe to modal state changes
@@ -393,11 +395,20 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     categoryConfigs.forEach((config) => {
       this.newsService.fetchNewsByPage(config.slug, 1).subscribe({
         next: async (news) => {
-          // Store only the first (latest) article
-          this.originalNewsItems[config.key] = news && news.length > 0 ? [news[0]] : [];
+          // Filter out already displayed articles
+          const filteredNews = this.displayedNewsService.filterDisplayed(news);
+          
+          // Store only the first (latest) article that hasn't been displayed
+          this.originalNewsItems[config.key] = filteredNews && filteredNews.length > 0 ? [filteredNews[0]] : [];
+          
+          // Register displayed article
+          if (filteredNews && filteredNews.length > 0 && filteredNews[0].id) {
+            this.displayedNewsService.registerDisplayed(filteredNews[0].id);
+          }
+          
           // Translate titles after loading - only process the first (latest) article
-          if (news && news.length > 0) {
-            const latestNews = news[0]; // Get only the first (latest) article
+          if (filteredNews && filteredNews.length > 0) {
+            const latestNews = filteredNews[0]; // Get only the first (latest) article
             let translatedTitle = this.languageService.getDisplayTitle(latestNews.title, latestNews.titleEn);
             try {
               translatedTitle = await this.languageService.translateToCurrentLanguage(latestNews.title);
@@ -420,7 +431,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
             this.categories[config.index].articles = [];
           }
           // Fetch images for articles - only pass the first article
-          this.fetchImagesForCategory(config.index, news.slice(0, 1));
+          this.fetchImagesForCategory(config.index, filteredNews.slice(0, 1));
           
           loadedCount++;
           if (loadedCount === totalCategories) {

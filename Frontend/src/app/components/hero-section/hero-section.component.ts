@@ -5,6 +5,7 @@ import { ButtonComponent } from '../../ui/button/button.component';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
+import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -263,6 +264,7 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     private newsService: NewsService,
     private modalService: ModalService,
     private languageService: LanguageService,
+    private displayedNewsService: DisplayedNewsService,
     private router: Router
   ) {
     // Subscribe to modal state changes
@@ -381,6 +383,11 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         // News is already translated by the service, so use it directly
         this.featuredNews = news;
         
+        // Register this article as displayed to prevent duplicates
+        if (news.id) {
+          this.displayedNewsService.registerDisplayed(news.id);
+        }
+        
         // Log trending news in featured section
         if (news.isTrending) {
           console.log('🔥 HERO SECTION - Featured News is Trending:', {
@@ -434,7 +441,14 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     // Load side news
     this.newsService.fetchSideNews(['Sports', 'Business']).subscribe({
       next: (news) => {
-        this.sideNews = news.map((n, index) => {
+        // Filter out already displayed articles
+        const filteredNews = this.displayedNewsService.filterDisplayed(news);
+        
+        // Register side news articles as displayed
+        const sideNewsIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+        this.displayedNewsService.registerDisplayedMultiple(sideNewsIds);
+        
+        this.sideNews = filteredNews.map((n, index) => {
           const sideNewsItem = {
             category: n.category,
             title: n.title,
