@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -32,11 +32,11 @@ interface Category {
   standalone: true,
   imports: [CommonModule, RouterLink, NewsDetailModalComponent],
   template: `
-    <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
-      <div class="container mx-auto px-4">
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
-          @for (category of categories; track category.title) {
-            <div>
+    <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent overflow-y-hidden">
+      <div class="container mx-auto px-4 overflow-y-hidden">
+        <div class="space-y-12 overflow-y-hidden">
+          @for (category of categories; track category.title; let catIndex = $index) {
+            <div class="overflow-y-hidden">
               <!-- Category Header -->
               <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
@@ -55,133 +55,123 @@ interface Category {
                 </a>
               </div>
 
-              <!-- Articles -->
-              <div class="space-y-4">
-                <!-- Featured Article -->
-                @if (category.articles && category.articles.length > 0) {
-                  <article class="news-card group hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-                    <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300">
-                      <!-- Loading Animation - Show while image is loading -->
-                      @if (category.articles[0]?.imageLoading || !category.articles[0]?.image) {
-                        <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
-                          <div class="flex flex-col items-center gap-2">
-                            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
+              <!-- Horizontal Scrollable Articles Container -->
+              <div class="relative group/category overflow-y-hidden">
+                <!-- Left Arrow - Show only when scrolled right -->
+                <button
+                  (click)="scrollLeft(getCategoryKeyByIndex(catIndex))"
+                  [class.opacity-0]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
+                  [class.pointer-events-none]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
+                  [class.invisible]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
+                  class="scroll-arrow-left absolute left-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
+                  aria-label="Scroll left">
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20"></div>
+                  <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[-2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <!-- Scrollable Articles -->
+                <div 
+                  #scrollContainer
+                  [attr.data-category]="getCategoryKeyByIndex(catIndex)"
+                  class="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-4 pl-2 pr-2 sm:pl-2 sm:pr-2"
+                  style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important;"
+                  (scroll)="onScroll(getCategoryKeyByIndex(catIndex), $event)">
+                  @for (article of category.articles; track $index; let i = $index) {
+                    <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
+                      <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300">
+                        <!-- Loading Animation - Show while image is loading -->
+                        @if (article?.imageLoading || !article?.image) {
+                          <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                            <div class="flex flex-col items-center gap-2">
+                              <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                              <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
+                            </div>
                           </div>
-                        </div>
-                      }
-                      <!-- Image - Only show when loaded -->
-                      @if (category.articles[0]?.image && !category.articles[0]?.imageLoading) {
-                        <img
-                          [src]="category.articles[0].image"
-                          [alt]="category.articles[0].title"
-                          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                      }
-                      @if (category.articles[0]?.hasVideo && category.articles[0]?.image && !category.articles[0]?.imageLoading) {
-                        <div class="absolute inset-0 flex items-center justify-center z-20">
-                          <div class="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform cursor-pointer">
-                            <svg class="w-6 h-6 text-primary-foreground ml-1" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                      }
-                      <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
-                      <!-- Trending/Breaking/Featured Badges -->
-                      @if (category.articles[0] && !isHomePage) {
-                        <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
-                          @if (category.articles[0].isTrending) {
-                            <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                              <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                              </svg>
-                              <span class="text-xs leading-none">🔥</span>
-                              <span>TRENDING</span>
-                              <span class="text-xs leading-none">🔥</span>
-                            </span>
-                          }
-                          @if (category.articles[0].isBreaking) {
-                            <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                              <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                              </svg>
-                              <span>BREAKING</span>
-                            </span>
-                          }
-                          @if (category.articles[0].isFeatured) {
-                            <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                              <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                              </svg>
-                              <span>FEATURED</span>
-                            </span>
-                          }
-                        </div>
-                      }
-                    </div>
-                    <!-- Border Line with Gradient -->
-                    <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
-                    <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col h-full">
-                      <div class="flex items-start justify-between gap-2 flex-grow">
-                        <div class="flex-1">
-                          <div class="flex items-start gap-3 mb-3">
-                            @if (!isHomePage) {
-                              <div class="flex-shrink-0" style="margin-top: 0.76rem; line-height: 1;">
-                                @if (category.title === 'Sports') {
-                                  <svg class="w-6 h-6 text-orange-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(251,146,60,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>
-                                } @else if (category.title === 'Entertainment') {
-                                  <svg class="w-6 h-6 text-pink-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(236,72,153,0.4)); vertical-align: baseline;"><path d="M8 5v14l11-7z"/></svg>
-                                } @else if (category.title === 'National') {
-                                  <svg class="w-6 h-6 text-blue-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(59,130,246,0.4)); vertical-align: baseline;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                } @else if (category.title === 'International') {
-                                  <svg class="w-6 h-6 text-purple-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(168,85,247,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                                } @else if (category.title === 'Politics') {
-                                  <svg class="w-6 h-6 text-red-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(239,68,68,0.4)); vertical-align: baseline;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                } @else if (category.title === 'Health') {
-                                  <svg class="w-6 h-6 text-green-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(34,197,94,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                } @else if (category.title === 'Business') {
-                                  <svg class="w-6 h-6 text-blue-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(59,130,246,0.4)); vertical-align: baseline;"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-                                } @else if (category.title === 'Technology') {
-                                  <svg class="w-6 h-6 text-cyan-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(6,182,212,0.4)); vertical-align: baseline;"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
-                                } @else if (category.title === 'Religious') {
-                                  <svg class="w-6 h-6 text-indigo-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(99,102,241,0.4)); vertical-align: baseline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                } @else {
-                                  <svg class="w-6 h-6 text-purple-500 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor" style="filter: drop-shadow(0 2px 4px rgba(168,85,247,0.4)); vertical-align: baseline;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                }
-                              </div>
+                        }
+                        <!-- Image - Only show when loaded -->
+                        @if (article?.image && !article?.imageLoading) {
+                          <img
+                            [src]="article.image"
+                            [alt]="article.title"
+                            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
+                        }
+                        <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+                        <!-- Trending/Breaking/Featured Badges -->
+                        @if (article && !isHomePage) {
+                          <div class="absolute top-2 left-2 z-20 flex gap-1 flex-wrap">
+                            @if (article.isTrending) {
+                              <span class="inline-flex items-center justify-center gap-1 px-2 py-1 text-[0.5rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.05em;">
+                                <span class="text-[0.5rem] leading-none">🔥</span>
+                                <span>TRENDING</span>
+                              </span>
                             }
-                            <h3 
-                              [class]="'font-display text-lg font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 hover:scale-[1.02] flex-1 ' + (category.articles[0]?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
-                              (click)="openNewsModal(category.title, 0)"
-                              (touchstart)="onTouchStart($event, category.title, 0)"
-                              (touchend)="onTouchEnd($event, category.title, 0)"
-                              (touchmove)="onTouchMove($event)"
-                              style="touch-action: pan-y;">
-                              @if (category.articles[0]?.isTrending && !isHomePage) {
-                                <span class="inline-block mr-2 text-lg leading-none">🔥</span>
-                              }
-                              {{ category.articles[0].title }}
-                            </h3>
+                            @if (article.isBreaking) {
+                              <span class="inline-flex items-center justify-center gap-1 px-2 py-1 text-[0.5rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.05em;">
+                                <span>BREAKING</span>
+                              </span>
+                            }
+                            @if (article.isFeatured) {
+                              <span class="inline-flex items-center justify-center gap-1 px-2 py-1 text-[0.5rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.05em;">
+                                <span>FEATURED</span>
+                              </span>
+                            }
                           </div>
-                          <div class="flex items-center justify-start gap-4 text-xs text-muted-foreground mt-auto">
-                            <span class="flex items-center gap-1.5">
-                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                              <span class="text-left">{{ getArticleAuthor(category.articles[0], category.title, 0) }}</span>
-                            </span>
-                            <span class="flex items-center gap-1.5">
-                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span>{{ category.articles[0].date || category.articles[0].time }}</span>
-                            </span>
+                        }
+                      </div>
+                      <!-- Border Line with Gradient -->
+                      <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
+                      <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col">
+                        <div class="flex items-start justify-between gap-2">
+                          <div class="flex-1 min-w-0">
+                            <h3 
+                              [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
+                              (click)="openNewsModal(getCategoryKeyByIndex(catIndex), i)"
+                              (touchstart)="onTouchStart($event, getCategoryKeyByIndex(catIndex), i)"
+                              (touchend)="onTouchEnd($event, getCategoryKeyByIndex(catIndex), i)"
+                              (touchmove)="onTouchMove($event)"
+                              style="touch-action: pan-y; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto;">
+                              @if (article?.isTrending && !isHomePage) {
+                                <span class="inline-block mr-1 text-sm leading-none">🔥</span>
+                              }
+                              {{ article?.title }}
+                            </h3>
+                            <div class="flex items-center justify-start gap-3 text-[0.65rem] sm:text-xs text-muted-foreground mt-2">
+                              <span class="flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span class="text-left">{{ getArticleAuthor(article, category.title, i) }}</span>
+                              </span>
+                              <span class="flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{{ article?.date || article?.time }}</span>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                }
+                    </article>
+                  }
+                </div>
+
+                <!-- Right Arrow - Hide when scrolled all the way to the right (at the end) -->
+                <button
+                  (click)="scrollRight(getCategoryKeyByIndex(catIndex))"
+                  [class.opacity-0]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
+                  [class.pointer-events-none]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
+                  [class.invisible]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
+                  class="scroll-arrow-right absolute right-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-l from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
+                  aria-label="Scroll right">
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-l from-purple-500/20 to-pink-500/20"></div>
+                  <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
             </div>
           }
@@ -199,9 +189,351 @@ interface Category {
       </app-news-detail-modal>
     }
   `,
-  styles: []
+  styles: [`
+    .scrollbar-hide {
+      -ms-overflow-style: none !important;
+      scrollbar-width: none !important;
+      overflow-y: hidden !important;
+      overflow-x: auto !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar-track {
+      display: none !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar-vertical {
+      display: none !important;
+      width: 0 !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar-horizontal {
+      display: none !important;
+      height: 0 !important;
+    }
+    /* Force hide all scrollbars for all browsers */
+    [data-category] {
+      overflow-y: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    [data-category]::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    [data-category]::-webkit-scrollbar:vertical {
+      display: none !important;
+      width: 0 !important;
+    }
+    [data-category]::-webkit-scrollbar:horizontal {
+      display: none !important;
+      height: 0 !important;
+    }
+    [data-category]::-webkit-scrollbar-track {
+      display: none !important;
+    }
+    [data-category]::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
+    [data-category]::-webkit-scrollbar-corner {
+      display: none !important;
+    }
+    /* Hide scrollbar on hover and focus states */
+    [data-category]:hover::-webkit-scrollbar,
+    [data-category]:focus::-webkit-scrollbar,
+    [data-category]:active::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    [data-category]:hover::-webkit-scrollbar-track,
+    [data-category]:focus::-webkit-scrollbar-track,
+    [data-category]:active::-webkit-scrollbar-track {
+      display: none !important;
+    }
+    [data-category]:hover::-webkit-scrollbar-thumb,
+    [data-category]:focus::-webkit-scrollbar-thumb,
+    [data-category]:active::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
+    /* Hide scrollbar when arrow buttons are hovered - use attribute selector to avoid CSS syntax issues */
+    .relative:hover [data-category]::-webkit-scrollbar,
+    .relative:focus [data-category]::-webkit-scrollbar,
+    .relative:active [data-category]::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    .relative:hover [data-category]::-webkit-scrollbar-track,
+    .relative:focus [data-category]::-webkit-scrollbar-track,
+    .relative:active [data-category]::-webkit-scrollbar-track {
+      display: none !important;
+    }
+    .relative:hover [data-category]::-webkit-scrollbar-thumb,
+    .relative:focus [data-category]::-webkit-scrollbar-thumb,
+    .relative:active [data-category]::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
+    /* Ensure scrollbar-hide class works on hover */
+    .scrollbar-hide:hover::-webkit-scrollbar,
+    .scrollbar-hide:focus::-webkit-scrollbar,
+    .scrollbar-hide:active::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    .scrollbar-hide:hover::-webkit-scrollbar-track,
+    .scrollbar-hide:focus::-webkit-scrollbar-track,
+    .scrollbar-hide:active::-webkit-scrollbar-track {
+      display: none !important;
+    }
+    .scrollbar-hide:hover::-webkit-scrollbar-thumb,
+    .scrollbar-hide:focus::-webkit-scrollbar-thumb,
+    .scrollbar-hide:active::-webkit-scrollbar-thumb {
+      display: none !important;
+    }
+    
+    .news-card {
+      scroll-snap-align: start;
+      height: auto !important;
+      min-height: auto !important;
+    }
+    
+    /* Allow cards to expand dynamically based on content */
+    .news-card > div:last-child {
+      height: auto !important;
+      min-height: auto !important;
+    }
+    
+    /* Ensure headline can expand to show all text */
+    .news-card h3 {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      display: block !important;
+      -webkit-line-clamp: unset !important;
+      -webkit-box-orient: unset !important;
+      line-height: 1.5 !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      hyphens: auto !important;
+    }
+    
+    /* Smooth scroll snap */
+    .scroll-smooth {
+      scroll-snap-type: x mandatory;
+    }
+    
+    /* Default arrow button sizes for desktop/tablet */
+    .scroll-arrow-left,
+    .scroll-arrow-right {
+      width: 36px;
+      height: 36px;
+    }
+    
+    .scroll-arrow-left .arrow-icon,
+    .scroll-arrow-right .arrow-icon {
+      width: 16px;
+      height: 16px;
+    }
+    
+    @media (min-width: 640px) {
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        width: 40px;
+        height: 40px;
+      }
+      .scroll-arrow-left .arrow-icon,
+      .scroll-arrow-right .arrow-icon {
+        width: 20px;
+        height: 20px;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        width: 48px;
+        height: 48px;
+      }
+      .scroll-arrow-left .arrow-icon,
+      .scroll-arrow-right .arrow-icon {
+        width: 24px;
+        height: 24px;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        width: 56px;
+        height: 56px;
+      }
+      .scroll-arrow-left .arrow-icon,
+      .scroll-arrow-right .arrow-icon {
+        width: 28px;
+        height: 28px;
+      }
+    }
+    
+    /* Mobile-specific adjustments */
+    @media (max-width: 640px) {
+      /* Reduce padding on mobile */
+      section {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+      }
+      
+      /* Ensure category headers are properly sized on mobile */
+      h2 {
+        font-size: 1.25rem !important;
+        line-height: 1.5 !important;
+      }
+      
+      /* Better spacing for category sections on mobile */
+      .space-y-12 > div {
+        margin-bottom: 2rem !important;
+      }
+      
+      /* Ensure scrollable container has proper touch scrolling on mobile */
+      [data-category] {
+        -webkit-overflow-scrolling: touch !important;
+        scroll-snap-type: x mandatory !important;
+        overscroll-behavior-x: contain !important;
+      }
+      
+      /* Make circle buttons 50% smaller on mobile (18px -> 9px), but keep arrow icon same size */
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        width: 9px !important;
+        height: 9px !important;
+        min-width: 9px !important;
+        min-height: 9px !important;
+        max-width: 9px !important;
+        max-height: 9px !important;
+      }
+      
+      /* Keep arrow icons at the same size (11px) - don't reduce them */
+      .scroll-arrow-left .arrow-icon,
+      .scroll-arrow-right .arrow-icon {
+        width: 11px !important;
+        height: 11px !important;
+        min-width: 11px !important;
+        min-height: 11px !important;
+        max-width: 11px !important;
+        max-height: 11px !important;
+      }
+      
+      /* Adjust border width for smaller arrows */
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        border-width: 1px !important;
+      }
+      
+      /* Adjust padding and positioning for smaller arrows */
+      .scroll-arrow-left {
+        left: 0.25rem !important;
+      }
+      .scroll-arrow-right {
+        right: 0.25rem !important;
+      }
+      
+      /* Reduce shadow for smaller arrows */
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      /* Adjust inner gradient div for smaller circle */
+      .scroll-arrow-left > div:first-child,
+      .scroll-arrow-right > div:first-child {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      
+      /* Better card spacing on mobile - adjust padding for smaller arrows (9px + 4px margin = 13px) */
+      [data-category] {
+        gap: 1rem !important;
+        padding-left: 0.875rem !important;
+        padding-right: 0.875rem !important;
+      }
+      
+      /* Ensure cards are properly sized on mobile */
+      .news-card {
+        width: 280px !important;
+        min-width: 280px !important;
+        flex-shrink: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+      }
+      
+      /* Allow headline to expand fully on mobile */
+      .news-card h3 {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        display: block !important;
+        -webkit-line-clamp: unset !important;
+        line-height: 1.5 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+      }
+    }
+    
+    /* Tablet adjustments */
+    @media (min-width: 641px) and (max-width: 1024px) {
+      /* Medium-sized arrows for tablet */
+      .relative.group\\/category button {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+      }
+    }
+    
+    /* Ensure proper touch targets on mobile */
+    @media (max-width: 1024px) {
+      button[aria-label*="Scroll"] {
+        min-width: 44px !important;
+        min-height: 44px !important;
+      }
+    }
+    
+    
+    /* Tablet adjustments */
+    @media (min-width: 641px) and (max-width: 1023px) {
+      /* Adjust arrow button size for tablet */
+      .relative button {
+        width: 3rem !important;
+        height: 3rem !important;
+      }
+      
+      /* Ensure proper spacing on tablet */
+      [data-category] {
+        padding-left: 3.5rem !important;
+        padding-right: 3.5rem !important;
+      }
+    }
+    
+    /* Ensure touch scrolling works smoothly on mobile */
+    @media (max-width: 1023px) {
+      [data-category] {
+        -webkit-overflow-scrolling: touch !important;
+        scroll-behavior: smooth !important;
+        overscroll-behavior-x: contain;
+      }
+      
+      /* Prevent pull-to-refresh interference on mobile */
+      [data-category] {
+        overscroll-behavior: contain;
+      }
+    }
+  `]
 })
-export class CategorySectionComponent implements OnInit, OnDestroy {
+export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewInit {
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -260,6 +592,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
   private originalNewsItems: { [key: string]: any[] } = {};
   t: any = {};
   private languageSubscription?: Subscription;
+  scrollStates: { [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } } = {};
 
   constructor(
     private newsService: NewsService,
@@ -279,12 +612,14 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     this.updateTranslations();
     this.updateCategoryTitles();
     this.loadCategoryNews();
+    this.initializeScrollStates();
 
     // Subscribe to language changes
     this.languageSubscription = this.languageService.currentLanguage$.subscribe(async () => {
       this.updateTranslations();
       this.updateCategoryTitles();
       await this.updateArticleTitles();
+      setTimeout(() => this.updateScrollStates(), 100);
     });
 
     // Subscribe to route changes
@@ -293,6 +628,128 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.checkIfHomePage();
     });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.updateScrollStates();
+    }, 500);
+  }
+
+  initializeScrollStates() {
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    categoryKeys.forEach(key => {
+      // Initially assume we can scroll right if there are articles
+      this.scrollStates[key] = { canScrollLeft: false, canScrollRight: true };
+    });
+  }
+
+  getScrollContainer(categoryTitle: string): HTMLElement | null {
+    // Try to find container by translated title first
+    let containers = document.querySelectorAll(`[data-category="${categoryTitle}"]`);
+    if (containers.length === 0) {
+      // If not found, try to find by original category key
+      const categoryKey = this.getCategoryKey(categoryTitle);
+      containers = document.querySelectorAll(`[data-category="${categoryKey}"]`);
+    }
+    return containers.length > 0 ? containers[0] as HTMLElement : null;
+  }
+
+  updateScrollStates() {
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    categoryKeys.forEach(key => {
+      const container = this.getScrollContainer(key);
+      if (container) {
+        const scrollLeft = container.scrollLeft;
+        const scrollWidth = container.scrollWidth;
+        const clientWidth = container.clientWidth;
+        const canScrollLeft = scrollLeft > 5; // Small threshold for better UX
+        const canScrollRight = scrollLeft < (scrollWidth - clientWidth - 5); // Small threshold
+        this.scrollStates[key] = { canScrollLeft, canScrollRight };
+      } else {
+        // If container not found, check if category has articles
+        const category = this.categories.find(c => c.title === key || this.getCategoryKey(c.title) === key);
+        if (category && category.articles && category.articles.length > 3) {
+          // If we have more than 3 articles, assume we can scroll right
+          this.scrollStates[key] = { canScrollLeft: false, canScrollRight: true };
+        }
+      }
+    });
+  }
+
+  getCategoryKey(translatedTitle: string): string {
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    const categoryIndex = this.categories.findIndex(c => c.title === translatedTitle);
+    if (categoryIndex >= 0 && categoryIndex < categoryKeys.length) {
+      return categoryKeys[categoryIndex];
+    }
+    return translatedTitle;
+  }
+
+  getCategoryKeyByIndex(index: number): string {
+    const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    return categoryKeys[index] || '';
+  }
+
+  onScroll(categoryTitle: string, event: Event) {
+    const target = event.target as HTMLElement;
+    const scrollLeft = target.scrollLeft;
+    const scrollWidth = target.scrollWidth;
+    const clientWidth = target.clientWidth;
+    const canScrollLeft = scrollLeft > 5;
+    const canScrollRight = scrollLeft < (scrollWidth - clientWidth - 5);
+    // Use both translated title and original key for state management
+    const categoryKey = this.getCategoryKey(categoryTitle);
+    this.scrollStates[categoryTitle] = { canScrollLeft, canScrollRight };
+    if (categoryKey !== categoryTitle) {
+      this.scrollStates[categoryKey] = { canScrollLeft, canScrollRight };
+    }
+  }
+
+  canScrollLeft(categoryTitle: string): boolean {
+    // Check both translated title and original key
+    const categoryKey = this.getCategoryKey(categoryTitle);
+    return this.scrollStates[categoryTitle]?.canScrollLeft || this.scrollStates[categoryKey]?.canScrollLeft || false;
+  }
+
+  canScrollRight(categoryTitle: string): boolean {
+    // Check both translated title and original key
+    const categoryKey = this.getCategoryKey(categoryTitle);
+    const state = this.scrollStates[categoryTitle] || this.scrollStates[categoryKey];
+    // Default to true if state doesn't exist (for initial load)
+    if (!state) {
+      const category = this.categories.find(c => c.title === categoryTitle || this.getCategoryKey(c.title) === categoryKey);
+      return category && category.articles && category.articles.length > 3;
+    }
+    return state.canScrollRight !== false;
+  }
+
+  scrollLeft(categoryTitle: string) {
+    const container = this.getScrollContainer(categoryTitle);
+    if (container) {
+      // Calculate card width based on viewport
+      const isMobile = window.innerWidth < 640;
+      const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
+      const cardWidth = isMobile ? 280 : (isTablet ? 320 : 360);
+      const gap = isMobile ? 16 : 24; // gap-4 = 16px, gap-6 = 24px
+      const scrollAmount = cardWidth + gap;
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setTimeout(() => this.updateScrollStates(), 300);
+    }
+  }
+
+  scrollRight(categoryTitle: string) {
+    const container = this.getScrollContainer(categoryTitle);
+    if (container) {
+      // Calculate card width based on viewport
+      const isMobile = window.innerWidth < 640;
+      const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
+      const cardWidth = isMobile ? 280 : (isTablet ? 320 : 360);
+      const gap = isMobile ? 16 : 24; // gap-4 = 16px, gap-6 = 24px
+      const scrollAmount = cardWidth + gap;
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setTimeout(() => this.updateScrollStates(), 300);
+    }
   }
 
   checkIfHomePage() {
@@ -347,30 +804,31 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
         if (originalNews && originalNews.length > 0) {
-          // Only process the first (latest) article
-          const latestNews = originalNews[0];
-          let translatedTitle = this.languageService.getDisplayTitle(latestNews.title, latestNews.titleEn);
-          // If titleEn doesn't exist or we need real-time translation, use Google Translate
-          if (!latestNews.titleEn || this.languageService.getCurrentLanguage() === 'hi') {
-            try {
-              translatedTitle = await this.languageService.translateToCurrentLanguage(latestNews.title);
-            } catch (error) {
-              console.warn(`Failed to translate title for ${categoryKey}:`, error);
-              translatedTitle = this.languageService.getDisplayTitle(latestNews.title, latestNews.titleEn);
+          // Process all articles (up to 3)
+          const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
+            let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+            // If titleEn doesn't exist or we need real-time translation, use Google Translate
+            if (!newsItem.titleEn || this.languageService.getCurrentLanguage() === 'hi') {
+              try {
+                translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
+              } catch (error) {
+                console.warn(`Failed to translate title for ${categoryKey}:`, error);
+                translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+              }
             }
-          }
-          const translatedArticle = {
-            title: translatedTitle,
-            image: latestNews.image || '',
-            time: latestNews.time,
-            date: latestNews.date,
-            hasVideo: true,
-            imageLoading: !latestNews.image || latestNews.image.trim() === '',
-            isTrending: latestNews.isTrending || false,
-            isBreaking: latestNews.isBreaking || false,
-            isFeatured: latestNews.isFeatured || false
-          };
-          category.articles = [translatedArticle]; // Only one article
+            return {
+              title: translatedTitle,
+              image: newsItem.image || '',
+              time: newsItem.time,
+              date: newsItem.date,
+              hasVideo: true,
+              imageLoading: !newsItem.image || newsItem.image.trim() === '',
+              isTrending: newsItem.isTrending || false,
+              isBreaking: newsItem.isBreaking || false,
+              isFeatured: newsItem.isFeatured || false
+            };
+          }));
+          category.articles = translatedArticles; // Up to 3 articles
         }
       }
     }
@@ -393,49 +851,61 @@ export class CategorySectionComponent implements OnInit, OnDestroy {
     const totalCategories = categoryConfigs.length;
 
     categoryConfigs.forEach((config) => {
-      this.newsService.fetchNewsByPage(config.slug, 1).subscribe({
+      // Fetch minimum 50 articles for horizontal scrolling
+      // Fetch 70 to account for filtering duplicates (which might remove some articles)
+      const targetCount = 50;
+      const fetchCount = 70;
+      
+      this.newsService.fetchNewsByPage(config.slug, fetchCount).subscribe({
         next: async (news) => {
-          // Filter out already displayed articles
+          // CRITICAL: Filter out already displayed articles (including the 6 Latest Stories items)
+          // This ensures no duplicates between Latest Stories and Category Sections
           const filteredNews = this.displayedNewsService.filterDisplayed(news);
           
-          // Store only the first (latest) article that hasn't been displayed
-          this.originalNewsItems[config.key] = filteredNews && filteredNews.length > 0 ? [filteredNews[0]] : [];
+          // Take minimum 50 articles (or all available if less than 50)
+          const articlesToShow = filteredNews && filteredNews.length > 0 
+            ? filteredNews.slice(0, Math.max(targetCount, filteredNews.length)) 
+            : [];
+          this.originalNewsItems[config.key] = articlesToShow;
           
-          // Register displayed article
-          if (filteredNews && filteredNews.length > 0 && filteredNews[0].id) {
-            this.displayedNewsService.registerDisplayed(filteredNews[0].id);
+          // Register displayed articles
+          if (articlesToShow.length > 0) {
+            const displayedIds = articlesToShow.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+            this.displayedNewsService.registerDisplayedMultiple(displayedIds);
           }
           
-          // Translate titles after loading - only process the first (latest) article
-          if (filteredNews && filteredNews.length > 0) {
-            const latestNews = filteredNews[0]; // Get only the first (latest) article
-            let translatedTitle = this.languageService.getDisplayTitle(latestNews.title, latestNews.titleEn);
-            try {
-              translatedTitle = await this.languageService.translateToCurrentLanguage(latestNews.title);
-            } catch (error) {
-              console.warn(`Failed to translate title for ${config.key}:`, error);
-            }
-            const translatedArticle = {
-              title: translatedTitle,
-              image: latestNews.image || '',
-              time: latestNews.time,
-              date: latestNews.date,
-              hasVideo: true, // First article can have video
-              imageLoading: !latestNews.image || latestNews.image.trim() === '',
-              isTrending: latestNews.isTrending || false,
-              isBreaking: latestNews.isBreaking || false,
-              isFeatured: latestNews.isFeatured || false
-            };
-            this.categories[config.index].articles = [translatedArticle]; // Only one article
+          // Translate titles after loading - process all articles (minimum 50)
+          if (articlesToShow.length > 0) {
+            const translatedArticles = await Promise.all(articlesToShow.map(async (newsItem) => {
+              let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+              try {
+                translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
+              } catch (error) {
+                console.warn(`Failed to translate title for ${config.key}:`, error);
+              }
+              return {
+                title: translatedTitle,
+                image: newsItem.image || '',
+                time: newsItem.time,
+                date: newsItem.date,
+                hasVideo: true,
+                imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                isTrending: newsItem.isTrending || false,
+                isBreaking: newsItem.isBreaking || false,
+                isFeatured: newsItem.isFeatured || false
+              };
+            }));
+            this.categories[config.index].articles = translatedArticles; // Minimum 50 articles
           } else {
             this.categories[config.index].articles = [];
           }
-          // Fetch images for articles - only pass the first article
-          this.fetchImagesForCategory(config.index, filteredNews.slice(0, 1));
+          // Fetch images for all articles
+          this.fetchImagesForCategory(config.index, articlesToShow);
           
           loadedCount++;
           if (loadedCount === totalCategories) {
             this.isLoading = false;
+            setTimeout(() => this.updateScrollStates(), 300);
           }
         },
         error: (error) => {

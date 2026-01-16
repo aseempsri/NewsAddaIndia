@@ -56,7 +56,8 @@ interface SideNews {
                   <img
                     [src]="featuredNews.image"
                     [alt]="featuredNews.title"
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
                 }
                 <!-- Category Badge - Top Left -->
                 @if (!isHomePage) {
@@ -139,7 +140,8 @@ interface SideNews {
                     <img
                       [src]="news.image"
                       [alt]="news.title"
-                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
                   }
                   
                   <!-- Category Badge -->

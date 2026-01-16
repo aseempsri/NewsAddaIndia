@@ -259,18 +259,9 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Serve Angular static assets (JS, CSS) - MUST come before location /
-    # Matches files like: polyfills-abc123.js, main-def456.js, styles-ghi789.css, etc.
-    location ~* ^/(polyfills|main|styles|runtime|vendor|common|favicon|assets).*\.(js|css)$ {
-        root /var/www/html;
-        try_files $uri =404;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        access_log off;
-    }
-
-    # Serve other static assets (images, fonts, etc.)
-    location ~* \.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|webp|avif|mp4|webm)$ {
+    # Serve Angular static assets (JS, CSS, images in assets folder) - MUST come before location /
+    # Matches files like: polyfills-abc123.js, main-def456.js, styles-ghi789.css, assets/...
+    location ~* ^/(polyfills|main|styles|runtime|vendor|common|favicon|assets).*\.(js|css|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)$ {
         root /var/www/html;
         try_files $uri =404;
         expires 1y;

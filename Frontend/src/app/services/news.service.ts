@@ -800,6 +800,64 @@ export class NewsService {
   }
 
   /**
+   * Fetch breaking news (top 3 latest)
+   */
+  fetchBreakingNewsList(limit: number = 3): Observable<NewsArticle[]> {
+    const url = `${this.backendApiUrl}/api/news?breaking=true&limit=${limit}&published=true`;
+    
+    return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
+      timeout(10000), // 10 second timeout for breaking news
+      switchMap(response => {
+        if (response.success && response.data && response.data.length > 0) {
+          // Sort by date (newest first)
+          const sortedNews = response.data.sort((a, b) => {
+            return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
+          });
+
+          const newsArticles: NewsArticle[] = sortedNews.slice(0, limit).map(article => {
+            let imageUrl = article.image || '';
+            if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
+              if (!imageUrl.startsWith('/')) {
+                imageUrl = '/' + imageUrl;
+              }
+              imageUrl = `${this.backendApiUrl}${imageUrl}`;
+            }
+
+            return {
+              id: article._id || article.id,
+              category: article.category,
+              title: article.title,
+              titleEn: article.titleEn || article.title,
+              excerpt: article.excerpt,
+              image: imageUrl,
+              imageLoading: !imageUrl || imageUrl.trim() === '',
+              time: this.getTimeAgo(new Date(article.createdAt || article.date).getTime()),
+              author: article.author || 'News Adda India',
+              date: article.date ? new Date(article.date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }) : new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+              isTrending: article.isTrending || false,
+              isBreaking: article.isBreaking || false,
+              isFeatured: article.isFeatured || false,
+              trendingTitle: article.trendingTitle || undefined
+            } as NewsArticle;
+          });
+
+          // Translate if Hindi is selected
+          return this.translateNewsIfNeeded(newsArticles);
+        }
+        return of([]);
+      }),
+      catchError(error => {
+        console.error('Error fetching breaking news list:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
    * Fetch featured news (top story) - uses cache if available
    */
   fetchFeaturedNews(category: string = 'National'): Observable<NewsArticle> {

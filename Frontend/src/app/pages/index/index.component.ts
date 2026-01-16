@@ -72,18 +72,43 @@ import { filter } from 'rxjs/operators';
       <main>
         <app-hero-section (imagesLoaded)="onHeroImagesLoaded()" />
         
-        <div class="container mx-auto px-4 py-8">
-          <div class="grid lg:grid-cols-3 gap-8 lg:gap-12">
-            <div class="lg:col-span-2">
+        <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8 w-full max-w-full">
+          <div class="grid lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-12 w-full">
+            <div class="lg:col-span-2 w-full min-w-0">
+              <!-- CRITICAL: Latest Stories (6 items) must always come FIRST before Category Sections -->
+              <!-- This ensures Latest Stories items are registered first and won't appear in Category Sections -->
               <app-news-grid (imagesLoaded)="onNewsGridImagesLoaded()" />
+              <!-- Category Sections come AFTER Latest Stories to prevent duplicates -->
               <app-category-section />
             </div>
-            <div class="order-first lg:order-last">
+            <div class="order-first lg:order-last w-full min-w-0">
               <app-sidebar />
             </div>
           </div>
         </div>
       </main>
+
+      <!-- Subscribe Card - Mobile only (shown before footer) -->
+      <div class="lg:hidden container mx-auto px-2 sm:px-4 py-4 w-full max-w-full">
+        <div class="relative overflow-hidden rounded-xl p-3 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 border border-primary/30 stay-informed-mobile">
+          <div class="absolute top-0 right-0 w-20 h-20 bg-primary/20 rounded-full blur-2xl"></div>
+          <div class="relative">
+            <h3 class="font-display text-base font-bold mb-1.5 leading-relaxed pt-0.5 pb-0.5">
+              {{ getStayInformedText() }}
+            </h3>
+            <p class="text-base text-muted-foreground mb-3">
+              {{ getSubscribeDescription() }}
+            </p>
+            <input
+              type="email"
+              [placeholder]="getEnterYourEmail()"
+              class="w-full px-3 py-2.5 rounded-lg bg-background/50 border border-border/50 text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 mb-2" />
+            <button class="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-base font-semibold hover:bg-primary/90 transition-colors glow-primary">
+              {{ getSubscribeNow() }}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <app-footer />
       
@@ -103,7 +128,68 @@ import { filter } from 'rxjs/operators';
       }
     </div>
   `,
-  styles: []
+  styles: [`
+    @media (max-width: 640px) {
+      .container {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+      main {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      main > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+      }
+      main .grid {
+        gap: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      main .grid > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .container {
+        box-sizing: border-box !important;
+      }
+      main > div {
+        box-sizing: border-box !important;
+      }
+      /* Stay Informed widget mobile styles - matching panchang font sizes */
+      .stay-informed-mobile h3 {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      .stay-informed-mobile p {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      .stay-informed-mobile input {
+        font-size: 1rem !important;
+        line-height: 1.4 !important;
+      }
+      .stay-informed-mobile input::placeholder {
+        font-size: 0.9375rem !important;
+      }
+      .stay-informed-mobile button {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+    }
+  `]
 })
 export class IndexComponent implements OnInit, OnDestroy {
   isPageLoading = true;
@@ -269,6 +355,26 @@ export class IndexComponent implements OnInit, OnDestroy {
       return `${formatted}K+ ${readersText}`;
     }
     return `${this.mobileTopBarReaderCount}+ ${readersText}`;
+  }
+
+  getStayInformedText(): string {
+    const t = this.languageService.getTranslations();
+    return t.stayInformed || 'Stay Informed';
+  }
+
+  getSubscribeDescription(): string {
+    const t = this.languageService.getTranslations();
+    return t.subscribeDescription || 'Subscribe to our newsletter for daily news updates delivered to your inbox.';
+  }
+
+  getEnterYourEmail(): string {
+    const t = this.languageService.getTranslations();
+    return t.enterYourEmail || 'Enter your email';
+  }
+
+  getSubscribeNow(): string {
+    const t = this.languageService.getTranslations();
+    return t.subscribeNow || 'Subscribe Now';
   }
 
   fetchReaderCount() {

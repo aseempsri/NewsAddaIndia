@@ -60,12 +60,14 @@ import { filter } from 'rxjs/operators';
 
         <!-- News Grid - Only show when all images are loaded -->
         @if (!isLoading && newsItems.length > 0) {
-          <div [class]="'grid sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 lg:gap-6' : 'gap-6')">
+          <!-- Debug: Show item count (remove in production if needed) -->
+          <!-- <div class="text-xs text-muted-foreground mb-2">Loaded: {{ newsItems.length }} items</div> -->
+          <div [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 sm:gap-4 lg:gap-6' : 'gap-2 sm:gap-5 lg:gap-6')">
             @for (news of newsItems; track news.id; let i = $index) {
             <article
               [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
               [style.animation-delay]="i * 100 + 'ms'">
-            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'flex-[0_0_50%] sm:flex-none sm:aspect-[16/10]' : 'flex-[0_0_40%] sm:flex-none sm:aspect-[16/10]')">
+            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'w-full sm:flex-none sm:aspect-[16/10]' : 'w-full sm:flex-none sm:aspect-[16/10]')">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -80,7 +82,8 @@ import { filter } from 'rxjs/operators';
                   <img
                     [src]="news.image"
                     [alt]="news.title"
-                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in" />
+                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in"
+                    style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
                 }
                 @if (!isHomePage) {
                   <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap">
@@ -120,9 +123,9 @@ import { filter } from 'rxjs/operators';
               <!-- Border Line with Gradient - Hidden on mobile home page -->
               <div [class]="'h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 ' + (isHomePage ? 'hidden lg:block' : '')"></div>
 
-              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-0.5 pt-0.5 pb-0.5 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-5 pt-6 pb-6')">
+              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-2 pt-2 pb-2 sm:p-3 sm:pt-3 sm:pb-3 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-3 pt-3 pb-3 sm:p-4 sm:pt-4 sm:pb-4 lg:p-5 lg:pt-6 lg:pb-6')">
                 <h3 
-                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'mobile-headline lg:text-lg lg:mb-1 lg:flex-grow' : 'text-base sm:text-lg mb-1 sm:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
+                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'mobile-headline text-sm sm:text-base lg:text-lg lg:mb-1 lg:flex-grow' : 'text-sm sm:text-base lg:text-lg mb-1 sm:mb-2 lg:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
                   (click)="openNewsModal(news)"
                   (touchstart)="onTouchStart($event, news)"
                   (touchend)="onTouchEnd($event, news)"
@@ -133,9 +136,9 @@ import { filter } from 'rxjs/operators';
                   }
                   {{ getDisplayTitle(news) }}
                 </h3>
-                <div [class]="'flex items-center justify-between text-xs text-muted-foreground ' + (isHomePage ? 'mt-auto lg:mt-2' : 'mt-2')">
-                  <span class="text-left">{{ news.author || 'News Adda India' }}</span>
-                  <span class="text-right">{{ news.date || news.time }}</span>
+                <div [class]="'flex items-center justify-between text-[0.65rem] sm:text-xs text-muted-foreground ' + (isHomePage ? 'mt-auto lg:mt-2' : 'mt-1.5 sm:mt-2')">
+                  <span class="text-left truncate pr-2">{{ news.author || 'News Adda India' }}</span>
+                  <span class="text-right flex-shrink-0">{{ news.date || news.time }}</span>
                 </div>
               </div>
             </article>
@@ -172,11 +175,103 @@ import { filter } from 'rxjs/operators';
     .news-grid-container {
       position: relative;
     }
-    /* Prevent duplicate rendering on mobile */
+    /* Mobile: Single column layout for Latest Stories */
     @media (max-width: 767px) {
+      :host {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       .grid {
-        display: grid;
-        grid-template-columns: 1fr;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* Ensure proper spacing on mobile */
+      .news-grid-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+      }
+      
+      .news-grid-container .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+      
+      /* Better card spacing on mobile */
+      .news-card {
+        margin-bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+      
+      /* Fix the image container - remove flex constraints */
+      .news-card > div:first-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: none !important;
+        aspect-ratio: 16/10 !important;
+      }
+      
+      /* Ensure cards don't overflow */
+      .news-card > * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* Fix image sizing on mobile */
+      .news-card img {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        object-fit: cover !important;
+      }
+      
+      /* Fix card content padding on mobile */
+      .news-card .bg-gradient-to-br {
+        padding: 0.625rem !important;
+      }
+      
+      /* Ensure text doesn't overflow */
+      .news-card h3 {
+        font-size: 0.8125rem !important;
+        line-height: 1.3 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        hyphens: auto !important;
+        margin-bottom: 0.375rem !important;
+      }
+      
+      .news-card .text-xs {
+        font-size: 0.625rem !important;
+      }
+      
+      /* Remove border width from total width calculation */
+      .news-card .border-2 {
+        border-width: 1px !important;
+      }
+    }
+    
+    /* Tablet: 2 columns for Latest Stories */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
         gap: 1.5rem;
       }
     }
@@ -249,6 +344,9 @@ import { filter } from 'rxjs/operators';
   `]
 })
 export class NewsGridComponent implements OnInit, OnDestroy {
+  // CRITICAL: Latest Stories must always show exactly 6 items - this rule should never change
+  private static readonly LATEST_STORIES_COUNT = 6;
+  
   @Output() imagesLoaded = new EventEmitter<boolean>();
   t: any = {};
   private languageSubscription?: Subscription;
@@ -366,75 +464,211 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     this.newsItems = [];
     this.isLoading = true;
     
-    // Fetch more articles initially to account for filtering (fetch 12 to ensure we get 6 after filtering)
-    this.newsService.fetchNewsByPage('home', 12).subscribe({
-      next: async (news) => {
-        // If we got news from backend for home page, use it
-        if (news && news.length > 0) {
-          // Remove duplicates by id and filter out already displayed articles
-          const uniqueNews = this.removeDuplicates(news);
-          const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
-          
-          // If we don't have 6 articles after filtering, fetch more from categories
-          if (filteredNews.length < 6) {
-            await this.fetchAdditionalNews(filteredNews, 6);
-          } else {
-            // Register displayed articles
-            const displayedIds = filteredNews.slice(0, 6).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
-            this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-            
-            this.newsItems = filteredNews.slice(0, 6);
-            
-            // Log trending news in news grid
-            const trendingNews = this.newsItems.filter(n => n.isTrending);
-            if (trendingNews.length > 0) {
-              console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
-              trendingNews.forEach((item, index) => {
-                console.log(`🔥 News Grid Trending ${index + 1}:`, {
-                  id: item.id,
-                  title: item.title,
-                  trendingTitle: item.trendingTitle || 'N/A',
-                  category: item.category,
-                  displayTitle: this.getDisplayTitle(item)
-                });
-              });
+    // First, fetch breaking news (top 3 latest) and wait for it
+    this.newsService.fetchBreakingNewsList(3).subscribe({
+      next: async (breakingNews) => {
+        console.log('[NewsGrid] Fetched breaking news:', breakingNews.length);
+        
+        // Filter out already displayed breaking news
+        const filteredBreakingNews = this.displayedNewsService.filterDisplayed(breakingNews);
+        
+        // Register breaking news as displayed
+        if (filteredBreakingNews.length > 0) {
+          const breakingIds = filteredBreakingNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+          this.displayedNewsService.registerDisplayedMultiple(breakingIds);
+        }
+        
+        // Now fetch other news to fill remaining slots
+        // CRITICAL: Always ensure exactly LATEST_STORIES_COUNT (6) items are shown
+        const remainingSlots = Math.max(0, NewsGridComponent.LATEST_STORIES_COUNT - filteredBreakingNews.length);
+        
+        if (remainingSlots > 0) {
+          // Fetch more articles initially to account for filtering (fetch 20 to ensure we get enough after filtering)
+          // We need extra because filtering removes duplicates and already-displayed items
+          this.newsService.fetchNewsByPage('home', 20).subscribe({
+            next: async (news) => {
+              // If we got news from backend for home page, use it
+              if (news && news.length > 0) {
+                // Remove duplicates by id and filter out already displayed articles
+                const uniqueHomeNews = this.removeDuplicates(news);
+                const filteredHomeNews = this.displayedNewsService.filterDisplayed(uniqueHomeNews);
+                
+                // Combine breaking news first, then other news
+                const allNews = [...filteredBreakingNews, ...filteredHomeNews];
+                
+                // If we don't have enough articles after filtering, fetch more from categories
+                if (allNews.length < NewsGridComponent.LATEST_STORIES_COUNT) {
+                  await this.fetchAdditionalNews(allNews, NewsGridComponent.LATEST_STORIES_COUNT);
+                } else {
+                  // Register displayed articles - CRITICAL: Always register exactly LATEST_STORIES_COUNT items
+                  const displayedIds = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                  
+                  // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
+                  this.newsItems = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  
+                  // Debug: Verify we have exactly 6 items
+                  console.log('[NewsGrid] Latest Stories items loaded:', this.newsItems.length, 'out of', allNews.length, 'available');
+                  if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
+                    console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
+                  }
+                  
+                  // Log breaking news in news grid
+                  const breakingNewsInGrid = this.newsItems.filter(n => n.isBreaking);
+                  if (breakingNewsInGrid.length > 0) {
+                    console.log('📢 NEWS GRID - Breaking News Found:', breakingNewsInGrid.length);
+                    breakingNewsInGrid.forEach((item, index) => {
+                      console.log(`📢 News Grid Breaking ${index + 1}:`, {
+                        id: item.id,
+                        title: item.title,
+                        category: item.category,
+                        displayTitle: this.getDisplayTitle(item)
+                      });
+                    });
+                  }
+                  
+                  // Log trending news in news grid
+                  const trendingNews = this.newsItems.filter(n => n.isTrending);
+                  if (trendingNews.length > 0) {
+                    console.log('🔥 NEWS GRID - Trending News Found:', trendingNews.length);
+                    trendingNews.forEach((item, index) => {
+                      console.log(`🔥 News Grid Trending ${index + 1}:`, {
+                        id: item.id,
+                        title: item.title,
+                        trendingTitle: item.trendingTitle || 'N/A',
+                        category: item.category,
+                        displayTitle: this.getDisplayTitle(item)
+                      });
+                    });
+                  }
+                  
+                  await this.translateNewsTitles();
+                  this.fetchImagesForAllItemsAndWait();
+                }
+              } else {
+                // Fallback to category-based fetch
+                await this.fetchAdditionalNews(filteredBreakingNews, NewsGridComponent.LATEST_STORIES_COUNT);
+              }
+            },
+            error: (error) => {
+              console.error('Error loading home page news:', error);
+              // Fallback to category-based fetch
+              this.fetchAdditionalNews(filteredBreakingNews, NewsGridComponent.LATEST_STORIES_COUNT);
             }
-            
-            await this.translateNewsTitles();
-            this.fetchImagesForAllItemsAndWait();
-          }
+          });
         } else {
-          // Fallback to category-based fetch
-          await this.fetchAdditionalNews([], 6);
+          // We have enough breaking news, just use it
+          // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
+          this.newsItems = filteredBreakingNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+          
+          // Debug: Verify we have exactly 6 items
+          console.log('[NewsGrid] Latest Stories items loaded (breaking news only):', this.newsItems.length);
+          if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
+            console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
+          }
+          
+          // Log breaking news
+          console.log('📢 NEWS GRID - All Breaking News:', this.newsItems.length);
+          
+          await this.translateNewsTitles();
+          this.fetchImagesForAllItemsAndWait();
         }
       },
       error: (error) => {
-        console.error('Error loading home page news:', error);
-        // Fallback to category-based fetch
-        this.fetchAdditionalNews([], 6);
+        console.error('Error loading breaking news:', error);
+        // Continue with regular news fetch even if breaking news fails
+        this.newsService.fetchNewsByPage('home', 12).subscribe({
+          next: async (news) => {
+            if (news && news.length > 0) {
+              const uniqueErrorNews = this.removeDuplicates(news);
+              const filteredErrorNews = this.displayedNewsService.filterDisplayed(uniqueErrorNews);
+              
+              if (filteredErrorNews.length < NewsGridComponent.LATEST_STORIES_COUNT) {
+                await this.fetchAdditionalNews(filteredErrorNews, NewsGridComponent.LATEST_STORIES_COUNT);
+              } else {
+                // CRITICAL: Always register and show exactly LATEST_STORIES_COUNT (6) items
+                const displayedIds = filteredErrorNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                
+                this.newsItems = filteredErrorNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                
+                // Debug: Verify we have exactly 6 items
+                console.log('[NewsGrid] Latest Stories items loaded (fallback):', this.newsItems.length);
+                if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
+                  console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
+                }
+                
+                await this.translateNewsTitles();
+                this.fetchImagesForAllItemsAndWait();
+              }
+            } else {
+              await this.fetchAdditionalNews([], NewsGridComponent.LATEST_STORIES_COUNT);
+            }
+          },
+          error: (error2) => {
+            console.error('Error loading home page news:', error2);
+            this.fetchAdditionalNews([], NewsGridComponent.LATEST_STORIES_COUNT);
+          }
+        });
       }
     });
   }
 
   /**
    * Fetch additional news from categories to ensure we have enough articles
+   * CRITICAL: This method must always return exactly targetCount items after filtering
    */
   private async fetchAdditionalNews(existingNews: NewsArticle[], targetCount: number): Promise<void> {
-    const categories = ['National', 'Sports', 'Business', 'International', 'Entertainment', 'Health'];
+    const categories = ['National', 'Sports', 'Business', 'International', 'Entertainment', 'Health', 'Politics', 'Technology', 'Religious'];
     let allNews = [...existingNews];
     let categoryIndex = 0;
     
     const fetchNextCategory = (): void => {
-      if (allNews.length >= targetCount || categoryIndex >= categories.length) {
-        // We have enough articles or ran out of categories
-        const finalNews = this.removeDuplicates(allNews);
-        const filteredFinalNews = this.displayedNewsService.filterDisplayed(finalNews);
+      // Check filtered count to ensure we have enough AFTER filtering
+      const uniqueAllNews = this.removeDuplicates(allNews);
+      const filteredAllNews = this.displayedNewsService.filterDisplayed(uniqueAllNews);
+      
+      // Continue fetching if we don't have enough items AFTER filtering, or if we've exhausted categories
+      if (filteredAllNews.length >= targetCount || categoryIndex >= categories.length) {
+        // We have enough articles after filtering, or ran out of categories
+        // Sort: breaking news first, then by date
+        const sortedNews = filteredAllNews.sort((a, b) => {
+          // Breaking news first
+          if (a.isBreaking && !b.isBreaking) return -1;
+          if (!a.isBreaking && b.isBreaking) return 1;
+          // Then by date (newest first)
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          return dateB - dateA;
+        });
         
-        // Register displayed articles
-        const displayedIds = filteredFinalNews.slice(0, targetCount).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+        // Register displayed articles - CRITICAL: Always register exactly targetCount items
+        const itemsToRegister = sortedNews.slice(0, targetCount);
+        const displayedIds = itemsToRegister.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
         this.displayedNewsService.registerDisplayedMultiple(displayedIds);
         
-        this.newsItems = filteredFinalNews.slice(0, targetCount);
+        // CRITICAL: Always show exactly targetCount (6) items - this rule should never change
+        this.newsItems = itemsToRegister;
+        
+        // Debug: Verify we have exactly the target count
+        console.log('[NewsGrid] Latest Stories items loaded (fetchAdditionalNews):', this.newsItems.length, 'target was:', targetCount, 'available after filtering:', sortedNews.length);
+        if (this.newsItems.length !== targetCount) {
+          console.warn('[NewsGrid] WARNING: Expected', targetCount, 'items but got', this.newsItems.length, '- available:', sortedNews.length);
+        }
+        
+        // Log breaking news in news grid
+        const breakingNewsInGrid = this.newsItems.filter(n => n.isBreaking);
+        if (breakingNewsInGrid.length > 0) {
+          console.log('📢 NEWS GRID - Breaking News Found:', breakingNewsInGrid.length);
+          breakingNewsInGrid.forEach((item, index) => {
+            console.log(`📢 News Grid Breaking ${index + 1}:`, {
+              id: item.id,
+              title: item.title,
+              category: item.category,
+              displayTitle: this.getDisplayTitle(item)
+            });
+          });
+        }
         
         // Log trending news in news grid
         const trendingNews = this.newsItems.filter(n => n.isTrending);
@@ -458,8 +692,12 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       }
       
       const category = categories[categoryIndex];
-      const needed = targetCount - allNews.length;
-      const fetchCount = Math.min(needed + 2, 10); // Fetch a few extra to account for filtering
+      // Calculate how many more we need AFTER filtering
+      const uniqueCurrentNews = this.removeDuplicates(allNews);
+      const filteredCurrentNews = this.displayedNewsService.filterDisplayed(uniqueCurrentNews);
+      const needed = Math.max(0, targetCount - filteredCurrentNews.length);
+      // Fetch more than needed to account for filtering (fetch at least 5-10 extra)
+      const fetchCount = Math.max(needed + 5, 10); // Fetch extra to account for filtering and duplicates
       
       this.newsService.fetchNewsByCategory(category, fetchCount).subscribe({
         next: (categoryNews) => {

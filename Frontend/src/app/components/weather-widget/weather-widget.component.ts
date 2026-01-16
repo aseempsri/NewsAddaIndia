@@ -27,55 +27,55 @@ interface WeatherData {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="glass-card rounded-lg p-3 float-animation">
+    <div class="glass-card rounded-lg p-2 sm:p-3 float-animation">
       @if (isLoading) {
-        <div class="flex items-center justify-center py-4">
-          <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div class="flex items-center justify-center py-3 sm:py-4">
+          <div class="w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       } @else if (error) {
         <div class="text-center py-2">
-          <p class="text-xs text-muted-foreground">{{ error }}</p>
+          <p class="text-[0.65rem] sm:text-xs text-muted-foreground">{{ error }}</p>
         </div>
       } @else if (weatherData) {
         <!-- Top Row: Location and Description -->
-        <div class="flex items-center justify-between mb-3">
-          <div>
-            <h3 class="font-display text-base font-semibold text-foreground leading-tight">{{ weatherData.city }}</h3>
-            <p class="text-xs text-muted-foreground">{{ weatherData.country }}</p>
+        <div class="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+          <div class="min-w-0 flex-1">
+            <h3 class="font-display text-base sm:text-base font-semibold text-foreground leading-tight truncate">{{ weatherData.city }}</h3>
+            <p class="text-xs sm:text-xs text-muted-foreground truncate">{{ weatherData.country }}</p>
           </div>
-          <p class="text-sm text-muted-foreground capitalize text-right">{{ weatherData.description }}</p>
+          <p class="text-xs sm:text-sm text-muted-foreground capitalize text-right flex-shrink-0 ml-2">{{ weatherData.description }}</p>
         </div>
 
         <!-- Main Row: Temperature, Icon, and Stats -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2 sm:gap-3">
           <!-- Temperature -->
-          <div class="flex items-end gap-1">
-            <span class="font-display text-4xl font-bold text-foreground leading-none">{{ weatherData.temperature }}</span>
-            <span class="text-xl text-muted-foreground mb-0.5">°C</span>
+          <div class="flex items-end gap-0.5 sm:gap-1 flex-shrink-0">
+            <span class="font-display text-3xl sm:text-3xl lg:text-4xl font-bold text-foreground leading-none">{{ weatherData.temperature }}</span>
+            <span class="text-lg sm:text-lg lg:text-xl text-muted-foreground mb-0.5">°C</span>
           </div>
 
           <!-- Icon and Stats -->
-          <div class="flex items-center gap-3">
-            <div [innerHTML]="getWeatherIcon(weatherData.icon)" class="w-10 h-10 text-accent flex-shrink-0"></div>
+          <div class="flex items-center gap-1 sm:gap-1.5 lg:gap-3 min-w-0 flex-1 justify-end">
+            <div [innerHTML]="getWeatherIcon(weatherData.icon)" class="flex-shrink-0"></div>
             
             <!-- Stats -->
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center gap-1 sm:gap-1.5 lg:gap-3">
+              <div class="flex items-center gap-1 sm:gap-1.5">
+                <svg class="w-4 h-4 sm:w-4 sm:h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                 </svg>
-                <div>
-                  <span class="text-sm font-semibold block leading-tight">{{ weatherData.humidity }}%</span>
-                  <p class="text-xs text-muted-foreground leading-tight">Humidity</p>
+                <div class="min-w-0">
+                  <span class="text-sm sm:text-sm font-semibold block leading-tight">{{ weatherData.humidity }}%</span>
+                  <p class="text-xs sm:text-xs text-muted-foreground leading-tight">Humidity</p>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="flex items-center gap-1 sm:gap-1.5">
+                <svg class="w-4 h-4 sm:w-4 sm:h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <div>
-                  <span class="text-sm font-semibold block leading-tight">{{ weatherData.windSpeed }}</span>
-                  <p class="text-xs text-muted-foreground leading-tight">km/h</p>
+                <div class="min-w-0">
+                  <span class="text-sm sm:text-sm font-semibold block leading-tight">{{ weatherData.windSpeed }}</span>
+                  <p class="text-xs sm:text-xs text-muted-foreground leading-tight">km/h</p>
                 </div>
               </div>
             </div>
@@ -84,7 +84,76 @@ interface WeatherData {
       }
     </div>
   `,
-  styles: []
+  styles: [`
+    @media (max-width: 640px) {
+      :host {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .glass-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 0.75rem !important;
+        margin: 0 !important;
+      }
+      .glass-card * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      /* Force larger fonts for all text elements on mobile - matching panchang */
+      .glass-card p,
+      .glass-card span:not(.text-xl):not(.text-lg):not(.text-3xl):not(.text-4xl) {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      .glass-card .flex {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+      }
+      /* City name (h3) - matching panchang h3 */
+      .glass-card h3 {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Country and description text */
+      .glass-card p.text-xs {
+        font-size: 0.9375rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Temperature - larger for prominence */
+      .glass-card .text-3xl,
+      .glass-card .text-2xl {
+        font-size: 1.75rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Temperature unit (°C) */
+      .glass-card .text-lg {
+        font-size: 1.125rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Stats labels (Humidity, km/h) */
+      .glass-card p.text-xs:last-child {
+        font-size: 0.9375rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Stats values (humidity %, wind speed) */
+      .glass-card span.text-sm {
+        font-size: 1.0625rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Icons */
+      .glass-card svg {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+      }
+    }
+  `]
 })
 export class WeatherWidgetComponent implements OnInit, OnDestroy {
   weatherData: WeatherData | null = null;
@@ -219,10 +288,10 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy {
 
   getWeatherIcon(iconType: string): string {
     const icons: Record<string, string> = {
-      'sun': '<svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>',
-      'cloud': '<svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /></svg>',
-      'rain': '<svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 19v-2m4 2v-4m4 4v-2" /></svg>',
-      'partly-cloudy': '<svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>'
+      'sun': '<svg class="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>',
+      'cloud': '<svg class="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /></svg>',
+      'rain': '<svg class="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 19v-2m4 2v-4m4 4v-2" /></svg>',
+      'partly-cloudy': '<svg class="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>'
     };
     return icons[iconType] || icons['cloud'];
   }

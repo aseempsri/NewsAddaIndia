@@ -151,6 +151,46 @@
     max-width: 100%;
     overflow-x: hidden;
   }
+  
+  /* Mobile-specific container fixes */
+  @media (max-width: 640px) {
+    * {
+      box-sizing: border-box !important;
+    }
+    html, body {
+      width: 100% !important;
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+    .container {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+      max-width: 100% !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    main .container {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+    .glass-card {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+    .news-card {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+    .news-card > div {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+    }
+  }
 
   h1,
   h2,

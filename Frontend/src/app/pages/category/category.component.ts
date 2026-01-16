@@ -75,7 +75,8 @@ import { Subscription } from 'rxjs';
                       <img
                         [src]="news.image"
                         [alt]="news.title"
-                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
                     }
                     <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
                       @if (news.isTrending) {

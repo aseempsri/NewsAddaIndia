@@ -26,66 +26,66 @@ interface Match {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="glass-card rounded-xl p-4 float-animation">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="glass-card rounded-xl p-2 sm:p-3 lg:p-4 float-animation">
+      <div class="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4 gap-2">
+        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <svg class="w-5 h-5 sm:w-5 sm:h-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 class="font-display text-base font-semibold">Live Cricket</h3>
+          <h3 class="font-display text-base sm:text-base font-semibold truncate">Live Cricket</h3>
         </div>
-        <span class="text-xs px-2 py-1 bg-green-500/20 text-green-500 rounded-full font-semibold">LIVE</span>
+        <span class="text-xs sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-500/20 text-green-500 rounded-full font-semibold flex-shrink-0">LIVE</span>
       </div>
 
       @if (isLoading) {
-        <div class="flex items-center justify-center py-6">
-          <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div class="flex items-center justify-center py-4 sm:py-5 lg:py-6">
+          <div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       } @else if (error) {
-        <div class="text-center py-3">
-          <p class="text-sm text-muted-foreground">{{ error }}</p>
-          <p class="text-xs text-muted-foreground mt-1">No live matches at the moment</p>
+        <div class="text-center py-2 sm:py-3">
+          <p class="text-xs sm:text-sm text-muted-foreground">{{ error }}</p>
+          <p class="text-[0.65rem] sm:text-xs text-muted-foreground mt-1">No live matches at the moment</p>
         </div>
       } @else if (liveMatches.length === 0) {
-        <div class="text-center py-4">
-          <svg class="w-8 h-8 mx-auto text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="text-center py-3 sm:py-4">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p class="text-sm text-muted-foreground">No live matches</p>
+          <p class="text-xs sm:text-sm text-muted-foreground">No live matches</p>
         </div>
       } @else {
         <div>
           @for (match of liveMatches.slice(0, 1); track match.id) {
-            <div class="space-y-3">
+            <div class="space-y-2 sm:space-y-2.5 lg:space-y-3">
               <!-- Match Type -->
               <div class="text-center">
-                <span class="text-xs font-semibold text-primary uppercase">{{ match.matchType }}</span>
+                <span class="text-xs sm:text-xs font-semibold text-primary uppercase">{{ match.matchType }}</span>
               </div>
               
               <!-- Teams and Scores -->
-              <div class="space-y-2.5">
+              <div class="space-y-2 sm:space-y-2.5">
                 @for (team of match.teams; track team; let i = $index) {
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-secondary/30 border border-border/50">
-                    <span class="text-sm font-semibold text-foreground">{{ team }}</span>
+                  <div class="flex items-center justify-between p-1.5 sm:p-2 rounded-lg bg-secondary/30 border border-border/50 gap-2">
+                    <span class="text-sm sm:text-sm font-semibold text-foreground truncate min-w-0 flex-1">{{ team }}</span>
                     @if (match.score && match.score[i]) {
-                      <div class="text-right">
-                        <span class="text-base font-bold text-foreground">
+                      <div class="text-right flex-shrink-0">
+                        <span class="text-base sm:text-base font-bold text-foreground">
                           {{ match.score[i].r }}/{{ match.score[i].w }}
                         </span>
-                        <span class="text-xs text-muted-foreground ml-1">({{ match.score[i].o }} ov)</span>
+                        <span class="text-xs sm:text-xs text-muted-foreground ml-1">({{ match.score[i].o }} ov)</span>
                       </div>
                     } @else {
-                      <span class="text-xs text-muted-foreground font-medium">Yet to bat</span>
+                      <span class="text-xs sm:text-xs text-muted-foreground font-medium flex-shrink-0">Yet to bat</span>
                     }
                   </div>
                 }
               </div>
 
               <!-- Status -->
-              <div class="pt-2 border-t border-border/50">
-                <p class="text-sm text-muted-foreground text-center">{{ match.status }}</p>
+              <div class="pt-1.5 sm:pt-2 border-t border-border/50">
+                <p class="text-sm sm:text-sm text-muted-foreground text-center break-words">{{ match.status }}</p>
                 @if (match.venue) {
-                  <p class="text-xs text-muted-foreground text-center mt-1">📍 {{ match.venue }}</p>
+                  <p class="text-xs sm:text-xs text-muted-foreground text-center mt-1 break-words">📍 {{ match.venue }}</p>
                 }
               </div>
             </div>
@@ -94,7 +94,85 @@ interface Match {
       }
     </div>
   `,
-  styles: []
+  styles: [`
+    @media (max-width: 640px) {
+      :host {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+      }
+      .glass-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 0.75rem !important;
+        margin: 0 !important;
+      }
+      .glass-card * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      /* Force larger fonts for all text elements on mobile - matching panchang */
+      .glass-card p,
+      .glass-card span:not(.text-xl):not(.text-lg) {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      .glass-card .flex {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+      }
+      /* Title (h3) - matching panchang h3 */
+      .glass-card h3 {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      /* LIVE badge */
+      .glass-card span.text-xs:first-of-type {
+        font-size: 0.9375rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Match type */
+      .glass-card > div > div > div > div > span.text-xs {
+        font-size: 0.9375rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Team names */
+      .glass-card span.text-sm:first-child {
+        font-size: 1.0625rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Scores */
+      .glass-card span.text-base {
+        font-size: 1.125rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Overs and "Yet to bat" */
+      .glass-card span.text-xs:not(:first-of-type) {
+        font-size: 0.9375rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Status text */
+      .glass-card p.text-sm {
+        font-size: 1rem !important;
+        line-height: 1.3 !important;
+      }
+      /* Venue */
+      .glass-card p.text-xs:last-child {
+        font-size: 0.9375rem !important;
+        line-height: 1.2 !important;
+      }
+      /* Icons */
+      .glass-card svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+    }
+  `]
 })
 export class CricketScoreWidgetComponent implements OnInit, OnDestroy {
   liveMatches: Match[] = [];
