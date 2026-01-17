@@ -507,13 +507,12 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
           return sideNewsItem;
         });
 
-        // Wait for all images to load before showing page
-        // Add timeout to prevent infinite loading
+        // OPTIMIZATION: Reduced timeout from 15s to 8s
         const timeoutPromise = new Promise<void>((resolve) => {
           setTimeout(() => {
             console.warn('Hero section image loading timeout - showing page anyway');
             resolve();
-          }, 15000); // 15 second timeout
+          }, 8000); // 8 second timeout (reduced from 15s)
         });
 
         Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {

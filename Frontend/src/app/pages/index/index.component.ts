@@ -79,10 +79,10 @@ import { filter } from 'rxjs/operators';
               <!-- This ensures Latest Stories items are registered first and won't appear in Category Sections -->
               <app-news-grid (imagesLoaded)="onNewsGridImagesLoaded()" />
               <!-- Category Sections come AFTER Latest Stories to prevent duplicates -->
-              <app-category-section />
+              <app-category-section (dataLoaded)="onCategorySectionLoaded()" />
             </div>
             <div class="order-first lg:order-last w-full min-w-0">
-              <app-sidebar />
+              <app-sidebar (widgetsLoaded)="onWidgetsLoaded()" />
             </div>
           </div>
         </div>
@@ -195,6 +195,8 @@ export class IndexComponent implements OnInit, OnDestroy {
   isPageLoading = true;
   heroImagesLoaded = false;
   newsGridImagesLoaded = false;
+  categorySectionLoaded = false;
+  widgetsLoaded = false;
   showScrollIndicator = false;
   currentTheme: Theme = 'light';
   private themeSubscription?: Subscription;
@@ -272,10 +274,13 @@ export class IndexComponent implements OnInit, OnDestroy {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
     
-    // Maximum wait time of 30 seconds as fallback
+    // OPTIMIZATION: Reduced timeout from 30s to 15s as fallback
     setTimeout(() => {
-      this.isPageLoading = false;
-    }, 30000);
+      if (this.isPageLoading) {
+        console.warn('Page loading timeout - showing page anyway');
+        this.isPageLoading = false;
+      }
+    }, 15000); // Reduced from 30s to 15s
     
     // Check scroll position on init and show indicator after page loads
     setTimeout(() => {
@@ -458,12 +463,22 @@ export class IndexComponent implements OnInit, OnDestroy {
     this.checkIfAllLoaded();
   }
 
+  onCategorySectionLoaded() {
+    this.categorySectionLoaded = true;
+    this.checkIfAllLoaded();
+  }
+
+  onWidgetsLoaded() {
+    this.widgetsLoaded = true;
+    this.checkIfAllLoaded();
+  }
+
   checkIfAllLoaded() {
-    if (this.heroImagesLoaded && this.newsGridImagesLoaded) {
+    if (this.heroImagesLoaded && this.newsGridImagesLoaded && this.categorySectionLoaded && this.widgetsLoaded) {
       // Small delay to ensure smooth transition
       setTimeout(() => {
         this.isPageLoading = false;
-      }, 300);
+      }, 200); // Reduced from 300ms to 200ms for faster display
     }
   }
 }

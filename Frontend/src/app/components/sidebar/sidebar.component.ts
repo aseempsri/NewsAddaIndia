@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LanguageService } from '../../services/language.service';
 import { WeatherWidgetComponent } from '../weather-widget/weather-widget.component';
@@ -14,17 +14,17 @@ import { Subscription } from 'rxjs';
     <aside>
       <!-- Weather Widget -->
       <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-weather-widget />
+        <app-weather-widget (dataLoaded)="onWidgetLoaded('weather')" />
       </div>
 
       <!-- Cricket Score Widget -->
       <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-cricket-score-widget />
+        <app-cricket-score-widget (dataLoaded)="onWidgetLoaded('cricket')" />
       </div>
 
       <!-- Panchang Widget -->
       <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-panchang-widget />
+        <app-panchang-widget (dataLoaded)="onWidgetLoaded('panchang')" />
       </div>
 
       <!-- Subscribe Card - Desktop only (hidden on mobile, shown before footer) -->
@@ -87,8 +87,10 @@ import { Subscription } from 'rxjs';
   `]
 })
 export class SidebarComponent implements OnInit, OnDestroy {
+  @Output() widgetsLoaded = new EventEmitter<boolean>();
   t: any = {};
   private languageSubscription?: Subscription;
+  private loadedWidgets = new Set<string>();
 
   constructor(private languageService: LanguageService) {}
 
@@ -107,6 +109,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   updateTranslations() {
     this.t = this.languageService.getTranslations();
+  }
+
+  onWidgetLoaded(widgetName: string) {
+    this.loadedWidgets.add(widgetName);
+    // Emit when all 3 widgets are loaded
+    if (this.loadedWidgets.size === 3) {
+      this.widgetsLoaded.emit(true);
+    }
   }
 }
 

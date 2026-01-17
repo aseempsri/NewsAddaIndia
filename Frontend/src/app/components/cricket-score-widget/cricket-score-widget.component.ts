@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { catchError } from 'rxjs/operators';
@@ -175,6 +175,7 @@ interface Match {
   `]
 })
 export class CricketScoreWidgetComponent implements OnInit, OnDestroy {
+  @Output() dataLoaded = new EventEmitter<boolean>();
   liveMatches: Match[] = [];
   isLoading = true;
   error: string | null = null;
@@ -215,6 +216,7 @@ export class CricketScoreWidgetComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.loadSampleData();
       this.isLoading = false;
+      this.dataLoaded.emit(true);
     }, 500);
     
     // Uncomment below when API is configured:

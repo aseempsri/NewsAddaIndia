@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { catchError } from 'rxjs/operators';
@@ -156,6 +156,7 @@ interface WeatherData {
   `]
 })
 export class WeatherWidgetComponent implements OnInit, OnDestroy {
+  @Output() dataLoaded = new EventEmitter<boolean>();
   weatherData: WeatherData | null = null;
   isLoading = true;
   error: string | null = null;
@@ -193,6 +194,7 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy {
         console.error('Weather API error:', err);
         this.error = 'Unable to load weather data';
         this.isLoading = false;
+        this.dataLoaded.emit(true);
         return of(null);
       })
     ).subscribe(data => {
@@ -200,6 +202,7 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy {
         this.processWeatherData(data);
       }
       this.isLoading = false;
+      this.dataLoaded.emit(true);
     });
   }
 

@@ -773,13 +773,12 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Wait for all images to load before showing the page
-    // Add timeout to prevent infinite loading
+    // OPTIMIZATION: Reduced timeout from 15s to 8s
     const timeoutPromise = new Promise<void>((resolve) => {
       setTimeout(() => {
         console.warn('Image loading timeout - showing page anyway');
         resolve();
-      }, 15000); // 15 second timeout
+      }, 8000); // 8 second timeout (reduced from 15s)
     });
 
     Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {

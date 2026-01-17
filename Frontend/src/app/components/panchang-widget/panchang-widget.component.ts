@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { catchError } from 'rxjs/operators';
@@ -241,6 +241,7 @@ interface PanchangData {
   `]
 })
 export class PanchangWidgetComponent implements OnInit, OnDestroy {
+  @Output() dataLoaded = new EventEmitter<boolean>();
   panchangData: PanchangData | null = null;
   isLoading = true;
   error: string | null = null;
@@ -298,6 +299,7 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
       if (data && (data.panchang || data.day)) {
         this.processPanchangData(data);
         this.isLoading = false;
+        this.dataLoaded.emit(true);
       } else {
         this.tryAlternativePanchangAPI(dateStr, day, month, year);
       }
@@ -309,6 +311,7 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
     // For now, use enhanced local calculation with more accurate data
     this.calculateEnhancedPanchang(day, month, year);
     this.isLoading = false;
+    this.dataLoaded.emit(true);
   }
 
   processPanchangData(data: any) {

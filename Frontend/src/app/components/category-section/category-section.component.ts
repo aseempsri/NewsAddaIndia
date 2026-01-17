@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -57,13 +57,13 @@ interface Category {
 
               <!-- Horizontal Scrollable Articles Container -->
               <div class="relative group/category overflow-y-hidden">
-                <!-- Left Arrow - Show only when scrolled right -->
+                <!-- Left Arrow - Show only when scrolled right, hidden on mobile -->
                 <button
                   (click)="scrollLeft(getCategoryKeyByIndex(catIndex))"
                   [class.opacity-0]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
                   [class.pointer-events-none]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
                   [class.invisible]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
-                  class="scroll-arrow-left absolute left-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
+                  class="scroll-arrow-left hidden lg:flex absolute left-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
                   aria-label="Scroll left">
                   <div class="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20"></div>
                   <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[-2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,13 +159,13 @@ interface Category {
                   }
                 </div>
 
-                <!-- Right Arrow - Hide when scrolled all the way to the right (at the end) -->
+                <!-- Right Arrow - Hide when scrolled all the way to the right (at the end), hidden on mobile -->
                 <button
                   (click)="scrollRight(getCategoryKeyByIndex(catIndex))"
                   [class.opacity-0]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
                   [class.pointer-events-none]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
                   [class.invisible]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
-                  class="scroll-arrow-right absolute right-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-l from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
+                  class="scroll-arrow-right hidden lg:flex absolute right-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-l from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
                   aria-label="Scroll right">
                   <div class="absolute inset-0 rounded-full bg-gradient-to-l from-purple-500/20 to-pink-500/20"></div>
                   <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,6 +382,17 @@ interface Category {
     }
     
     /* Mobile-specific adjustments */
+    @media (max-width: 1023px) {
+      /* Hide navigation arrows on mobile and tablet */
+      .scroll-arrow-left,
+      .scroll-arrow-right {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    }
+    
     @media (max-width: 640px) {
       /* Reduce padding on mobile */
       section {
@@ -405,62 +416,8 @@ interface Category {
         -webkit-overflow-scrolling: touch !important;
         scroll-snap-type: x mandatory !important;
         overscroll-behavior-x: contain !important;
-      }
-      
-      /* Make circle buttons 50% smaller on mobile (18px -> 9px), but keep arrow icon same size */
-      .scroll-arrow-left,
-      .scroll-arrow-right {
-        width: 9px !important;
-        height: 9px !important;
-        min-width: 9px !important;
-        min-height: 9px !important;
-        max-width: 9px !important;
-        max-height: 9px !important;
-      }
-      
-      /* Keep arrow icons at the same size (11px) - don't reduce them */
-      .scroll-arrow-left .arrow-icon,
-      .scroll-arrow-right .arrow-icon {
-        width: 11px !important;
-        height: 11px !important;
-        min-width: 11px !important;
-        min-height: 11px !important;
-        max-width: 11px !important;
-        max-height: 11px !important;
-      }
-      
-      /* Adjust border width for smaller arrows */
-      .scroll-arrow-left,
-      .scroll-arrow-right {
-        border-width: 1px !important;
-      }
-      
-      /* Adjust padding and positioning for smaller arrows */
-      .scroll-arrow-left {
-        left: 0.25rem !important;
-      }
-      .scroll-arrow-right {
-        right: 0.25rem !important;
-      }
-      
-      /* Reduce shadow for smaller arrows */
-      .scroll-arrow-left,
-      .scroll-arrow-right {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-      }
-      
-      /* Adjust inner gradient div for smaller circle */
-      .scroll-arrow-left > div:first-child,
-      .scroll-arrow-right > div:first-child {
-        width: 100% !important;
-        height: 100% !important;
-      }
-      
-      /* Better card spacing on mobile - adjust padding for smaller arrows (9px + 4px margin = 13px) */
-      [data-category] {
-        gap: 1rem !important;
-        padding-left: 0.875rem !important;
-        padding-right: 0.875rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
       }
       
       /* Ensure cards are properly sized on mobile */
@@ -534,6 +491,7 @@ interface Category {
   `]
 })
 export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewInit {
+  @Output() dataLoaded = new EventEmitter<boolean>();
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -849,6 +807,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
     let loadedCount = 0;
     const totalCategories = categoryConfigs.length;
+    const allImagePromises: Promise<void>[] = [];
 
     categoryConfigs.forEach((config) => {
       // Fetch minimum 50 articles for horizontal scrolling
@@ -874,9 +833,15 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             this.displayedNewsService.registerDisplayedMultiple(displayedIds);
           }
           
-          // Translate titles after loading - process all articles (minimum 50)
-          if (articlesToShow.length > 0) {
-            const translatedArticles = await Promise.all(articlesToShow.map(async (newsItem) => {
+          // OPTIMIZATION: Load only first 20 visible cards per category initially
+          // This dramatically speeds up initial page load
+          const initialVisibleCards = 20;
+          const initialArticles = articlesToShow.slice(0, initialVisibleCards);
+          const remainingArticles = articlesToShow.slice(initialVisibleCards);
+          
+          // Translate titles for initial visible articles only
+          if (initialArticles.length > 0) {
+            const translatedArticles = await Promise.all(initialArticles.map(async (newsItem) => {
               let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
               try {
                 translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
@@ -895,17 +860,62 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                 isFeatured: newsItem.isFeatured || false
               };
             }));
-            this.categories[config.index].articles = translatedArticles; // Minimum 50 articles
+            this.categories[config.index].articles = translatedArticles; // Only 20 articles initially
           } else {
             this.categories[config.index].articles = [];
           }
-          // Fetch images for all articles
-          this.fetchImagesForCategory(config.index, articlesToShow);
+          
+          // Fetch images for initial visible cards only
+          const categoryImagePromises = this.fetchImagesForCategory(config.index, initialArticles, true);
+          categoryImagePromises.forEach(promise => allImagePromises.push(promise));
+          
+          // Lazy load remaining cards in background (don't block page load)
+          if (remainingArticles.length > 0) {
+            setTimeout(() => {
+              // Translate and add remaining articles
+              Promise.all(remainingArticles.map(async (newsItem) => {
+                let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+                try {
+                  translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
+                } catch (error) {
+                  console.warn(`Failed to translate title for ${config.key}:`, error);
+                }
+                return {
+                  title: translatedTitle,
+                  image: newsItem.image || '',
+                  time: newsItem.time,
+                  date: newsItem.date,
+                  hasVideo: true,
+                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                  isTrending: newsItem.isTrending || false,
+                  isBreaking: newsItem.isBreaking || false,
+                  isFeatured: newsItem.isFeatured || false
+                };
+              })).then(translatedRemaining => {
+                // Add remaining articles to the category
+                this.categories[config.index].articles = [...this.categories[config.index].articles, ...translatedRemaining];
+                // Load images for remaining articles
+                this.fetchImagesForCategory(config.index, remainingArticles, true);
+              });
+            }, 1000); // Start loading after 1 second
+          }
           
           loadedCount++;
           if (loadedCount === totalCategories) {
             this.isLoading = false;
-            setTimeout(() => this.updateScrollStates(), 300);
+            // OPTIMIZATION: Reduced timeout from 20s to 10s - only wait for visible cards
+            const timeoutPromise = new Promise<void>((resolve) => {
+              setTimeout(() => {
+                console.warn('Category section image loading timeout - showing page anyway');
+                resolve();
+              }, 10000); // 10 second timeout (reduced from 20s)
+            });
+            
+            Promise.race([Promise.all(allImagePromises), timeoutPromise]).then(() => {
+              setTimeout(() => this.updateScrollStates(), 300);
+              this.dataLoaded.emit(true);
+              console.log('All category section visible images loaded');
+            });
           }
         },
         error: (error) => {
@@ -913,47 +923,89 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           loadedCount++;
           if (loadedCount === totalCategories) {
             this.isLoading = false;
+            // Even on error, emit dataLoaded after a short delay
+            setTimeout(() => {
+              this.dataLoaded.emit(true);
+            }, 1000);
           }
         }
       });
     });
   }
 
-  fetchImagesForCategory(categoryIndex: number, newsItems: any[]) {
+  fetchImagesForCategory(categoryIndex: number, newsItems: any[], updateArticles: boolean = true): Promise<void>[] {
     const category = this.categories[categoryIndex];
-    if (!category || !category.articles || category.articles.length === 0 || !newsItems) {
-      return;
+    const imagePromises: Promise<void>[] = [];
+    
+    if (!category || !category.articles || category.articles.length === 0 || !newsItems || newsItems.length === 0) {
+      return imagePromises;
     }
 
-    category.articles.forEach((article, index) => {
+    // OPTIMIZATION: Only update articles if this is the initial load
+    const articlesToProcess = updateArticles ? category.articles : [];
+    const startIndex = updateArticles ? 0 : category.articles.length;
+
+    newsItems.forEach((newsItem, itemIndex) => {
+      const articleIndex = updateArticles ? itemIndex : startIndex + itemIndex;
+      const article = updateArticles && articleIndex < category.articles.length 
+        ? category.articles[articleIndex] 
+        : null;
+      
+      // If not updating articles, create a temporary article object for image loading
+      if (!article && !updateArticles) {
+        // For lazy loading, we don't need to update the article array
+        // Just load the image to cache it
+        if (newsItem.image && newsItem.image.trim() !== '') {
+          const imagePromise = new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // Don't block on errors
+            img.src = newsItem.image;
+          });
+          imagePromises.push(imagePromise);
+        }
+        return;
+      }
+      
+      if (!article) return;
       // Use image from database or placeholder (no external API calls)
       if (article.imageLoading || !article.image || article.image.trim() === '') {
-        const newsItem = newsItems[index];
         if (newsItem) {
           if (newsItem.image && newsItem.image.trim() !== '') {
             // Use image from database
-            const img = new Image();
-            img.onload = () => {
-              article.image = newsItem.image;
-              article.imageLoading = false;
-            };
-            img.onerror = () => {
-              // If image fails to load, use placeholder
-              article.image = this.newsService.getPlaceholderImage(newsItem.title);
-              article.imageLoading = false;
-            };
-            img.src = newsItem.image;
+            const imagePromise = new Promise<void>((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                article.image = newsItem.image;
+                article.imageLoading = false;
+                resolve();
+              };
+              img.onerror = () => {
+                // If image fails to load, use placeholder
+                article.image = this.newsService.getPlaceholderImage(newsItem.title);
+                article.imageLoading = false;
+                resolve();
+              };
+              img.src = newsItem.image;
+            });
+            imagePromises.push(imagePromise);
           } else {
             // No image in database - use placeholder
-            article.image = this.newsService.getPlaceholderImage(newsItem.title);
-            article.imageLoading = false;
+            const imagePromise = new Promise<void>((resolve) => {
+              article.image = this.newsService.getPlaceholderImage(newsItem.title);
+              article.imageLoading = false;
+              resolve();
+            });
+            imagePromises.push(imagePromise);
           }
-        }
       } else {
         // If image already exists, ensure it's not in loading state
         article.imageLoading = false;
+        imagePromises.push(Promise.resolve());
       }
     });
+    
+    return imagePromises;
   }
 
 
