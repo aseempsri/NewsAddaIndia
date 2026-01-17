@@ -937,24 +937,13 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     const category = this.categories[categoryIndex];
     const imagePromises: Promise<void>[] = [];
     
-    if (!category || !category.articles || category.articles.length === 0 || !newsItems || newsItems.length === 0) {
+    if (!category || !newsItems || newsItems.length === 0) {
       return imagePromises;
     }
 
-    // OPTIMIZATION: Only update articles if this is the initial load
-    const articlesToProcess = updateArticles ? category.articles : [];
-    const startIndex = updateArticles ? 0 : category.articles.length;
-
-    newsItems.forEach((newsItem, itemIndex) => {
-      const articleIndex = updateArticles ? itemIndex : startIndex + itemIndex;
-      const article = updateArticles && articleIndex < category.articles.length 
-        ? category.articles[articleIndex] 
-        : null;
-      
-      // If not updating articles, create a temporary article object for image loading
-      if (!article && !updateArticles) {
-        // For lazy loading, we don't need to update the article array
-        // Just load the image to cache it
+    // OPTIMIZATION: For lazy loading (updateArticles=false), just preload images without updating articles
+    if (!updateArticles) {
+      newsItems.forEach((newsItem) => {
         if (newsItem.image && newsItem.image.trim() !== '') {
           const imagePromise = new Promise<void>((resolve) => {
             const img = new Image();
@@ -964,40 +953,50 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           });
           imagePromises.push(imagePromise);
         }
-        return;
-      }
+      });
+      return imagePromises;
+    }
+
+    // For initial load, update articles array
+    if (!category.articles || category.articles.length === 0) {
+      return imagePromises;
+    }
+
+    category.articles.forEach((article, index) => {
+      if (index >= newsItems.length) return;
       
-      if (!article) return;
+      const newsItem = newsItems[index];
+      if (!newsItem) return;
+
       // Use image from database or placeholder (no external API calls)
       if (article.imageLoading || !article.image || article.image.trim() === '') {
-        if (newsItem) {
-          if (newsItem.image && newsItem.image.trim() !== '') {
-            // Use image from database
-            const imagePromise = new Promise<void>((resolve) => {
-              const img = new Image();
-              img.onload = () => {
-                article.image = newsItem.image;
-                article.imageLoading = false;
-                resolve();
-              };
-              img.onerror = () => {
-                // If image fails to load, use placeholder
-                article.image = this.newsService.getPlaceholderImage(newsItem.title);
-                article.imageLoading = false;
-                resolve();
-              };
-              img.src = newsItem.image;
-            });
-            imagePromises.push(imagePromise);
-          } else {
-            // No image in database - use placeholder
-            const imagePromise = new Promise<void>((resolve) => {
+        if (newsItem.image && newsItem.image.trim() !== '') {
+          // Use image from database
+          const imagePromise = new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              article.image = newsItem.image;
+              article.imageLoading = false;
+              resolve();
+            };
+            img.onerror = () => {
+              // If image fails to load, use placeholder
               article.image = this.newsService.getPlaceholderImage(newsItem.title);
               article.imageLoading = false;
               resolve();
-            });
-            imagePromises.push(imagePromise);
-          }
+            };
+            img.src = newsItem.image;
+          });
+          imagePromises.push(imagePromise);
+        } else {
+          // No image in database - use placeholder
+          const imagePromise = new Promise<void>((resolve) => {
+            article.image = this.newsService.getPlaceholderImage(newsItem.title);
+            article.imageLoading = false;
+            resolve();
+          });
+          imagePromises.push(imagePromise);
+        }
       } else {
         // If image already exists, ensure it's not in loading state
         article.imageLoading = false;
