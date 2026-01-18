@@ -26,14 +26,6 @@ import { filter } from 'rxjs/operators';
             </h2>
             <p class="text-muted-foreground mt-1">{{ t.stayUpdated }}</p>
           </div>
-          <a
-            href="#"
-            class="hidden sm:flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
-            {{ t.viewAll }}
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </a>
         </div>
 
         <!-- Loading State - Show while fetching news and images -->
@@ -157,18 +149,6 @@ import { filter } from 'rxjs/operators';
             (closeModal)="closeModal()">
           </app-news-detail-modal>
         }
-
-        <!-- Mobile View All -->
-        <div class="sm:hidden mt-8 text-center">
-          <a
-            href="#"
-            class="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
-            {{ t.viewAllStories }}
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </a>
-        </div>
       </div>
     </section>
   `,
@@ -746,12 +726,22 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       if (item.image && item.image.trim() !== '' && !item.imageLoading) {
         const imagePromise = new Promise<void>((resolve) => {
           const img = new Image();
+          // Set timeout for individual image (3 seconds per image)
+          const imageTimeout = setTimeout(() => {
+            console.warn(`Image timeout for "${item.title}", using placeholder...`);
+            item.image = this.newsService.getPlaceholderImage(item.title);
+            item.imageLoading = false;
+            resolve();
+          }, 3000);
+          
           img.onload = () => {
+            clearTimeout(imageTimeout);
             // Image loaded successfully
             item.imageLoading = false;
             resolve();
           };
           img.onerror = () => {
+            clearTimeout(imageTimeout);
             // Image failed to load - use placeholder (no external API calls)
             console.warn(`Image failed to load for "${item.title}", using placeholder...`);
             item.image = this.newsService.getPlaceholderImage(item.title);
@@ -762,7 +752,7 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         });
         imagePromises.push(imagePromise);
       } else if (item.imageLoading || !item.image || item.image.trim() === '') {
-        // No image in database - use placeholder (no external API calls)
+        // No image in database - use placeholder immediately (no external API calls)
         const imagePromise = new Promise<void>((resolve) => {
           item.image = this.newsService.getPlaceholderImage(item.title);
           item.imageLoading = false;
@@ -775,12 +765,19 @@ export class NewsGridComponent implements OnInit, OnDestroy {
       }
     });
 
-    // OPTIMIZATION: Reduced timeout from 15s to 8s
+    // OPTIMIZATION: Reduced timeout from 8s to 5s - show content faster
     const timeoutPromise = new Promise<void>((resolve) => {
       setTimeout(() => {
         console.warn('Image loading timeout - showing page anyway');
+        // Mark all remaining items as loaded
+        this.newsItems.forEach(item => {
+          if (item.imageLoading || !item.image || item.image.trim() === '') {
+            item.image = this.newsService.getPlaceholderImage(item.title);
+          }
+          item.imageLoading = false;
+        });
         resolve();
-      }, 8000); // 8 second timeout (reduced from 15s)
+      }, 5000); // 5 second timeout (reduced from 8s)
     });
 
     Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
