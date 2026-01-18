@@ -8,7 +8,8 @@
         "dev": "nodemon server.js",
         "import:wordpress": "node scripts/importWordPressToMongoDB.js",
         "import:multiple": "node scripts/importMultipleWordPressXML.js",
-        "clear:news": "node scripts/clearAllNews.js"
+        "clear:news": "node scripts/clearAllNews.js",
+        "count:articles": "node scripts/countUniqueArticles.js"
     },
     "keywords": [],
     "author": "",
