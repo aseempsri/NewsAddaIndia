@@ -1,7 +1,6 @@
 import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstagramService } from '../../services/instagram.service';
-import { YouTubeService } from '../../services/youtube.service';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
 
@@ -407,7 +406,6 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
 
   constructor(
     private instagramService: InstagramService,
-    private youtubeService: YouTubeService,
     private themeService: ThemeService,
     private cdr: ChangeDetectorRef
   ) { }
@@ -435,19 +433,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
       }
     );
 
-    // Fetch the latest YouTube video URL
-    this.youtubeService.getLatestVideoUrl().subscribe(
-      (latestVideoUrl) => {
-        if (latestVideoUrl) {
-          this.youtubeLatestVideoUrl = latestVideoUrl;
-          console.log('Latest YouTube video URL:', latestVideoUrl);
-        } else {
-          // Fallback to channel URL if we can't fetch latest video
-          this.youtubeLatestVideoUrl = this.youtubeUrl;
-          console.log('Using channel URL as fallback:', this.youtubeUrl);
-        }
-      }
-    );
+    // Use channel URL directly (YouTube service removed)
+    this.youtubeLatestVideoUrl = this.youtubeUrl;
   }
 
   ngOnDestroy() {
