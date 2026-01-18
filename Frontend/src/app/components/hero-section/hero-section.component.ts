@@ -59,7 +59,7 @@ interface SideNews {
                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     loading="eager"
                     decoding="async"
-                    style="filter: none !important; -webkit-filter: none !important; image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; image-rendering: high-quality !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
+                    style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
                 }
                 <!-- Category Badge - Top Left -->
                 @if (!isHomePage) {
@@ -145,7 +145,7 @@ interface SideNews {
                       class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
                       decoding="async"
-                      style="filter: none !important; -webkit-filter: none !important; image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; image-rendering: high-quality !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
+                      style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
                   }
                   
                   <!-- Category Badge -->
