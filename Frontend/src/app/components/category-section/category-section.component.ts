@@ -76,7 +76,7 @@ interface Category {
                   #scrollContainer
                   [attr.data-category]="getCategoryKeyByIndex(catIndex)"
                   class="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-4 pl-2 pr-2 sm:pl-2 sm:pr-2"
-                  style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important;"
+                  style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important; touch-action: pan-x pan-y; overscroll-behavior-x: contain; overscroll-behavior-y: auto;"
                   (scroll)="onScroll(getCategoryKeyByIndex(catIndex), $event)">
                   @for (article of category.articles; track $index; let i = $index) {
                     <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
@@ -133,7 +133,7 @@ interface Category {
                               (touchstart)="onTouchStart($event, getCategoryKeyByIndex(catIndex), i)"
                               (touchend)="onTouchEnd($event, getCategoryKeyByIndex(catIndex), i)"
                               (touchmove)="onTouchMove($event)"
-                              style="touch-action: pan-y; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto;">
+                              style="touch-action: pan-x pan-y !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none;">
                               @if (article?.isTrending && !isHomePage) {
                                 <span class="inline-block mr-1 text-sm leading-none">🔥</span>
                               }
@@ -428,6 +428,10 @@ interface Category {
         flex-shrink: 0 !important;
         height: auto !important;
         min-height: auto !important;
+        /* CRITICAL: Allow vertical page scrolling when touching anywhere on the card */
+        touch-action: pan-x pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
+        pointer-events: auto !important;
       }
       
       /* Allow headline to expand fully on mobile */
@@ -440,6 +444,14 @@ interface Category {
         line-height: 1.5 !important;
         word-wrap: break-word !important;
         overflow-wrap: break-word !important;
+        /* CRITICAL: Allow both horizontal and vertical scrolling on mobile */
+        touch-action: pan-x pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      
+      /* Ensure all card content allows vertical scrolling */
+      .news-card > * {
+        touch-action: pan-x pan-y !important;
       }
     }
     
@@ -481,12 +493,10 @@ interface Category {
       [data-category] {
         -webkit-overflow-scrolling: touch !important;
         scroll-behavior: smooth !important;
-        overscroll-behavior-x: contain;
-      }
-      
-      /* Prevent pull-to-refresh interference on mobile */
-      [data-category] {
-        overscroll-behavior: contain;
+        /* CRITICAL: Allow vertical scrolling to pass through to page, but contain horizontal scrolling */
+        overscroll-behavior-x: contain !important;
+        overscroll-behavior-y: auto !important;
+        touch-action: pan-x pan-y !important;
       }
     }
   `]
@@ -1090,22 +1100,33 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   private touchTarget: { categoryTitle: string; articleIndex: number } | null = null;
 
   onTouchStart(event: TouchEvent, categoryTitle: string, articleIndex: number) {
+    // Don't prevent default - allow scrolling to work naturally
     this.touchStartTime = Date.now();
     this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
     this.touchMoved = false;
     this.touchTarget = { categoryTitle, articleIndex };
+    // Don't prevent default - allow scrolling
   }
 
   onTouchMove(event: TouchEvent) {
+    // Don't prevent default - allow scrolling to work naturally
     if (this.touchStartTime > 0) {
       const deltaX = Math.abs(event.touches[0].clientX - this.touchStartX);
       const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
-      // If touch moved more than 10px, consider it a scroll
-      if (deltaX > 10 || deltaY > 10) {
+      // If touch moved more than 10px in any direction, consider it a scroll
+      // Allow both horizontal and vertical scrolling
+      // If vertical movement is greater, it's a page scroll - mark as moved immediately
+      if (deltaY > 10 || deltaX > 10) {
         this.touchMoved = true;
+        // If primarily vertical scroll (page scroll), don't interfere at all
+        if (deltaY > deltaX) {
+          // This is a vertical page scroll - allow it completely
+          return;
+        }
       }
     }
+    // Never prevent default - always allow scrolling
   }
 
   onTouchEnd(event: TouchEvent, categoryTitle: string, articleIndex: number) {
@@ -1113,16 +1134,19 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
     const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
     
-    // Only open modal if:
-    // 1. Touch didn't move much (not a scroll) - less than 10px
+    // Only open modal if it was a tap (not a scroll):
+    // 1. Touch didn't move much (not a scroll) - less than 10px in both directions
     // 2. Touch was quick (less than 300ms) - deliberate tap
     // 3. Touch target matches
+    // 4. Only prevent default if it's actually a tap
     if (!this.touchMoved && deltaX < 10 && deltaY < 10 && touchDuration < 300 && 
         this.touchTarget && this.touchTarget.categoryTitle === categoryTitle && this.touchTarget.articleIndex === articleIndex) {
+      // Only prevent default for actual taps, not scrolls
       event.preventDefault();
       event.stopPropagation();
       this.openNewsModal(categoryTitle, articleIndex);
     }
+    // If it was a scroll, don't prevent default - allow normal scroll behavior
     
     // Reset touch state
     this.touchStartTime = 0;

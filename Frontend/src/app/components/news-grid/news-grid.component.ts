@@ -124,7 +124,7 @@ import { filter } from 'rxjs/operators';
                   (touchstart)="onTouchStart($event, news)"
                   (touchend)="onTouchEnd($event, news)"
                   (touchmove)="onTouchMove($event)"
-                  style="touch-action: pan-y;">
+                  style="touch-action: pan-y !important; -webkit-touch-callout: none; -webkit-overflow-scrolling: touch; -webkit-user-select: none; user-select: none;">
                   @if (news.isTrending && !isHomePage) {
                     <span class="inline-block mr-2 text-lg leading-none">🔥</span>
                   }
@@ -238,6 +238,9 @@ import { filter } from 'rxjs/operators';
         overflow-wrap: break-word !important;
         hyphens: auto !important;
         margin-bottom: 0.375rem !important;
+        /* CRITICAL: Allow vertical scrolling on mobile - don't interfere with page scroll */
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
       }
       
       .news-card .text-xs {
@@ -1218,22 +1221,33 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   private touchTargetNews: NewsArticle | null = null;
 
   onTouchStart(event: TouchEvent, news: NewsArticle) {
+    // Don't prevent default - allow scrolling to work naturally
     this.touchStartTime = Date.now();
     this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
     this.touchMoved = false;
     this.touchTargetNews = news;
+    // Don't prevent default - allow scrolling
   }
 
   onTouchMove(event: TouchEvent) {
+    // Don't prevent default - allow scrolling to work naturally
     if (this.touchStartTime > 0) {
       const deltaX = Math.abs(event.touches[0].clientX - this.touchStartX);
       const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
-      // If touch moved more than 10px, consider it a scroll
-      if (deltaX > 10 || deltaY > 10) {
+      // If touch moved more than 10px in any direction, consider it a scroll
+      // Allow vertical scrolling for page scroll
+      // If vertical movement detected, mark as moved immediately and allow scroll
+      if (deltaY > 10 || deltaX > 10) {
         this.touchMoved = true;
+        // If primarily vertical scroll (page scroll), don't interfere at all
+        if (deltaY > deltaX) {
+          // This is a vertical page scroll - allow it completely
+          return;
+        }
       }
     }
+    // Never prevent default - always allow scrolling
   }
 
   onTouchEnd(event: TouchEvent, news: NewsArticle) {
@@ -1241,15 +1255,18 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
     const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
 
-    // Only open modal if:
-    // 1. Touch didn't move much (not a scroll) - less than 10px
+    // Only open modal if it was a tap (not a scroll):
+    // 1. Touch didn't move much (not a scroll) - less than 10px in both directions
     // 2. Touch was quick (less than 300ms) - deliberate tap
     // 3. Touch target matches
+    // 4. Only prevent default if it's actually a tap
     if (!this.touchMoved && deltaX < 10 && deltaY < 10 && touchDuration < 300 && this.touchTargetNews === news) {
+      // Only prevent default for actual taps, not scrolls
       event.preventDefault();
       event.stopPropagation();
       this.openNewsModal(news);
     }
+    // If it was a scroll, don't prevent default - allow normal scroll behavior
 
     // Reset touch state
     this.touchStartTime = 0;
