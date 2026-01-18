@@ -37,12 +37,20 @@ export class DisplayedNewsService {
    * Register multiple articles as displayed
    */
   registerDisplayedMultiple(articleIds: (string | number)[]): void {
+    const addedIds: string[] = [];
     articleIds.forEach(id => {
       if (id) {
         const normalizedId = this.normalizeId(id);
-        this.displayedIds.add(normalizedId);
+        if (!this.displayedIds.has(normalizedId)) {
+          this.displayedIds.add(normalizedId);
+          addedIds.push(normalizedId);
+        }
       }
     });
+    if (addedIds.length > 0) {
+      console.log(`[DisplayedNewsService] Registered ${addedIds.length} new IDs (total: ${this.displayedIds.size})`);
+      console.log(`[DisplayedNewsService] New IDs:`, addedIds.slice(0, 10), addedIds.length > 10 ? '...' : '');
+    }
     this.displayedIdsSubject.next(new Set(this.displayedIds));
   }
 
@@ -58,10 +66,20 @@ export class DisplayedNewsService {
    * Filter out already displayed articles from an array
    */
   filterDisplayed<T extends { id?: string | number }>(articles: T[]): T[] {
-    return articles.filter(article => {
+    const filtered = articles.filter(article => {
       if (!article.id) return true; // Include articles without IDs
-      return !this.isDisplayed(article.id);
+      const normalizedId = this.normalizeId(article.id);
+      const isDisplayed = this.displayedIds.has(normalizedId);
+      if (isDisplayed) {
+        console.log(`[DisplayedNewsService] Filtering out duplicate article: ${normalizedId}`);
+      }
+      return !isDisplayed;
     });
+    const filteredCount = articles.length - filtered.length;
+    if (filteredCount > 0) {
+      console.log(`[DisplayedNewsService] Filtered out ${filteredCount} duplicate articles (${filtered.length} remaining)`);
+    }
+    return filtered;
   }
 
   /**

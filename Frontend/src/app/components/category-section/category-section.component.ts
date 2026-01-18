@@ -571,18 +571,27 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     this.updateTranslations();
     this.updateCategoryTitles();
     
-    // CRITICAL: Wait a bit for NewsGrid to register its items first
+    // CRITICAL: Wait longer for NewsGrid to register its items first
+    // Increased delay to ensure NewsGridComponent finishes registering all IDs
     // Then load category news to ensure proper duplicate filtering
     setTimeout(() => {
       this.loadCategoryNews();
-    }, 100);
+    }, 500); // Increased from 100ms to 500ms to give NewsGridComponent more time
     
     this.initializeScrollStates();
 
     // Subscribe to displayed IDs changes - re-filter when NewsGrid registers new items
+    // Use debounce to avoid excessive re-filtering
+    let reFilterTimeout: any;
     this.displayedNewsService.displayedIds$.subscribe(() => {
-      // Re-filter all categories when displayed IDs change
-      this.reFilterAllCategories();
+      // Debounce re-filtering to avoid excessive calls
+      if (reFilterTimeout) {
+        clearTimeout(reFilterTimeout);
+      }
+      reFilterTimeout = setTimeout(() => {
+        // Re-filter all categories when displayed IDs change
+        this.reFilterAllCategories();
+      }, 200); // Wait 200ms after IDs change to ensure all registrations are complete
     });
 
     // Subscribe to language changes
@@ -847,22 +856,42 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           
           console.log(`[CategorySection] ${config.key}: Fetched ${news.length} articles, ${newsWithIds.filter(n => n.id).length} have IDs`);
           console.log(`[CategorySection] ${config.key}: Article IDs:`, newsWithIds.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
-          console.log(`[CategorySection] ${config.key}: Displayed IDs before filtering:`, Array.from(this.displayedNewsService.getDisplayedIds()));
+          
+          // CRITICAL: Wait a bit more to ensure NewsGridComponent has finished registering all IDs
+          // This prevents race conditions where CategorySection checks displayedIds before NewsGrid finishes
+          await new Promise(resolve => setTimeout(resolve, 300)); // Wait 300ms before filtering
+          
+          const displayedIdsBeforeFilter = this.displayedNewsService.getDisplayedIds(); // This returns a Set<string>
+          const displayedIdsArray = Array.from(displayedIdsBeforeFilter);
+          console.log(`[CategorySection] ${config.key}: Displayed IDs before filtering:`, displayedIdsArray.length, 'IDs');
+          console.log(`[CategorySection] ${config.key}: Displayed IDs list:`, displayedIdsArray.slice(0, 20), '...');
           
           // CRITICAL: Filter out already displayed articles (including the 6 Latest Stories items)
           // This ensures no duplicates between Latest Stories and Category Sections
           const filteredNews = this.displayedNewsService.filterDisplayed(newsWithIds);
           
-          console.log(`[CategorySection] ${config.key}: After filtering displayed: ${filteredNews.length} articles remaining`);
+          console.log(`[CategorySection] ${config.key}: After filtering displayed: ${filteredNews.length} articles remaining (out of ${newsWithIds.length})`);
           const filteredOutCount = newsWithIds.length - filteredNews.length;
           if (filteredOutCount > 0) {
-            console.log(`[CategorySection] ${config.key}: Filtered out ${filteredOutCount} duplicate articles`);
+            console.log(`[CategorySection] ${config.key}: ✅ Filtered out ${filteredOutCount} duplicate articles`);
             const filteredOutIds = newsWithIds
               .filter(n => !filteredNews.find(f => f.id === n.id))
               .map(n => ({ id: n.id, title: n.title?.substring(0, 30) }));
             console.log(`[CategorySection] ${config.key}: Filtered out IDs:`, filteredOutIds);
           } else {
             console.warn(`[CategorySection] ${config.key}: ⚠️ NO ARTICLES FILTERED OUT - Possible duplicate issue!`);
+            console.warn(`[CategorySection] ${config.key}: Checking if any article IDs match displayed IDs...`);
+            // Debug: Check if any IDs actually match
+            const matchingIds = newsWithIds.filter(n => {
+              if (!n.id) return false;
+              const normalizedId = typeof n.id === 'string' ? n.id : n.id.toString();
+              return displayedIdsBeforeFilter.has(normalizedId); // Now using Set.has() correctly
+            });
+            if (matchingIds.length > 0) {
+              console.warn(`[CategorySection] ${config.key}: Found ${matchingIds.length} matching IDs that should have been filtered:`, matchingIds.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+            } else {
+              console.log(`[CategorySection] ${config.key}: No matching IDs found - articles are unique`);
+            }
           }
           
           // Take minimum 50 articles (or all available if less than 50)
@@ -871,9 +900,10 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             : [];
           this.originalNewsItems[config.key] = articlesToShow;
           
-          // Register displayed articles
+          // Register displayed articles AFTER filtering to prevent duplicates
           if (articlesToShow.length > 0) {
             const displayedIds = articlesToShow.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+            console.log(`[CategorySection] ${config.key}: Registering ${displayedIds.length} article IDs`);
             this.displayedNewsService.registerDisplayedMultiple(displayedIds);
           }
           
@@ -1192,8 +1222,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
    * Re-filter all categories when displayed IDs change
    * This ensures duplicates are removed when NewsGrid registers items
    */
-  private reFilterAllCategories(): void {
+  private async reFilterAllCategories(): Promise<void> {
     console.log('[CategorySection] Re-filtering categories due to displayed IDs change');
+    const displayedIds = Array.from(this.displayedNewsService.getDisplayedIds());
+    console.log('[CategorySection] Current displayed IDs count:', displayedIds.length);
+    console.log('[CategorySection] Displayed IDs:', Array.from(displayedIds).slice(0, 20), '...');
+    
     const categoryConfigs = [
       { index: 0, key: 'Entertainment', slug: 'entertainment' },
       { index: 1, key: 'Sports', slug: 'sports' },
@@ -1206,7 +1240,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       { index: 8, key: 'Religious', slug: 'religious' },
     ];
 
-    categoryConfigs.forEach(async (config) => {
+    // Use Promise.all to ensure all async operations complete
+    await Promise.all(categoryConfigs.map(async (config) => {
       const originalNews = this.originalNewsItems[config.key];
       if (originalNews && originalNews.length > 0) {
         // Ensure IDs are consistent and normalized
@@ -1222,6 +1257,9 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
         // Re-filter against displayed IDs
         const filteredNews = this.displayedNewsService.filterDisplayed(newsWithIds);
+        
+        // CRITICAL: Update originalNewsItems to the filtered list to prevent duplicates in future re-filters
+        this.originalNewsItems[config.key] = filteredNews;
         
         // Update the displayed articles (only first 20 visible)
         const initialVisibleCards = 20;
@@ -1253,16 +1291,22 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           this.categories[config.index].articles = translatedArticles;
           
           const removedCount = originalNews.length - filteredNews.length;
-          console.log(`[CategorySection] Re-filtered ${config.key}: ${articlesToShow.length} articles (removed ${removedCount} duplicates)`);
+          console.log(`[CategorySection] Re-filtered ${config.key}: ${articlesToShow.length} visible articles (removed ${removedCount} duplicates from ${originalNews.length} total)`);
           if (removedCount > 0) {
             const removedIds = newsWithIds
               .filter(n => !filteredNews.find(f => f.id === n.id))
               .map(n => ({ id: n.id, title: n.title?.substring(0, 30) }));
-            console.log(`[CategorySection] Removed duplicate IDs from ${config.key}:`, removedIds);
+            console.log(`[CategorySection] Removed duplicate IDs from ${config.key}:`, removedIds.slice(0, 10), removedIds.length > 10 ? '...' : '');
+          } else {
+            console.log(`[CategorySection] No duplicates found in ${config.key} (all ${filteredNews.length} articles are unique)`);
           }
+        } else {
+          console.warn(`[CategorySection] ${config.key}: No articles to show after re-filtering!`);
         }
       }
-    });
+    }));
+    
+    console.log('[CategorySection] Finished re-filtering all categories');
   }
 }
 
