@@ -46,7 +46,7 @@ const newsSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'],
+    enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious', 'Technology'],
     index: true
   },
   tags: [{
@@ -55,7 +55,7 @@ const newsSchema = new mongoose.Schema({
   }],
   pages: [{
     type: String,
-    enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'],
+    enum: ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious', 'technology'],
     default: []
   }],
   author: {
@@ -117,7 +117,8 @@ newsSchema.pre('save', function(next) {
       'Entertainment': 'entertainment',
       'Health': 'health',
       'Politics': 'politics',
-      'Religious': 'religious'
+      'Religious': 'religious',
+      'Technology': 'technology'
     };
     
     const correspondingPage = categoryToPageMap[this.category];
