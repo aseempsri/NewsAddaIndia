@@ -632,6 +632,13 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         // CRITICAL: Always show exactly targetCount (6) items - this rule should never change
         this.newsItems = itemsToRegister;
         
+        // Ensure all items have imageLoading set
+        this.newsItems.forEach(item => {
+          if (item.imageLoading === undefined) {
+            item.imageLoading = !item.image || item.image.trim() === '';
+          }
+        });
+        
         // Debug: Verify we have exactly the target count
         console.log('[NewsGrid] Latest Stories items loaded (fetchAdditionalNews):', this.newsItems.length, 'target was:', targetCount, 'available after filtering:', sortedNews.length);
         if (this.newsItems.length !== targetCount) {
@@ -667,6 +674,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           });
         }
         
+        // Ensure isLoading is true before loading images
+        this.isLoading = true;
         this.translateNewsTitles().then(() => {
           this.fetchImagesForAllItemsAndWait();
         });
@@ -718,21 +727,36 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   }
 
   fetchImagesForAllItemsAndWait() {
+    // Ensure we have items before trying to load images
+    if (!this.newsItems || this.newsItems.length === 0) {
+      console.warn('[NewsGrid] No items to load images for');
+      this.isLoading = false;
+      this.imagesLoaded.emit(true);
+      return;
+    }
+
+    console.log(`[NewsGrid] Loading images for ${this.newsItems.length} items`);
+    
     // Fetch all images first, then show page only when all are loaded
     const imagePromises: Promise<void>[] = [];
 
     this.newsItems.forEach((item, index) => {
+      // Initialize imageLoading if not set
+      if (item.imageLoading === undefined) {
+        item.imageLoading = true;
+      }
+
       // If image exists and is a valid URL, verify it loads
-      if (item.image && item.image.trim() !== '' && !item.imageLoading) {
+      if (item.image && item.image.trim() !== '' && item.imageLoading) {
         const imagePromise = new Promise<void>((resolve) => {
           const img = new Image();
-          // Set timeout for individual image (3 seconds per image)
+          // Set timeout for individual image (2 seconds per image - faster)
           const imageTimeout = setTimeout(() => {
-            console.warn(`Image timeout for "${item.title}", using placeholder...`);
+            console.warn(`[NewsGrid] Image timeout for item ${index + 1}, using placeholder...`);
             item.image = this.newsService.getPlaceholderImage(item.title);
             item.imageLoading = false;
             resolve();
-          }, 3000);
+          }, 2000); // Reduced from 3s to 2s
           
           img.onload = () => {
             clearTimeout(imageTimeout);
@@ -743,32 +767,33 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           img.onerror = () => {
             clearTimeout(imageTimeout);
             // Image failed to load - use placeholder (no external API calls)
-            console.warn(`Image failed to load for "${item.title}", using placeholder...`);
+            console.warn(`[NewsGrid] Image failed to load for item ${index + 1}, using placeholder...`);
             item.image = this.newsService.getPlaceholderImage(item.title);
             item.imageLoading = false;
             resolve();
           };
+          // Start loading immediately
           img.src = item.image;
         });
         imagePromises.push(imagePromise);
-      } else if (item.imageLoading || !item.image || item.image.trim() === '') {
+      } else {
         // No image in database - use placeholder immediately (no external API calls)
         const imagePromise = new Promise<void>((resolve) => {
-          item.image = this.newsService.getPlaceholderImage(item.title);
+          if (!item.image || item.image.trim() === '') {
+            item.image = this.newsService.getPlaceholderImage(item.title);
+          }
           item.imageLoading = false;
-          resolve();
+          // Resolve immediately for placeholders
+          setTimeout(() => resolve(), 10); // Small delay to ensure UI updates
         });
         imagePromises.push(imagePromise);
-      } else {
-        // Image already loaded and valid, create resolved promise
-        imagePromises.push(Promise.resolve());
       }
     });
 
-    // OPTIMIZATION: Reduced timeout from 8s to 5s - show content faster
+    // OPTIMIZATION: Reduced timeout from 5s to 4s - show content faster
     const timeoutPromise = new Promise<void>((resolve) => {
       setTimeout(() => {
-        console.warn('Image loading timeout - showing page anyway');
+        console.warn('[NewsGrid] Image loading timeout - showing page anyway');
         // Mark all remaining items as loaded
         this.newsItems.forEach(item => {
           if (item.imageLoading || !item.image || item.image.trim() === '') {
@@ -777,13 +802,14 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           item.imageLoading = false;
         });
         resolve();
-      }, 5000); // 5 second timeout (reduced from 8s)
+      }, 4000); // 4 second timeout (reduced from 5s)
     });
 
+    // Wait for all images or timeout, whichever comes first
     Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
       this.isLoading = false;
       this.imagesLoaded.emit(true);
-      console.log('All news grid images loaded');
+      console.log(`[NewsGrid] All ${this.newsItems.length} images loaded/completed`);
     });
   }
 
