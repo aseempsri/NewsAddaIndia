@@ -100,7 +100,6 @@ interface Category {
                             decoding="async"
                             style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
                         }
-                        <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
                         <!-- Trending/Breaking/Featured Badges -->
                         @if (article && !isHomePage) {
                           <div class="absolute top-2 left-2 z-20 flex gap-1 flex-wrap">
@@ -571,8 +570,20 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     this.checkIfHomePage();
     this.updateTranslations();
     this.updateCategoryTitles();
-    this.loadCategoryNews();
+    
+    // CRITICAL: Wait a bit for NewsGrid to register its items first
+    // Then load category news to ensure proper duplicate filtering
+    setTimeout(() => {
+      this.loadCategoryNews();
+    }, 100);
+    
     this.initializeScrollStates();
+
+    // Subscribe to displayed IDs changes - re-filter when NewsGrid registers new items
+    this.displayedNewsService.displayedIds$.subscribe(() => {
+      // Re-filter all categories when displayed IDs change
+      this.reFilterAllCategories();
+    });
 
     // Subscribe to language changes
     this.languageSubscription = this.languageService.currentLanguage$.subscribe(async () => {
@@ -819,9 +830,40 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       
       this.newsService.fetchNewsByPage(config.slug, fetchCount).subscribe({
         next: async (news) => {
+          // CRITICAL: Ensure all articles have consistent IDs (same method as NewsGridComponent)
+          // This ensures articles without backend IDs get the same ID in both components
+          const newsWithIds = news.map(item => {
+            // Normalize ID to string for consistent comparison
+            if (item.id) {
+              item.id = typeof item.id === 'string' ? item.id : item.id.toString();
+            } else if (item.title) {
+              // Use title hash for consistent ID (same as NewsGridComponent)
+              const titleHash = this.hashString(item.title.trim());
+              item.id = `title_hash_${titleHash}`;
+              console.log(`[CategorySection] Assigned title-based ID to article: ${item.id}, Title: ${item.title.substring(0, 30)}`);
+            }
+            return item;
+          });
+          
+          console.log(`[CategorySection] ${config.key}: Fetched ${news.length} articles, ${newsWithIds.filter(n => n.id).length} have IDs`);
+          console.log(`[CategorySection] ${config.key}: Article IDs:`, newsWithIds.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+          console.log(`[CategorySection] ${config.key}: Displayed IDs before filtering:`, Array.from(this.displayedNewsService.getDisplayedIds()));
+          
           // CRITICAL: Filter out already displayed articles (including the 6 Latest Stories items)
           // This ensures no duplicates between Latest Stories and Category Sections
-          const filteredNews = this.displayedNewsService.filterDisplayed(news);
+          const filteredNews = this.displayedNewsService.filterDisplayed(newsWithIds);
+          
+          console.log(`[CategorySection] ${config.key}: After filtering displayed: ${filteredNews.length} articles remaining`);
+          const filteredOutCount = newsWithIds.length - filteredNews.length;
+          if (filteredOutCount > 0) {
+            console.log(`[CategorySection] ${config.key}: Filtered out ${filteredOutCount} duplicate articles`);
+            const filteredOutIds = newsWithIds
+              .filter(n => !filteredNews.find(f => f.id === n.id))
+              .map(n => ({ id: n.id, title: n.title?.substring(0, 30) }));
+            console.log(`[CategorySection] ${config.key}: Filtered out IDs:`, filteredOutIds);
+          } else {
+            console.warn(`[CategorySection] ${config.key}: ⚠️ NO ARTICLES FILTERED OUT - Possible duplicate issue!`);
+          }
           
           // Take minimum 50 articles (or all available if less than 50)
           const articlesToShow = filteredNews && filteredNews.length > 0 
@@ -1129,6 +1171,98 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       'Religious': 'bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
+  }
+
+  /**
+   * Hash a string to a number (for consistent ID generation)
+   * Same method as NewsGridComponent to ensure articles get the same ID
+   */
+  private hashString(str: string): number {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  }
+
+  /**
+   * Re-filter all categories when displayed IDs change
+   * This ensures duplicates are removed when NewsGrid registers items
+   */
+  private reFilterAllCategories(): void {
+    console.log('[CategorySection] Re-filtering categories due to displayed IDs change');
+    const categoryConfigs = [
+      { index: 0, key: 'Entertainment', slug: 'entertainment' },
+      { index: 1, key: 'Sports', slug: 'sports' },
+      { index: 2, key: 'National', slug: 'national' },
+      { index: 3, key: 'International', slug: 'international' },
+      { index: 4, key: 'Politics', slug: 'politics' },
+      { index: 5, key: 'Health', slug: 'health' },
+      { index: 6, key: 'Business', slug: 'business' },
+      { index: 7, key: 'Technology', slug: 'technology' },
+      { index: 8, key: 'Religious', slug: 'religious' },
+    ];
+
+    categoryConfigs.forEach(async (config) => {
+      const originalNews = this.originalNewsItems[config.key];
+      if (originalNews && originalNews.length > 0) {
+        // Ensure IDs are consistent and normalized
+        const newsWithIds = originalNews.map(item => {
+          if (item.id) {
+            item.id = typeof item.id === 'string' ? item.id : item.id.toString();
+          } else if (item.title) {
+            const titleHash = this.hashString(item.title.trim());
+            item.id = `title_hash_${titleHash}`;
+          }
+          return item;
+        });
+
+        // Re-filter against displayed IDs
+        const filteredNews = this.displayedNewsService.filterDisplayed(newsWithIds);
+        
+        // Update the displayed articles (only first 20 visible)
+        const initialVisibleCards = 20;
+        const articlesToShow = filteredNews.slice(0, initialVisibleCards);
+        
+        if (articlesToShow.length > 0) {
+          // Translate titles if needed
+          const translatedArticles = await Promise.all(articlesToShow.map(async (newsItem) => {
+            let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+            try {
+              translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
+            } catch (error) {
+              console.warn(`Failed to translate title for ${config.key}:`, error);
+            }
+            return {
+              title: translatedTitle,
+              image: newsItem.image || '',
+              time: newsItem.time,
+              date: newsItem.date,
+              hasVideo: true,
+              imageLoading: !newsItem.image || newsItem.image.trim() === '',
+              isTrending: newsItem.isTrending || false,
+              isBreaking: newsItem.isBreaking || false,
+              isFeatured: newsItem.isFeatured || false
+            };
+          }));
+          
+          // Update the category articles
+          this.categories[config.index].articles = translatedArticles;
+          
+          const removedCount = originalNews.length - filteredNews.length;
+          console.log(`[CategorySection] Re-filtered ${config.key}: ${articlesToShow.length} articles (removed ${removedCount} duplicates)`);
+          if (removedCount > 0) {
+            const removedIds = newsWithIds
+              .filter(n => !filteredNews.find(f => f.id === n.id))
+              .map(n => ({ id: n.id, title: n.title?.substring(0, 30) }));
+            console.log(`[CategorySection] Removed duplicate IDs from ${config.key}:`, removedIds);
+          }
+        }
+      }
+    });
   }
 }
 

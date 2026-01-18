@@ -9,16 +9,26 @@ import { BehaviorSubject, Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class DisplayedNewsService {
-  private displayedIds = new Set<string | number>();
-  private displayedIdsSubject = new BehaviorSubject<Set<string | number>>(new Set());
-  public displayedIds$: Observable<Set<string | number>> = this.displayedIdsSubject.asObservable();
+  // Store IDs as strings for consistent comparison (normalize numbers to strings)
+  private displayedIds = new Set<string>();
+  private displayedIdsSubject = new BehaviorSubject<Set<string>>(new Set());
+  public displayedIds$: Observable<Set<string>> = this.displayedIdsSubject.asObservable();
+
+  /**
+   * Normalize ID to string for consistent comparison
+   * This ensures "123" and 123 are treated as the same ID
+   */
+  private normalizeId(id: string | number): string {
+    return typeof id === 'string' ? id : id.toString();
+  }
 
   /**
    * Register an article as displayed
    */
   registerDisplayed(articleId: string | number): void {
     if (articleId) {
-      this.displayedIds.add(articleId);
+      const normalizedId = this.normalizeId(articleId);
+      this.displayedIds.add(normalizedId);
       this.displayedIdsSubject.next(new Set(this.displayedIds));
     }
   }
@@ -29,7 +39,8 @@ export class DisplayedNewsService {
   registerDisplayedMultiple(articleIds: (string | number)[]): void {
     articleIds.forEach(id => {
       if (id) {
-        this.displayedIds.add(id);
+        const normalizedId = this.normalizeId(id);
+        this.displayedIds.add(normalizedId);
       }
     });
     this.displayedIdsSubject.next(new Set(this.displayedIds));
@@ -39,7 +50,8 @@ export class DisplayedNewsService {
    * Check if an article has been displayed
    */
   isDisplayed(articleId: string | number): boolean {
-    return this.displayedIds.has(articleId);
+    const normalizedId = this.normalizeId(articleId);
+    return this.displayedIds.has(normalizedId);
   }
 
   /**
@@ -63,7 +75,7 @@ export class DisplayedNewsService {
   /**
    * Get all displayed article IDs
    */
-  getDisplayedIds(): Set<string | number> {
+  getDisplayedIds(): Set<string> {
     return new Set(this.displayedIds);
   }
 }

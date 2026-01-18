@@ -50,10 +50,10 @@ import { filter } from 'rxjs/operators';
           </div>
         }
 
-        <!-- News Grid - Only show when all images are loaded -->
-        @if (!isLoading && newsItems.length > 0) {
-          <!-- Debug: Show item count (remove in production if needed) -->
-          <!-- <div class="text-xs text-muted-foreground mb-2">Loaded: {{ newsItems.length }} items</div> -->
+        <!-- News Grid - Show when items are available (even if still loading images) -->
+        @if (newsItems.length > 0) {
+          <!-- Debug: Show item count -->
+          <div class="text-xs text-muted-foreground mb-2">Loaded: {{ newsItems.length }} items, isLoading: {{ isLoading }}</div>
           <div [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 sm:gap-4 lg:gap-6' : 'gap-2 sm:gap-5 lg:gap-6')">
             @for (news of newsItems; track news.id; let i = $index) {
             <article
@@ -348,6 +348,11 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     private displayedNewsService: DisplayedNewsService,
     private router: Router
   ) {
+    console.log('[NewsGrid] ⚡⚡⚡ CONSTRUCTOR CALLED - Component is being created');
+    console.log('[NewsGrid] ⚡⚡⚡ newsService:', !!this.newsService);
+    console.log('[NewsGrid] ⚡⚡⚡ languageService:', !!this.languageService);
+    console.log('[NewsGrid] ⚡⚡⚡ displayedNewsService:', !!this.displayedNewsService);
+    
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
       this.modalState = state;
@@ -355,9 +360,55 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('[NewsGrid] Component initialized');
+    console.log('[NewsGrid] ✅✅✅ ngOnInit CALLED - Component is initializing');
+    console.log('[NewsGrid] ✅✅✅ newsItems.length:', this.newsItems.length);
+    console.log('[NewsGrid] ✅✅✅ isLoading:', this.isLoading);
     this.updateTranslations();
+    console.log('[NewsGrid] ✅✅✅ About to call loadNews()');
     this.loadNews();
+    console.log('[NewsGrid] ✅✅✅ loadNews() called');
+
+    // Safety timeout: If items don't load within 10 seconds, show whatever we have
+    setTimeout(() => {
+      if (this.isLoading && this.newsItems.length === 0) {
+        console.warn('[NewsGrid] Safety timeout - forcing fallback fetch');
+        // Try one more direct fetch
+        this.newsService.fetchNewsByPage('home', 12).subscribe({
+          next: (news) => {
+            if (news && news.length > 0) {
+              const uniqueNews = this.removeDuplicates(news);
+              const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
+              this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+              
+              if (this.newsItems.length > 0) {
+                this.newsItems.forEach(item => {
+                  if (item.imageLoading === undefined) {
+                    item.imageLoading = !item.image || item.image.trim() === '';
+                  }
+                  if (!item.image || item.image.trim() === '') {
+                    item.image = this.newsService.getPlaceholderImage(item.title);
+                    item.imageLoading = false;
+                  }
+                });
+                this.isLoading = false;
+                this.imagesLoaded.emit(true);
+                console.log('[NewsGrid] Safety timeout - loaded', this.newsItems.length, 'items');
+              }
+            }
+          },
+          error: (err) => {
+            console.error('[NewsGrid] Safety timeout fallback failed:', err);
+            this.isLoading = false;
+            this.imagesLoaded.emit(true);
+          }
+        });
+      } else if (this.newsItems.length > 0 && this.isLoading) {
+        // We have items but isLoading is still true - force it to false
+        console.warn('[NewsGrid] Safety timeout - forcing isLoading to false');
+        this.isLoading = false;
+        this.imagesLoaded.emit(true);
+      }
+    }, 10000); // 10 second safety timeout
 
     // Check if we're on the home page
     this.checkIfHomePage();
@@ -446,37 +497,145 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     this.newsItems = [];
     this.isLoading = true;
     
+    console.log('[NewsGrid] Starting to load news...');
+    console.log('[NewsGrid] Displayed IDs before fetch:', Array.from(this.displayedNewsService.getDisplayedIds()));
+    
     // First, fetch breaking news (top 3 latest) and wait for it
     this.newsService.fetchBreakingNewsList(3).subscribe({
       next: async (breakingNews) => {
-        console.log('[NewsGrid] Fetched breaking news:', breakingNews.length);
+        console.log('[NewsGrid] Fetched breaking news:', breakingNews?.length || 0);
+        if (breakingNews && breakingNews.length > 0) {
+          console.log('[NewsGrid] Breaking news IDs:', breakingNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+        }
+        
+        if (!breakingNews || breakingNews.length === 0) {
+          console.warn('[NewsGrid] No breaking news found, fetching regular news...');
+          // Skip breaking news and go straight to regular news
+          this.newsService.fetchNewsByPage('home', 20).subscribe({
+            next: async (news) => {
+              console.log('[NewsGrid] Fetched home page news:', news?.length || 0);
+              if (news && news.length > 0) {
+                console.log('[NewsGrid] Home page news IDs before filtering:', news.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                const uniqueNews = this.removeDuplicates(news);
+                console.log('[NewsGrid] After removeDuplicates:', uniqueNews.length, 'items');
+                console.log('[NewsGrid] Unique news IDs:', uniqueNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
+                console.log('[NewsGrid] After filterDisplayed:', filteredNews.length, 'items');
+                console.log('[NewsGrid] Filtered news IDs:', filteredNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                console.log('[NewsGrid] Displayed IDs at this point:', Array.from(this.displayedNewsService.getDisplayedIds()));
+                
+                if (filteredNews.length < NewsGridComponent.LATEST_STORIES_COUNT) {
+                  console.warn('[NewsGrid] Not enough items after filtering, fetching additional news...');
+                  await this.fetchAdditionalNews(filteredNews, NewsGridComponent.LATEST_STORIES_COUNT);
+                } else {
+                  const displayedIds = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                  this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  
+                  this.newsItems.forEach(item => {
+                    if (item.imageLoading === undefined) {
+                      item.imageLoading = !item.image || item.image.trim() === '';
+                    }
+                    // Set placeholder if no image
+                    if (!item.image || item.image.trim() === '') {
+                      item.image = this.newsService.getPlaceholderImage(item.title);
+                      item.imageLoading = false;
+                    }
+                  });
+                  
+                  console.log('[NewsGrid] ✅ Loaded', this.newsItems.length, 'items from home page');
+                  console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                  // IMPORTANT: Set isLoading to false IMMEDIATELY so items show
+                  this.isLoading = false;
+                  await this.translateNewsTitles();
+                  // Load images in background without blocking display
+                  this.fetchImagesForAllItemsAndWait();
+                }
+              } else {
+                console.warn('[NewsGrid] No news from home page, fetching from categories...');
+                await this.fetchAdditionalNews([], NewsGridComponent.LATEST_STORIES_COUNT);
+              }
+            },
+            error: (err) => {
+              console.error('[NewsGrid] Error fetching home page news:', err);
+              this.fetchAdditionalNews([], NewsGridComponent.LATEST_STORIES_COUNT);
+            }
+          });
+          return;
+        }
         
         // Filter out already displayed breaking news
+        console.log('[NewsGrid] Filtering breaking news...');
+        console.log('[NewsGrid] Breaking news before filterDisplayed:', breakingNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
         const filteredBreakingNews = this.displayedNewsService.filterDisplayed(breakingNews);
+        console.log('[NewsGrid] Breaking news after filterDisplayed:', filteredBreakingNews.length, 'items');
+        console.log('[NewsGrid] Filtered breaking news IDs:', filteredBreakingNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
         
         // Register breaking news as displayed
         if (filteredBreakingNews.length > 0) {
           const breakingIds = filteredBreakingNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+          console.log('[NewsGrid] Registering breaking news IDs:', breakingIds);
           this.displayedNewsService.registerDisplayedMultiple(breakingIds);
+          console.log('[NewsGrid] Displayed IDs after registering breaking news:', Array.from(this.displayedNewsService.getDisplayedIds()));
         }
         
         // Now fetch other news to fill remaining slots
         // CRITICAL: Always ensure exactly LATEST_STORIES_COUNT (6) items are shown
         const remainingSlots = Math.max(0, NewsGridComponent.LATEST_STORIES_COUNT - filteredBreakingNews.length);
+        console.log('[NewsGrid] Remaining slots needed:', remainingSlots);
         
         if (remainingSlots > 0) {
           // Fetch more articles initially to account for filtering (fetch 20 to ensure we get enough after filtering)
           // We need extra because filtering removes duplicates and already-displayed items
           this.newsService.fetchNewsByPage('home', 20).subscribe({
             next: async (news) => {
+              console.log('[NewsGrid] Fetched home page news (after breaking):', news?.length || 0);
               // If we got news from backend for home page, use it
               if (news && news.length > 0) {
+                console.log('[NewsGrid] Home page news IDs before processing:', news.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                 // Remove duplicates by id and filter out already displayed articles
                 const uniqueHomeNews = this.removeDuplicates(news);
+                console.log('[NewsGrid] After removeDuplicates (home):', uniqueHomeNews.length, 'items');
+                console.log('[NewsGrid] Unique home news IDs:', uniqueHomeNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                 const filteredHomeNews = this.displayedNewsService.filterDisplayed(uniqueHomeNews);
+                console.log('[NewsGrid] After filterDisplayed (home):', filteredHomeNews.length, 'items');
+                console.log('[NewsGrid] Filtered home news IDs:', filteredHomeNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                console.log('[NewsGrid] Displayed IDs before combining:', Array.from(this.displayedNewsService.getDisplayedIds()));
                 
                 // Combine breaking news first, then other news
                 const allNews = [...filteredBreakingNews, ...filteredHomeNews];
+                console.log('[NewsGrid] Combined news (breaking + home):', allNews.length, 'items');
+                console.log('[NewsGrid] Combined news IDs:', allNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+                
+                // SAFEGUARD: If filtering removed everything, use unfiltered news (but still remove duplicates)
+                if (allNews.length === 0 && (filteredBreakingNews.length === 0 || filteredHomeNews.length === 0)) {
+                  console.warn('[NewsGrid] ⚠️ All items filtered out! Using unfiltered news as fallback...');
+                  const unfilteredBreaking = this.removeDuplicates(breakingNews);
+                  const unfilteredHome = this.removeDuplicates(news);
+                  const unfilteredAll = [...unfilteredBreaking, ...unfilteredHome];
+                  const uniqueUnfiltered = this.removeDuplicates(unfilteredAll);
+                  if (uniqueUnfiltered.length > 0) {
+                    console.log('[NewsGrid] Using', uniqueUnfiltered.length, 'unfiltered items as fallback');
+                    this.newsItems = uniqueUnfiltered.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                    const displayedIds = this.newsItems.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                    this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                    
+                    this.newsItems.forEach(item => {
+                      if (item.imageLoading === undefined) {
+                        item.imageLoading = !item.image || item.image.trim() === '';
+                      }
+                      if (!item.image || item.image.trim() === '') {
+                        item.image = this.newsService.getPlaceholderImage(item.title);
+                        item.imageLoading = false;
+                      }
+                    });
+                    
+                    this.isLoading = false;
+                    await this.translateNewsTitles();
+                    this.fetchImagesForAllItemsAndWait();
+                    return;
+                  }
+                }
                 
                 // If we don't have enough articles after filtering, fetch more from categories
                 if (allNews.length < NewsGridComponent.LATEST_STORIES_COUNT) {
@@ -484,7 +643,10 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                 } else {
                   // Register displayed articles - CRITICAL: Always register exactly LATEST_STORIES_COUNT items
                   const displayedIds = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  console.log('[NewsGrid] 🔵 Registering Latest Stories IDs:', displayedIds);
+                  console.log('[NewsGrid] 🔵 Latest Stories titles:', allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => ({ id: n.id, title: n.title?.substring(0, 40) })));
                   this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                  console.log('[NewsGrid] 🔵 Displayed IDs after registration:', Array.from(this.displayedNewsService.getDisplayedIds()));
                   
                   // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
                   this.newsItems = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
@@ -494,10 +656,16 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                     if (item.imageLoading === undefined) {
                       item.imageLoading = !item.image || item.image.trim() === '';
                     }
+                    // Set placeholder if no image
+                    if (!item.image || item.image.trim() === '') {
+                      item.image = this.newsService.getPlaceholderImage(item.title);
+                      item.imageLoading = false;
+                    }
                   });
                   
                   // Debug: Verify we have exactly 6 items
-                  console.log('[NewsGrid] Latest Stories items loaded:', this.newsItems.length, 'out of', allNews.length, 'available');
+                  console.log('[NewsGrid] ✅ Latest Stories items loaded:', this.newsItems.length, 'out of', allNews.length, 'available');
+                  console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                   if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
                     console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
                   }
@@ -531,9 +699,10 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                     });
                   }
                   
+                  // IMPORTANT: Set isLoading to false IMMEDIATELY so items show, then load images in background
+                  this.isLoading = false;
                   await this.translateNewsTitles();
-                  // Ensure isLoading is true before loading images
-                  this.isLoading = true;
+                  // Load images in background without blocking display
                   this.fetchImagesForAllItemsAndWait();
                 }
               } else {
@@ -557,10 +726,16 @@ export class NewsGridComponent implements OnInit, OnDestroy {
             if (item.imageLoading === undefined) {
               item.imageLoading = !item.image || item.image.trim() === '';
             }
+            // Set placeholder if no image
+            if (!item.image || item.image.trim() === '') {
+              item.image = this.newsService.getPlaceholderImage(item.title);
+              item.imageLoading = false;
+            }
           });
           
           // Debug: Verify we have exactly 6 items
-          console.log('[NewsGrid] Latest Stories items loaded (breaking news only):', this.newsItems.length);
+          console.log('[NewsGrid] ✅ Latest Stories items loaded (breaking news only):', this.newsItems.length);
+          console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
           if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
             console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
           }
@@ -568,9 +743,10 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           // Log breaking news
           console.log('📢 NEWS GRID - All Breaking News:', this.newsItems.length);
           
+          // IMPORTANT: Set isLoading to false IMMEDIATELY so items show, then load images in background
+          this.isLoading = false;
           await this.translateNewsTitles();
-          // Ensure isLoading is true before loading images
-          this.isLoading = true;
+          // Load images in background without blocking display
           this.fetchImagesForAllItemsAndWait();
         }
       },
@@ -592,13 +768,28 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                 
                 this.newsItems = filteredErrorNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                 
+                // Ensure all items have imageLoading set and placeholders
+                this.newsItems.forEach(item => {
+                  if (item.imageLoading === undefined) {
+                    item.imageLoading = !item.image || item.image.trim() === '';
+                  }
+                  if (!item.image || item.image.trim() === '') {
+                    item.image = this.newsService.getPlaceholderImage(item.title);
+                    item.imageLoading = false;
+                  }
+                });
+                
                 // Debug: Verify we have exactly 6 items
-                console.log('[NewsGrid] Latest Stories items loaded (fallback):', this.newsItems.length);
+                console.log('[NewsGrid] ✅ Latest Stories items loaded (fallback):', this.newsItems.length);
+                console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                 if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
                   console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
                 }
                 
+                // IMPORTANT: Set isLoading to false IMMEDIATELY so items show
+                this.isLoading = false;
                 await this.translateNewsTitles();
+                // Load images in background without blocking display
                 this.fetchImagesForAllItemsAndWait();
               }
             } else {
@@ -607,6 +798,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           },
           error: (error2) => {
             console.error('Error loading home page news:', error2);
+            // Ensure isLoading is set before fetching additional news
+            this.isLoading = true;
             this.fetchAdditionalNews([], NewsGridComponent.LATEST_STORIES_COUNT);
           }
         });
@@ -619,6 +812,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
    * CRITICAL: This method must always return exactly targetCount items after filtering
    */
   private async fetchAdditionalNews(existingNews: NewsArticle[], targetCount: number): Promise<void> {
+    console.log('[NewsGrid] fetchAdditionalNews called with', existingNews.length, 'existing items, target:', targetCount);
+    console.log('[NewsGrid] Existing news IDs:', existingNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
     const categories = ['National', 'Sports', 'Business', 'International', 'Entertainment', 'Health', 'Politics', 'Technology', 'Religious'];
     let allNews = [...existingNews];
     let categoryIndex = 0;
@@ -626,7 +821,10 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     const fetchNextCategory = (): void => {
       // Check filtered count to ensure we have enough AFTER filtering
       const uniqueAllNews = this.removeDuplicates(allNews);
+      console.log('[NewsGrid] fetchNextCategory - after removeDuplicates:', uniqueAllNews.length, 'items');
       const filteredAllNews = this.displayedNewsService.filterDisplayed(uniqueAllNews);
+      console.log('[NewsGrid] fetchNextCategory - after filterDisplayed:', filteredAllNews.length, 'items');
+      console.log('[NewsGrid] fetchNextCategory - displayed IDs:', Array.from(this.displayedNewsService.getDisplayedIds()));
       
       // Continue fetching if we don't have enough items AFTER filtering, or if we've exhausted categories
       if (filteredAllNews.length >= targetCount || categoryIndex >= categories.length) {
@@ -655,12 +853,61 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           if (item.imageLoading === undefined) {
             item.imageLoading = !item.image || item.image.trim() === '';
           }
+          // Set placeholder if no image
+          if (!item.image || item.image.trim() === '') {
+            item.image = this.newsService.getPlaceholderImage(item.title);
+            item.imageLoading = false;
+          }
         });
         
         // Debug: Verify we have exactly the target count
-        console.log('[NewsGrid] Latest Stories items loaded (fetchAdditionalNews):', this.newsItems.length, 'target was:', targetCount, 'available after filtering:', sortedNews.length);
+        console.log('[NewsGrid] ✅ Latest Stories items loaded (fetchAdditionalNews):', this.newsItems.length, 'target was:', targetCount, 'available after filtering:', sortedNews.length);
+        console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
         if (this.newsItems.length !== targetCount) {
           console.warn('[NewsGrid] WARNING: Expected', targetCount, 'items but got', this.newsItems.length, '- available:', sortedNews.length);
+          
+          // FINAL SAFEGUARD: If we still have 0 items after fetching from all categories, try one more direct fetch
+          if (this.newsItems.length === 0 && categoryIndex >= categories.length) {
+            console.warn('[NewsGrid] ⚠️ Still 0 items after all categories! Trying final direct fetch...');
+            this.newsService.fetchNewsByPage('home', 12).subscribe({
+              next: (finalNews) => {
+                if (finalNews && finalNews.length > 0) {
+                  const uniqueFinal = this.removeDuplicates(finalNews);
+                  // Don't filter by displayed - just show the first 6 items
+                  this.newsItems = uniqueFinal.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  
+                  this.newsItems.forEach(item => {
+                    if (item.imageLoading === undefined) {
+                      item.imageLoading = !item.image || item.image.trim() === '';
+                    }
+                    if (!item.image || item.image.trim() === '') {
+                      item.image = this.newsService.getPlaceholderImage(item.title);
+                      item.imageLoading = false;
+                    }
+                  });
+                  
+                  const displayedIds = this.newsItems.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  this.displayedNewsService.registerDisplayedMultiple(displayedIds);
+                  
+                  console.log('[NewsGrid] ✅ Final fallback loaded', this.newsItems.length, 'items');
+                  this.isLoading = false;
+                  this.translateNewsTitles().then(() => {
+                    this.fetchImagesForAllItemsAndWait();
+                  });
+                } else {
+                  console.error('[NewsGrid] ❌ Final fallback also returned 0 items');
+                  this.isLoading = false;
+                  this.imagesLoaded.emit(true);
+                }
+              },
+              error: (err) => {
+                console.error('[NewsGrid] ❌ Final fallback fetch failed:', err);
+                this.isLoading = false;
+                this.imagesLoaded.emit(true);
+              }
+            });
+            return;
+          }
         }
         
         // Log breaking news in news grid
@@ -692,30 +939,41 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           });
         }
         
-        // Ensure isLoading is true before loading images
-        this.isLoading = true;
+        // IMPORTANT: Set isLoading to false IMMEDIATELY so items show, then load images in background
+        this.isLoading = false;
         this.translateNewsTitles().then(() => {
+          // Load images in background without blocking display
           this.fetchImagesForAllItemsAndWait();
         });
         return;
       }
       
       const category = categories[categoryIndex];
+      console.log('[NewsGrid] Fetching from category:', category, 'index:', categoryIndex);
       // Calculate how many more we need AFTER filtering
       const uniqueCurrentNews = this.removeDuplicates(allNews);
       const filteredCurrentNews = this.displayedNewsService.filterDisplayed(uniqueCurrentNews);
       const needed = Math.max(0, targetCount - filteredCurrentNews.length);
       // Fetch more than needed to account for filtering (fetch at least 5-10 extra)
       const fetchCount = Math.max(needed + 5, 10); // Fetch extra to account for filtering and duplicates
+      console.log('[NewsGrid] Need', needed, 'more items, fetching', fetchCount, 'from', category);
       
       this.newsService.fetchNewsByCategory(category, fetchCount).subscribe({
         next: (categoryNews) => {
+          console.log('[NewsGrid] Fetched', categoryNews?.length || 0, 'items from category', category);
+          if (categoryNews && categoryNews.length > 0) {
+            console.log('[NewsGrid] Category news IDs:', categoryNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
+          }
           const uniqueCategoryNews = this.removeDuplicates(categoryNews);
+          console.log('[NewsGrid] After removeDuplicates (category):', uniqueCategoryNews.length, 'items');
           const filteredCategoryNews = this.displayedNewsService.filterDisplayed(uniqueCategoryNews);
+          console.log('[NewsGrid] After filterDisplayed (category):', filteredCategoryNews.length, 'items');
+          console.log('[NewsGrid] Filtered category news IDs:', filteredCategoryNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
           
           // Add new articles to the collection
           allNews = [...allNews, ...filteredCategoryNews];
           allNews = this.removeDuplicates(allNews);
+          console.log('[NewsGrid] Total news after adding', category, ':', allNews.length, 'items');
           
           categoryIndex++;
           fetchNextCategory();
@@ -732,24 +990,95 @@ export class NewsGridComponent implements OnInit, OnDestroy {
   }
 
   private removeDuplicates(news: NewsArticle[]): NewsArticle[] {
-    const seen = new Set<string | number>();
-    return news.filter(item => {
-      if (!item.id) return false;
-      const id = typeof item.id === 'string' ? item.id : item.id.toString();
-      if (seen.has(id)) {
-        return false;
+    const seen = new Set<string>();
+    const result: NewsArticle[] = [];
+    
+    news.forEach(item => {
+      // Normalize ID to string for consistent comparison
+      let id: string;
+      if (!item.id) {
+        // Use title hash for consistent ID across components
+        // This ensures the same article gets the same ID in both NewsGrid and CategorySection
+        const titleHash = this.hashString((item.title || '').trim());
+        id = `title_hash_${titleHash}`;
+        item.id = id;
+        console.warn('[NewsGrid] Article missing ID, assigned title-based ID:', id, 'Title:', item.title?.substring(0, 30));
+      } else {
+        // Normalize to string (same as DisplayedNewsService)
+        id = typeof item.id === 'string' ? item.id : item.id.toString();
+        item.id = id; // Update item.id to normalized string
       }
-      seen.add(id);
-      return true;
+      
+      if (!seen.has(id)) {
+        seen.add(id);
+        result.push(item);
+      } else {
+        console.log('[NewsGrid] Duplicate article filtered:', id, item.title?.substring(0, 30));
+      }
     });
+    
+    return result;
+  }
+
+  /**
+   * Hash a string to a number (for consistent ID generation)
+   */
+  private hashString(str: string): number {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
   }
 
   fetchImagesForAllItemsAndWait() {
     // Ensure we have items before trying to load images
     if (!this.newsItems || this.newsItems.length === 0) {
-      console.warn('[NewsGrid] No items to load images for');
-      this.isLoading = false;
-      this.imagesLoaded.emit(true);
+      console.warn('[NewsGrid] No items to load images for - this should not happen!');
+      console.warn('[NewsGrid] Attempting to fetch news directly...');
+      // Try to fetch news one more time as fallback
+      this.newsService.fetchNewsByPage('home', 12).subscribe({
+        next: (news) => {
+          if (news && news.length > 0) {
+            const uniqueNews = this.removeDuplicates(news);
+            const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
+            this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+            
+            if (this.newsItems.length > 0) {
+              this.newsItems.forEach(item => {
+                if (item.imageLoading === undefined) {
+                  item.imageLoading = !item.image || item.image.trim() === '';
+                }
+                if (!item.image || item.image.trim() === '') {
+                  item.image = this.newsService.getPlaceholderImage(item.title);
+                  item.imageLoading = false;
+                }
+              });
+              console.log('[NewsGrid] ✅ Safety timeout fallback loaded', this.newsItems.length, 'items');
+              // IMPORTANT: Set isLoading to false IMMEDIATELY
+              this.isLoading = false;
+              this.translateNewsTitles().then(() => {
+                // Load images in background without blocking display
+                this.fetchImagesForAllItemsAndWait();
+              });
+            } else {
+              this.isLoading = false;
+              this.imagesLoaded.emit(true);
+            }
+          } else {
+            this.isLoading = false;
+            this.imagesLoaded.emit(true);
+          }
+        },
+        error: (err) => {
+          console.error('[NewsGrid] Final fallback fetch failed:', err);
+          this.isLoading = false;
+          this.imagesLoaded.emit(true);
+        }
+      });
       return;
     }
 
