@@ -43,18 +43,14 @@ export class YouTubeService {
     // Use a CORS proxy to fetch the channel's videos page
     const channelUrl = `https://www.youtube.com/@${this.CHANNEL_HANDLE}/videos`;
 
-    // Try multiple CORS proxy services for reliability
-    const proxyUrls = [
-      `https://api.allorigins.win/get?url=${encodeURIComponent(channelUrl)}`,
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(channelUrl)}`,
-    ];
+    // Use CORS proxy service to fetch the channel's videos page
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(channelUrl)}`;
 
-    // Try first proxy
-    return this.http.get<any>(proxyUrls[0]).pipe(
+    return this.http.get<any>(proxyUrl).pipe(
       timeout(15000),
       map(response => {
         try {
-          // Handle different proxy response formats
+          // Handle proxy response format
           const html = response.contents || response || '';
 
           // Try multiple patterns to extract video ID
@@ -88,31 +84,8 @@ export class YouTubeService {
         return null;
       }),
       catchError(error => {
-        console.error('Error fetching channel page from first proxy:', error);
-        // Try second proxy as fallback
-        return this.http.get<any>(proxyUrls[1]).pipe(
-          timeout(15000),
-          map(response => {
-            try {
-              const html = response.contents || response || '';
-              const videoIdMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/) ||
-                html.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
-
-              if (videoIdMatch && videoIdMatch[1]) {
-                const videoUrl = `https://www.youtube.com/watch?v=${videoIdMatch[1]}`;
-                this.cacheVideoUrl(videoUrl);
-                return videoUrl;
-              }
-            } catch (err) {
-              console.error('Error parsing from second proxy:', err);
-            }
-            return null;
-          }),
-          catchError(err => {
-            console.error('Error fetching from second proxy:', err);
-            return of(null);
-          })
-        );
+        console.error('Error fetching channel page from proxy:', error);
+        return of(null);
       })
     );
   }
