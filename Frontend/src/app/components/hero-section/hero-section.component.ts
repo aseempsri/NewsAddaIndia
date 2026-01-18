@@ -57,7 +57,9 @@ interface SideNews {
                     [src]="featuredNews.image"
                     [alt]="featuredNews.title"
                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
+                    loading="eager"
+                    decoding="async"
+                    style="filter: none !important; -webkit-filter: none !important; image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; image-rendering: high-quality !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
                 }
                 <!-- Category Badge - Top Left -->
                 @if (!isHomePage) {
@@ -141,7 +143,9 @@ interface SideNews {
                       [src]="news.image"
                       [alt]="news.title"
                       class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
+                      loading="lazy"
+                      decoding="async"
+                      style="filter: none !important; -webkit-filter: none !important; image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; image-rendering: high-quality !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
                   }
                   
                   <!-- Category Badge -->
