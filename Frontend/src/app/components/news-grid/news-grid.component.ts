@@ -489,6 +489,13 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                   // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
                   this.newsItems = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                   
+                  // Ensure all items have imageLoading set
+                  this.newsItems.forEach(item => {
+                    if (item.imageLoading === undefined) {
+                      item.imageLoading = !item.image || item.image.trim() === '';
+                    }
+                  });
+                  
                   // Debug: Verify we have exactly 6 items
                   console.log('[NewsGrid] Latest Stories items loaded:', this.newsItems.length, 'out of', allNews.length, 'available');
                   if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
@@ -525,6 +532,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                   }
                   
                   await this.translateNewsTitles();
+                  // Ensure isLoading is true before loading images
+                  this.isLoading = true;
                   this.fetchImagesForAllItemsAndWait();
                 }
               } else {
@@ -543,6 +552,13 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
           this.newsItems = filteredBreakingNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
           
+          // Ensure all items have imageLoading set
+          this.newsItems.forEach(item => {
+            if (item.imageLoading === undefined) {
+              item.imageLoading = !item.image || item.image.trim() === '';
+            }
+          });
+          
           // Debug: Verify we have exactly 6 items
           console.log('[NewsGrid] Latest Stories items loaded (breaking news only):', this.newsItems.length);
           if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
@@ -553,6 +569,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           console.log('📢 NEWS GRID - All Breaking News:', this.newsItems.length);
           
           await this.translateNewsTitles();
+          // Ensure isLoading is true before loading images
+          this.isLoading = true;
           this.fetchImagesForAllItemsAndWait();
         }
       },
