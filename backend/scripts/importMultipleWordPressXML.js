@@ -407,12 +407,27 @@ async function importWordPressXML(xmlFilePath, stats) {
         
         // Check if news already exists (by title)
         const existingNews = await News.findOne({ title: title.trim() });
+        
         if (existingNews) {
-          stats.skipped++;
+          // Update existing article with corrected category and other fields
+          existingNews.category = category; // Update category (this was the main issue)
+          existingNews.tags = tags; // Update tags
+          existingNews.isBreaking = isBreaking; // Update breaking status
+          existingNews.excerpt = newsExcerpt || getExcerpt(contentString); // Update excerpt
+          existingNews.content = cleanedContent; // Update content
+          existingNews.image = image || existingNews.image; // Update image if available, keep existing if not
+          existingNews.author = author; // Update author
+          existingNews.updatedAt = new Date(); // Update timestamp
+          
+          await existingNews.save();
+          stats.imported++; // Count as imported (updated)
+          if (stats.imported % 10 === 0) {
+            console.log(`✅ Processed ${stats.imported} articles so far (imported/updated)...`);
+          }
           continue;
         }
         
-        // Create news document
+        // Create news document for new articles
         const newsData = {
           title: (typeof title === 'string' ? title : String(title)).trim(),
           titleEn: (typeof title === 'string' ? title : String(title)).trim(), // Same as title for now
@@ -447,8 +462,8 @@ async function importWordPressXML(xmlFilePath, stats) {
     }
     
     console.log(`\n✅ Completed ${path.basename(xmlFilePath)}`);
-    console.log(`   Imported: ${stats.imported - (stats.prevImported || 0)}`);
-    console.log(`   Skipped: ${stats.skipped - (stats.prevSkipped || 0)}`);
+    console.log(`   Imported/Updated: ${stats.imported - (stats.prevImported || 0)}`);
+    console.log(`   Skipped (no title/content): ${stats.skipped - (stats.prevSkipped || 0)}`);
     console.log(`   Errors: ${stats.errors - (stats.prevErrors || 0)}`);
     
     stats.prevImported = stats.imported;
@@ -587,8 +602,8 @@ async function main() {
   console.log(`\n${'='.repeat(60)}`);
   console.log('📊 FINAL IMPORT SUMMARY');
   console.log(`${'='.repeat(60)}`);
-  console.log(`✅ Successfully imported: ${stats.imported}`);
-  console.log(`⏭️  Skipped (duplicates/missing data): ${stats.skipped}`);
+  console.log(`✅ Successfully imported/updated: ${stats.imported}`);
+  console.log(`⏭️  Skipped (missing title/content): ${stats.skipped}`);
   console.log(`❌ Errors: ${stats.errors}`);
   console.log(`📝 Total files processed: ${xmlFiles.length}`);
   console.log(`${'='.repeat(60)}\n`);
