@@ -8,17 +8,37 @@ require('dotenv').config();
 const News = require('../models/News');
 
 // Category mapping from WordPress to MongoDB
+// IMPORTANT: Keys are case-insensitive and trimmed
 const categoryMapping = {
-  'National': 'National',
-  'International': 'International',
-  'Sports': 'Sports',
-  'Business': 'Business',
-  'Entertainment': 'Entertainment',
-  'Health': 'Health',
-  'Politics': 'Politics',
-  'Religious': 'Religious',
-  'State': 'National', // Map State to National
-  'Breaking news': 'National', // Map Breaking news to National
+  // Main categories
+  'national': 'National',
+  'international': 'International',
+  'sports': 'Sports',
+  'business': 'Business',
+  'entertainment': 'Entertainment',
+  'health': 'Health',
+  'politics': 'Politics',
+  'religious': 'Religious',
+  'technology': 'Technology',
+  
+  // State/Region categories -> National
+  'state': 'National',
+  'bihar': 'National',
+  'madhya pradesh': 'National',
+  'uttar pradesh': 'National',
+  'उत्तर प्रदेश': 'National', // Hindi: Uttar Pradesh
+  'उत्तराखंड': 'National', // Hindi: Uttarakhand
+  'वाराणसी': 'National', // Hindi: Varanasi
+  'desh': 'National', // Hindi: Country
+  
+  // Other mappings
+  'crime': 'National',
+  'poltics': 'Politics', // Typo fix
+  'breaking news': 'National', // Only if it's a category, not a tag
+  'uncategorized': 'National',
+  'न्यूज़ अड्डा स्पेशल': 'National', // Hindi: News Adda Special
+  'खेल': 'Sports', // Hindi: Sports
+  
   'default': 'National' // Default category
 };
 
@@ -64,7 +84,8 @@ function mapCategory(wordPressCategories) {
     return categoryMapping['default'];
   }
   
-  // Look for main category (domain="category")
+  // CRITICAL FIX: Only look for main category (domain="category")
+  // DO NOT use tags for category mapping - tags are separate
   for (const cat of wordPressCategories) {
     // Handle different XML parsing structures
     let domain, categoryName;
@@ -85,39 +106,19 @@ function mapCategory(wordPressCategories) {
       continue;
     }
     
+    // Only process categories, NOT tags
     if (domain === 'category' && categoryName) {
-      const mapped = categoryMapping[categoryName];
+      // Normalize: trim whitespace and convert to lowercase for matching
+      const normalizedName = String(categoryName).trim().toLowerCase();
+      const mapped = categoryMapping[normalizedName];
       if (mapped) {
         return mapped;
       }
     }
   }
   
-  // Check tags for category hints
-  for (const cat of wordPressCategories) {
-    let domain, categoryName;
-    
-    if (cat.$ && cat.$.domain) {
-      domain = cat.$.domain;
-      categoryName = cat._ || (typeof cat === 'string' ? cat : '');
-    } else if (cat.domain) {
-      domain = cat.domain;
-      categoryName = cat._ || cat.name || (typeof cat === 'string' ? cat : '');
-    } else if (typeof cat === 'string') {
-      categoryName = cat;
-      domain = 'unknown';
-    } else {
-      continue;
-    }
-    
-    if (domain === 'post_tag' && categoryName) {
-      const mapped = categoryMapping[categoryName];
-      if (mapped) {
-        return mapped;
-      }
-    }
-  }
-  
+  // If no category found, return default
+  // DO NOT check tags - tags should not determine category
   return categoryMapping['default'];
 }
 
@@ -470,35 +471,55 @@ function findXMLFiles() {
   ];
   
   const xmlFiles = [];
+  let foundDir = null;
   
   for (const dir of possibleDirs) {
     if (!fs.existsSync(dir)) continue;
     
     try {
       const files = fs.readdirSync(dir);
-      const matchingFiles = files.filter(file => 
+      
+      // Find monthly files (2026-01-16_*.xml)
+      const monthlyFiles = files.filter(file => 
         file.startsWith('newsaddaindia.WordPress.2026-01-16_') && file.endsWith('.xml')
       );
       
-      if (matchingFiles.length > 0) {
-        // Sort files by month order
+      // Find dec-jan file (2026-01-03.xml)
+      const decJanFile = files.find(file => 
+        file === 'newsaddaindia.WordPress.2026-01-03.xml'
+      );
+      
+      if (monthlyFiles.length > 0 || decJanFile) {
+        foundDir = dir;
+        
+        // Sort monthly files by month order
         const monthOrder = {
           'jan-feb': 1, 'feb-mar': 2, 'mar-apr': 3, 'apr-may': 4,
           'may-jun': 5, 'jun-jul': 6, 'jul-aug': 7, 'aug-sept': 8,
           'sept-oct': 9, 'oct-nov': 10, 'nov-dec': 11
         };
         
-        matchingFiles.sort((a, b) => {
+        monthlyFiles.sort((a, b) => {
           const aMonth = a.match(/2026-01-16_([a-z]+-[a-z]+)\.xml/)?.[1];
           const bMonth = b.match(/2026-01-16_([a-z]+-[a-z]+)\.xml/)?.[1];
           return (monthOrder[aMonth] || 99) - (monthOrder[bMonth] || 99);
         });
         
-        matchingFiles.forEach(file => {
+        // Add dec-jan file first (it covers Dec-Jan period, so should be processed first)
+        if (decJanFile) {
+          xmlFiles.push(path.join(dir, decJanFile));
+          console.log(`✅ Found dec-jan file: ${decJanFile}`);
+        }
+        
+        // Add monthly files
+        monthlyFiles.forEach(file => {
           xmlFiles.push(path.join(dir, file));
         });
         
-        console.log(`✅ Found ${matchingFiles.length} XML files in: ${dir}`);
+        console.log(`✅ Found ${monthlyFiles.length} monthly XML files in: ${dir}`);
+        if (decJanFile) {
+          console.log(`✅ Total files to process: ${xmlFiles.length}`);
+        }
         break; // Use first directory that has files
       }
     } catch (error) {
@@ -516,7 +537,9 @@ async function main() {
   const xmlFiles = findXMLFiles();
   
   if (xmlFiles.length === 0) {
-    console.error('❌ No XML files found matching pattern: newsaddaindia.WordPress.2026-01-16_*.xml');
+    console.error('❌ No XML files found matching patterns:');
+    console.error('   - newsaddaindia.WordPress.2026-01-16_*.xml (monthly files)');
+    console.error('   - newsaddaindia.WordPress.2026-01-03.xml (dec-jan file)');
     console.log('\nPlease ensure the XML files are in one of these locations:');
     console.log('  - Project root directory');
     console.log('  - NewsAddaIndia directory');
