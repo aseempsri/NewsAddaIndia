@@ -39,6 +39,7 @@ yarn-error.log
 /.angular/cache
 Frontend/.angular/cache
 **/.angular/cache
+**/.tsbuildinfo
 .sass-cache/
 /connect.lock
 /coverage
