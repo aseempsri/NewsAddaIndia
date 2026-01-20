@@ -3,6 +3,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const News = require('../models/News');
 const { authenticateAdmin } = require('../middleware/auth');
 
@@ -195,7 +196,22 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     console.log('[Backend GET /api/news/:id] Fetching news:', req.params.id);
-    const news = await News.findById(req.params.id);
+
+    // Try direct MongoDB query to bypass any Mongoose transformations
+    const db = mongoose.connection.db;
+    const collection = db.collection('news');
+    const directQuery = await collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+
+    console.log('[Backend GET /api/news/:id] Direct MongoDB query result:', {
+      found: !!directQuery,
+      directContentLength: directQuery?.content ? directQuery.content.length : 0,
+      directContentFirst200: directQuery?.content ? directQuery.content.substring(0, 200) : 'N/A',
+      directExcerptLength: directQuery?.excerpt ? directQuery.excerpt.length : 0,
+      directExcerptFirst200: directQuery?.excerpt ? directQuery.excerpt.substring(0, 200) : 'N/A'
+    });
+
+    // Explicitly fetch ALL fields including content - don't use select() to exclude anything
+    const news = await News.findById(req.params.id).lean();
 
     if (!news) {
       console.log('[Backend GET /api/news/:id] News not found:', req.params.id);
@@ -205,8 +221,45 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Convert to plain object to ensure all fields are included
-    const newsData = news.toObject ? news.toObject() : news;
+    // news is already a plain object from .lean(), no need to convert
+    const newsData = news;
+
+    // Compare direct query vs Mongoose query
+    if (directQuery) {
+      console.log('[Backend GET /api/news/:id] Comparison:', {
+        directContentLength: directQuery.content ? directQuery.content.length : 0,
+        mongooseContentLength: newsData.content ? newsData.content.length : 0,
+        contentMatches: directQuery.content === newsData.content
+      });
+
+      // If direct query has different content, use that instead
+      if (directQuery.content && directQuery.content.length > newsData.content.length) {
+        console.log('[Backend GET /api/news/:id] Using direct MongoDB query content (longer)');
+        newsData.content = directQuery.content;
+      }
+    }
+
+    // Log raw MongoDB response BEFORE any processing
+    // Log FULL content to see what MongoDB actually returns
+    const fullContentValue = newsData.content || '';
+    const fullExcerptValue = newsData.excerpt || '';
+
+    console.log('[Backend GET /api/news/:id] Raw MongoDB response:', {
+      hasContent: !!newsData.content,
+      contentType: typeof newsData.content,
+      contentLength: fullContentValue.length,
+      contentFirst200: fullContentValue.substring(0, 200),
+      contentLast200: fullContentValue.length > 200 ? fullContentValue.substring(fullContentValue.length - 200) : 'N/A',
+      contentFullValue: fullContentValue, // Log the ENTIRE content value
+      hasExcerpt: !!newsData.excerpt,
+      excerptLength: fullExcerptValue.length,
+      excerptFirst200: fullExcerptValue.substring(0, 200),
+      excerptFullValue: fullExcerptValue, // Log the ENTIRE excerpt value
+      contentEqualsExcerpt: fullContentValue === fullExcerptValue,
+      allFields: Object.keys(newsData),
+      contentStartsWithHTML: fullContentValue.trim().startsWith('<'),
+      excerptStartsWithHTML: fullExcerptValue.trim().startsWith('<')
+    });
 
     // Ensure images array exists
     if (!newsData.images || !Array.isArray(newsData.images)) {
@@ -219,6 +272,13 @@ router.get('/:id', async (req, res) => {
       }
     }
 
+    // Log detailed content information
+    const contentLength = newsData.content ? newsData.content.length : 0;
+    const excerptLength = newsData.excerpt ? newsData.excerpt.length : 0;
+    const contentStartsWith = newsData.content ? newsData.content.substring(0, 100) : 'missing';
+    const excerptStartsWith = newsData.excerpt ? newsData.excerpt.substring(0, 100) : 'missing';
+    const contentEqualsExcerpt = newsData.content === newsData.excerpt;
+
     console.log('[Backend GET /api/news/:id] News found:', {
       id: newsData._id,
       image: newsData.image,
@@ -228,8 +288,22 @@ router.get('/:id', async (req, res) => {
       imagesIsArray: Array.isArray(newsData.images),
       isTrending: newsData.isTrending,
       trendingTitle: newsData.trendingTitle,
-      trendingTitleType: typeof newsData.trendingTitle
+      trendingTitleType: typeof newsData.trendingTitle,
+      contentExists: !!newsData.content,
+      contentLength: contentLength,
+      contentStartsWith: contentStartsWith,
+      excerptExists: !!newsData.excerpt,
+      excerptLength: excerptLength,
+      excerptStartsWith: excerptStartsWith,
+      contentEqualsExcerpt: contentEqualsExcerpt,
+      contentEnExists: !!newsData.contentEn,
+      contentEnLength: newsData.contentEn ? newsData.contentEn.length : 0
     });
+
+    // WARNING: If content equals excerpt, the database might have excerpt in content field
+    if (contentEqualsExcerpt && contentLength > 0) {
+      console.warn('[Backend GET /api/news/:id] WARNING: content field equals excerpt field! Content field may contain excerpt instead of full article.');
+    }
 
     res.json({
       success: true,
@@ -267,7 +341,7 @@ function generateSummary(content, maxWords = 60) {
 // POST /api/news - Create new news (Admin only)
 router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn } = req.body;
 
     // Validate required fields
     if (!title || !excerpt || !category) {
@@ -349,13 +423,16 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 
     const news = new News({
       title,
-      titleEn: titleEn || title,
+      // Preserve empty string if sent, otherwise fallback to Hindi title
+      titleEn: titleEn !== undefined ? titleEn : title,
       excerpt,
-      excerptEn: excerptEn || '',
+      // Preserve empty string if sent
+      excerptEn: excerptEn !== undefined ? excerptEn : '',
       summary: hindiSummary,
       summaryEn: englishSummary,
       content: finalContent,
-      contentEn: contentEn || '',
+      // Preserve empty string if sent
+      contentEn: contentEn !== undefined ? contentEn : '',
       category,
       tags: parsedTags,
       pages: parsedPages.length > 0 ? parsedPages : ['home'], // Default to home if no pages specified
@@ -365,7 +442,9 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
       isBreaking: isBreaking === 'true' || isBreaking === true,
       isFeatured: isFeatured === 'true' || isFeatured === true,
       isTrending: isTrending === 'true' || isTrending === true,
-      trendingTitle: trendingTitle || undefined
+      trendingTitle: trendingTitle || undefined,
+      // Preserve empty string if sent for trendingTitleEn
+      trendingTitleEn: req.body.trendingTitleEn !== undefined ? req.body.trendingTitleEn : undefined
     });
 
     await news.save();
@@ -398,7 +477,7 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 // PUT /api/news/:id - Update news (Admin only)
 router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount: 3 }]), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn } = req.body;
 
     // Extract files from req.files.images (when using upload.fields)
     const imageFiles = req.files && req.files.images ? req.files.images : [];
@@ -413,6 +492,16 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
       trendingTitle: req.body.trendingTitle,
       trendingTitleType: typeof req.body.trendingTitle,
       isTrending: req.body.isTrending,
+      // Log English fields to debug empty string handling
+      titleEn: req.body.titleEn,
+      titleEnType: typeof req.body.titleEn,
+      titleEnLength: req.body.titleEn ? req.body.titleEn.length : 'N/A',
+      excerptEn: req.body.excerptEn,
+      excerptEnType: typeof req.body.excerptEn,
+      summaryEn: req.body.summaryEn,
+      summaryEnType: typeof req.body.summaryEn,
+      trendingTitleEn: req.body.trendingTitleEn,
+      trendingTitleEnType: typeof req.body.trendingTitleEn,
       fullBody: JSON.stringify(req.body, null, 2)
     });
 
@@ -432,56 +521,178 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
       currentImagesCount: news.images ? news.images.length : 0
     });
 
-    // Update fields
-    if (title) news.title = title;
-    if (titleEn !== undefined) news.titleEn = titleEn;
-    if (excerpt) news.excerpt = excerpt;
-    if (excerptEn !== undefined) news.excerptEn = excerptEn;
-    if (content !== undefined) news.content = content;
-    if (contentEn !== undefined) news.contentEn = contentEn;
-
-    // Generate summaries if content changed and summary not provided
-    if (content !== undefined && !summary) {
-      news.summary = generateSummary(content || news.excerpt, 60);
-    } else if (summary !== undefined) {
-      news.summary = summary;
+    // Update fields - allow clearing all fields with empty strings
+    // Check if field exists in req.body (even if empty string) to allow clearing
+    if ('title' in req.body) {
+      news.title = req.body.title !== undefined ? req.body.title : '';
+      news.markModified('title');
+      console.log('[Backend PUT] Setting title:', {
+        received: req.body.title,
+        receivedType: typeof req.body.title,
+        value: news.title,
+        type: typeof news.title,
+        length: news.title ? news.title.length : 0,
+        isModified: news.isModified('title')
+      });
+    }
+    if ('excerpt' in req.body) {
+      news.excerpt = req.body.excerpt !== undefined ? req.body.excerpt : '';
+      news.markModified('excerpt');
+      console.log('[Backend PUT] Setting excerpt:', {
+        received: req.body.excerpt ? `${req.body.excerpt.substring(0, 50)}...` : '(empty)',
+        receivedType: typeof req.body.excerpt,
+        value: news.excerpt ? `${news.excerpt.substring(0, 50)}...` : '(empty)',
+        length: news.excerpt ? news.excerpt.length : 0,
+        isModified: news.isModified('excerpt')
+      });
     }
 
-    if (contentEn !== undefined && !summaryEn) {
-      news.summaryEn = generateSummary(contentEn, 60);
-    } else if (summaryEn !== undefined) {
-      news.summaryEn = summaryEn;
+    // For optional English fields, explicitly handle empty strings
+    // Check if field exists in req.body (even if empty string) to allow clearing
+    if ('titleEn' in req.body) {
+      // Preserve empty string if sent, otherwise use the value or empty string
+      news.titleEn = req.body.titleEn !== undefined ? req.body.titleEn : '';
+      news.markModified('titleEn'); // Explicitly mark as modified to ensure save
+      console.log('[Backend PUT] Setting titleEn:', {
+        received: req.body.titleEn,
+        receivedType: typeof req.body.titleEn,
+        value: news.titleEn,
+        type: typeof news.titleEn,
+        length: news.titleEn ? news.titleEn.length : 0,
+        isModified: news.isModified('titleEn')
+      });
+    }
+    if ('excerptEn' in req.body) {
+      news.excerptEn = req.body.excerptEn !== undefined ? req.body.excerptEn : '';
+      news.markModified('excerptEn');
+      console.log('[Backend PUT] Setting excerptEn:', {
+        received: req.body.excerptEn,
+        receivedType: typeof req.body.excerptEn,
+        value: news.excerptEn,
+        type: typeof news.excerptEn,
+        length: news.excerptEn ? news.excerptEn.length : 0,
+        isModified: news.isModified('excerptEn')
+      });
+    }
+    if ('summaryEn' in req.body) {
+      news.summaryEn = req.body.summaryEn !== undefined ? req.body.summaryEn : '';
+      news.markModified('summaryEn');
+      console.log('[Backend PUT] Setting summaryEn:', {
+        received: req.body.summaryEn,
+        receivedType: typeof req.body.summaryEn,
+        value: news.summaryEn,
+        type: typeof news.summaryEn,
+        length: news.summaryEn ? news.summaryEn.length : 0,
+        isModified: news.isModified('summaryEn')
+      });
+    }
+    if ('contentEn' in req.body) {
+      news.contentEn = req.body.contentEn !== undefined ? req.body.contentEn : '';
+      news.markModified('contentEn');
+      console.log('[Backend PUT] Setting contentEn:', {
+        received: req.body.contentEn ? `${req.body.contentEn.substring(0, 50)}...` : '(empty)',
+        receivedType: typeof req.body.contentEn,
+        value: news.contentEn ? `${news.contentEn.substring(0, 50)}...` : '(empty)',
+        length: news.contentEn ? news.contentEn.length : 0,
+        isModified: news.isModified('contentEn')
+      });
     }
 
-    if (category) news.category = category;
-    if (author) news.author = author;
+    // Content can be empty, so check for presence in req.body
+    if ('content' in req.body) {
+      news.content = req.body.content !== undefined ? req.body.content : '';
+      news.markModified('content');
+      console.log('[Backend PUT] Setting content:', {
+        received: req.body.content ? `${req.body.content.substring(0, 50)}...` : '(empty)',
+        receivedType: typeof req.body.content,
+        value: news.content ? `${news.content.substring(0, 50)}...` : '(empty)',
+        length: news.content ? news.content.length : 0,
+        isModified: news.isModified('content')
+      });
+    }
+
+    // Handle summary - allow clearing with empty string
+    if ('summary' in req.body) {
+      if (req.body.summary !== undefined && req.body.summary !== '') {
+        // If summary is provided and not empty, use it
+        news.summary = req.body.summary;
+      } else if (req.body.summary === '') {
+        // If summary is explicitly cleared (empty string), clear it
+        news.summary = '';
+      } else if (content !== undefined && content !== '') {
+        // If content changed and summary not provided, generate it
+        news.summary = generateSummary(content || news.excerpt, 60);
+      }
+      news.markModified('summary');
+      console.log('[Backend PUT] Setting summary:', {
+        received: req.body.summary ? `${req.body.summary.substring(0, 50)}...` : '(empty)',
+        value: news.summary ? `${news.summary.substring(0, 50)}...` : '(empty)',
+        length: news.summary ? news.summary.length : 0
+      });
+    }
+
+    // Handle summaryEn - already handled above, but ensure it's marked as modified
+    // (summaryEn is already handled in the English fields section above)
+
+    // Handle category - allow clearing with empty string
+    if ('category' in req.body) {
+      news.category = req.body.category !== undefined ? req.body.category : '';
+      news.markModified('category');
+      console.log('[Backend PUT] Setting category:', {
+        received: req.body.category,
+        value: news.category
+      });
+    }
+
+    // Handle author - allow clearing with empty string
+    if ('author' in req.body) {
+      news.author = req.body.author !== undefined ? req.body.author : '';
+      news.markModified('author');
+      console.log('[Backend PUT] Setting author:', {
+        received: req.body.author,
+        value: news.author
+      });
+    }
     if (published !== undefined) news.published = published === 'true' || published === true;
     if (isBreaking !== undefined) news.isBreaking = isBreaking === 'true' || isBreaking === true;
     if (isFeatured !== undefined) news.isFeatured = isFeatured === 'true' || isFeatured === true;
     if (isTrending !== undefined) news.isTrending = isTrending === 'true' || isTrending === true;
-    // Handle trendingTitle: set it if provided, clear it if trending is unchecked
-    console.log('[Backend PUT /api/news/:id] Processing trendingTitle:', {
-      trendingTitleReceived: trendingTitle,
-      trendingTitleType: typeof trendingTitle,
-      trendingTitleUndefined: trendingTitle === undefined,
-      isTrending: isTrending,
-      currentTrendingTitle: news.trendingTitle
-    });
-
-    if (trendingTitle !== undefined && trendingTitle !== null) {
-      const trimmedTitle = typeof trendingTitle === 'string' ? trendingTitle.trim() : String(trendingTitle).trim();
-      news.trendingTitle = trimmedTitle || undefined;
-      console.log('[Backend PUT /api/news/:id] Set trendingTitle:', {
-        original: trendingTitle,
-        trimmed: trimmedTitle,
-        final: news.trendingTitle
+    // Handle trendingTitle: allow clearing with empty string
+    if ('trendingTitle' in req.body) {
+      if (req.body.trendingTitle !== undefined && req.body.trendingTitle !== null && req.body.trendingTitle !== '') {
+        // If trendingTitle is provided and not empty, use it
+        const trimmedTitle = typeof req.body.trendingTitle === 'string' ? req.body.trendingTitle.trim() : String(req.body.trendingTitle).trim();
+        news.trendingTitle = trimmedTitle || '';
+      } else {
+        // If trendingTitle is empty string or null, clear it
+        news.trendingTitle = '';
+      }
+      news.markModified('trendingTitle');
+      console.log('[Backend PUT] Setting trendingTitle:', {
+        received: req.body.trendingTitle,
+        receivedType: typeof req.body.trendingTitle,
+        value: news.trendingTitle,
+        isModified: news.isModified('trendingTitle')
       });
     } else if (isTrending === 'false' || isTrending === false) {
-      // Clear trendingTitle if trending is unchecked
-      news.trendingTitle = undefined;
-      console.log('[Backend PUT /api/news/:id] Cleared trendingTitle (trending unchecked)');
-    } else {
-      console.log('[Backend PUT /api/news/:id] Keeping existing trendingTitle:', news.trendingTitle);
+      // Clear trendingTitle if trending is unchecked (even if not in req.body)
+      news.trendingTitle = '';
+      news.markModified('trendingTitle');
+      console.log('[Backend PUT] Cleared trendingTitle (trending unchecked)');
+    }
+
+    // Handle trendingTitleEn: allow clearing with empty string
+    if ('trendingTitleEn' in req.body) {
+      news.trendingTitleEn = req.body.trendingTitleEn !== undefined ? req.body.trendingTitleEn : '';
+      news.markModified('trendingTitleEn');
+      console.log('[Backend PUT] Setting trendingTitleEn:', {
+        received: req.body.trendingTitleEn,
+        receivedType: typeof req.body.trendingTitleEn,
+        value: news.trendingTitleEn,
+        type: typeof news.trendingTitleEn,
+        length: news.trendingTitleEn ? news.trendingTitleEn.length : 0,
+        isModified: news.isModified('trendingTitleEn')
+      });
     }
 
     // Parse tags and pages

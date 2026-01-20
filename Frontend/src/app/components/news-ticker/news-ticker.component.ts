@@ -208,11 +208,17 @@ export class NewsTickerComponent implements OnInit, AfterViewInit {
   }
 
   getDisplayTitle(news: any): string {
-    // If trending and trendingTitle exists, use it; otherwise use regular title
-    if (news.isTrending && news.trendingTitle) {
-      return news.trendingTitle;
+    if (!news) return '';
+    
+    // If trending, use trendingTitle with language support, otherwise use title
+    if (news.isTrending && (news.trendingTitle || news.trendingTitleEn)) {
+      return this.languageService.getDisplayTrendingTitle(
+        news.trendingTitle || '',
+        news.trendingTitleEn || ''
+      );
     }
-    return news.title || '';
+
+    return this.languageService.getDisplayTitle(news.title || '', news.titleEn || '');
   }
 
   async translateTrendingTitles() {

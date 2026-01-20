@@ -31,6 +31,7 @@ interface PendingNews {
   isFeatured: boolean;
   isTrending: boolean;
   trendingTitle?: string;
+  trendingTitleEn?: string;
   generatedBy: string;
   generatedAt: string;
   createdAt: string;
@@ -120,21 +121,12 @@ interface PendingNews {
                   <!-- Title (English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Title (English)</label>
-                    <div class="flex gap-2">
-                      <input
-                        type="text"
-                        [(ngModel)]="newsData.titleEn"
-                        name="titleEn"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      />
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('title')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      [(ngModel)]="newsData.titleEn"
+                      name="titleEn"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    />
                   </div>
 
                   <!-- Excerpt -->
@@ -152,21 +144,12 @@ interface PendingNews {
                   <!-- Excerpt (English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Excerpt (English)</label>
-                    <div class="flex gap-2">
-                      <textarea
-                        [(ngModel)]="newsData.excerptEn"
-                        name="excerptEn"
-                        rows="3"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      ></textarea>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('excerpt')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <textarea
+                      [(ngModel)]="newsData.excerptEn"
+                      name="excerptEn"
+                      rows="3"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    ></textarea>
                   </div>
 
                   <!-- Summary (60 words) -->
@@ -188,23 +171,14 @@ interface PendingNews {
                   <!-- Summary (60 words in English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Summary (60 words in English)</label>
-                    <div class="flex gap-2">
-                      <textarea
-                        [(ngModel)]="newsData.summaryEn"
-                        name="summaryEn"
-                        rows="4"
-                        maxlength="400"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                        placeholder="Enter a concise summary in English (approximately 60 words)..."
-                      ></textarea>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('summary')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <textarea
+                      [(ngModel)]="newsData.summaryEn"
+                      name="summaryEn"
+                      rows="4"
+                      maxlength="400"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      placeholder="Enter a concise summary in English (approximately 60 words)..."
+                    ></textarea>
                     <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsData.summaryEn) }} / 60 words</p>
                   </div>
 
@@ -224,36 +198,13 @@ interface PendingNews {
                   <!-- Detailed Content (Full Article in English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Detailed Content (Full Article in English)</label>
-                    <div class="flex gap-2">
-                      <div class="flex-1">
-                        <ckeditor
-                          [(ngModel)]="newsData.contentEn"
-                          [editor]="Editor"
-                          [config]="editorConfig"
-                          name="contentEn"
-                          class="ckeditor-custom">
-                        </ckeditor>
-                      </div>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('content')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Convert All to English Button -->
-                  <div class="border-t-2 border-primary/30 pt-4">
-                    <button
-                      type="button"
-                      (click)="convertAllToEnglish()"
-                      [disabled]="isTranslating || !newsData.title || !newsData.excerpt"
-                      class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl">
-                      {{ isTranslating ? 'Translating All Fields...' : '🔄 Convert All to English' }}
-                    </button>
-                    <p class="text-xs text-muted-foreground mt-2 text-center">This will translate Title, Excerpt, Summary, and Content to English</p>
+                    <ckeditor
+                      [(ngModel)]="newsData.contentEn"
+                      [editor]="Editor"
+                      [config]="editorConfig"
+                      name="contentEn"
+                      class="ckeditor-custom">
+                    </ckeditor>
                   </div>
 
                   <!-- Category -->
@@ -378,20 +329,37 @@ interface PendingNews {
                     
                     <!-- Trending Title (shown only when Trending is checked) -->
                     @if (newsData.isTrending) {
-                      <div>
-                        <label class="block text-sm font-medium mb-2">
-                          Trending Title <span class="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          [(ngModel)]="newsData.trendingTitle"
-                          name="trendingTitle"
-                          required
-                          placeholder="Enter a catchy title for trending news..."
-                          class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                          [class.border-red-500]="newsData.isTrending && !newsData.trendingTitle"
-                        />
-                        <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                      <div class="space-y-4">
+                        <div>
+                          <label class="block text-sm font-medium mb-2">
+                            Trending Title <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            [(ngModel)]="newsData.trendingTitle"
+                            name="trendingTitle"
+                            required
+                            placeholder="Enter a catchy title for trending news..."
+                            class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            [class.border-red-500]="newsData.isTrending && !newsData.trendingTitle"
+                          />
+                          <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium mb-2">
+                            Trending Title (English) <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            [(ngModel)]="newsData.trendingTitleEn"
+                            name="trendingTitleEn"
+                            required
+                            placeholder="Enter a catchy title for trending news in English..."
+                            class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            [class.border-red-500]="newsData.isTrending && !newsData.trendingTitleEn"
+                          />
+                          <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section (English version)</p>
+                        </div>
                       </div>
                     }
                   </div>
@@ -598,6 +566,7 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
     isFeatured: false,
     isTrending: false,
     trendingTitle: '',
+    trendingTitleEn: '',
     generatedBy: '',
     generatedAt: '',
     createdAt: '',
@@ -1009,26 +978,39 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
     this.submitSuccess = '';
 
     const formData = new FormData();
-    formData.append('title', this.newsData.title);
-    formData.append('titleEn', this.newsData.titleEn || this.newsData.title);
-    formData.append('excerpt', this.newsData.excerpt);
-    formData.append('excerptEn', this.newsData.excerptEn || '');
-    formData.append('summary', this.newsData.summary || '');
-    formData.append('summaryEn', this.newsData.summaryEn || '');
-    formData.append('content', this.newsData.content || this.newsData.excerpt);
-    formData.append('contentEn', this.newsData.contentEn || '');
-    formData.append('category', this.newsData.category);
+    // Send all fields as-is (empty string if cleared) - allow clearing any field
+    formData.append('title', this.newsData.title !== undefined ? this.newsData.title : '');
+    // Send titleEn as-is (empty string if cleared, don't fallback to Hindi title)
+    formData.append('titleEn', this.newsData.titleEn !== undefined ? this.newsData.titleEn : '');
+    formData.append('excerpt', this.newsData.excerpt !== undefined ? this.newsData.excerpt : '');
+    // Send excerptEn as-is (empty string if cleared)
+    formData.append('excerptEn', this.newsData.excerptEn !== undefined ? this.newsData.excerptEn : '');
+    formData.append('summary', this.newsData.summary !== undefined ? this.newsData.summary : '');
+    // Send summaryEn as-is (empty string if cleared)
+    formData.append('summaryEn', this.newsData.summaryEn !== undefined ? this.newsData.summaryEn : '');
+    formData.append('content', this.newsData.content !== undefined ? this.newsData.content : (this.newsData.excerpt || ''));
+    // Send contentEn as-is (empty string if cleared)
+    formData.append('contentEn', this.newsData.contentEn !== undefined ? this.newsData.contentEn : '');
+    formData.append('category', this.newsData.category !== undefined ? this.newsData.category : '');
     if (this.newsData.icon) {
       formData.append('icon', this.newsData.icon);
     }
     formData.append('tags', JSON.stringify(this.newsData.tags));
     formData.append('pages', JSON.stringify(this.newsData.pages));
-    formData.append('author', this.newsData.author);
+    formData.append('author', this.newsData.author !== undefined ? this.newsData.author : '');
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
     formData.append('isTrending', this.newsData.isTrending.toString());
-    if (this.newsData.isTrending && this.newsData.trendingTitle) {
-      formData.append('trendingTitle', this.newsData.trendingTitle);
+    // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
+    if (this.newsData.isTrending) {
+      // If trending is checked, send trendingTitle (even if empty, backend will validate)
+      formData.append('trendingTitle', this.newsData.trendingTitle !== undefined ? this.newsData.trendingTitle : '');
+      // Send trendingTitleEn as-is (empty string if cleared)
+      formData.append('trendingTitleEn', this.newsData.trendingTitleEn !== undefined ? this.newsData.trendingTitleEn : '');
+    } else {
+      // If trending is unchecked, send empty string to clear it
+      formData.append('trendingTitle', '');
+      formData.append('trendingTitleEn', '');
     }
     
     // Append all new images (max 3)

@@ -26,6 +26,7 @@ export interface NewsArticle {
   isBreaking?: boolean;
   isFeatured?: boolean;
   trendingTitle?: string;
+  trendingTitleEn?: string;
   tags?: string[];
 }
 
@@ -571,6 +572,7 @@ export class NewsService {
               isBreaking: article.isBreaking || false,
               isFeatured: article.isFeatured || false,
               trendingTitle: article.trendingTitle || undefined,
+              trendingTitleEn: article.trendingTitleEn || undefined,
               tags: article.tags || []
             } as NewsArticle;
             
@@ -694,7 +696,8 @@ export class NewsService {
             isTrending: article.isTrending || false,
             isBreaking: article.isBreaking || false,
             isFeatured: article.isFeatured || false,
-            trendingTitle: article.trendingTitle || undefined
+            trendingTitle: article.trendingTitle || undefined,
+            trendingTitleEn: article.trendingTitleEn || undefined
           } as NewsArticle;
           
           // Translate if Hindi is selected
@@ -766,7 +769,8 @@ export class NewsService {
               isTrending: article.isTrending || false,
               isBreaking: article.isBreaking || false,
               isFeatured: article.isFeatured || false,
-              trendingTitle: article.trendingTitle || undefined
+              trendingTitle: article.trendingTitle || undefined,
+            trendingTitleEn: article.trendingTitleEn || undefined
             } as NewsArticle;
           });
 
@@ -841,7 +845,8 @@ export class NewsService {
               isTrending: article.isTrending || false,
               isBreaking: article.isBreaking || false,
               isFeatured: article.isFeatured || false,
-              trendingTitle: article.trendingTitle || undefined
+              trendingTitle: article.trendingTitle || undefined,
+            trendingTitleEn: article.trendingTitleEn || undefined
             } as NewsArticle;
           });
 

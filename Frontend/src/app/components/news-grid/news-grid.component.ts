@@ -33,7 +33,7 @@ import { filter } from 'rxjs/operators';
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (item of [1,2,3,4,5,6]; track $index) {
               <article class="news-card group">
-                <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                <div class="relative aspect-video overflow-hidden rounded-t-xl bg-secondary/20">
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
                     <div class="flex flex-col items-center gap-2">
                       <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -52,14 +52,12 @@ import { filter } from 'rxjs/operators';
 
         <!-- News Grid - Show when items are available (even if still loading images) -->
         @if (newsItems.length > 0) {
-          <!-- Debug: Show item count -->
-          <div class="text-xs text-muted-foreground mb-2">Loaded: {{ newsItems.length }} items, isLoading: {{ isLoading }}</div>
           <div [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 sm:gap-4 lg:gap-6' : 'gap-2 sm:gap-5 lg:gap-6')">
             @for (news of newsItems; track news.id; let i = $index) {
             <article
               [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
               [style.animation-delay]="i * 100 + 'ms'">
-            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'w-full sm:flex-none sm:aspect-[16/10]' : 'w-full sm:flex-none sm:aspect-[16/10]')">
+            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'w-full sm:flex-none aspect-video' : 'w-full sm:flex-none aspect-video')">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -74,7 +72,7 @@ import { filter } from 'rxjs/operators';
                   <img
                     [src]="news.image"
                     [alt]="news.title"
-                    class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 animate-fade-in"
+                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                     decoding="async"
                     style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
@@ -114,25 +112,39 @@ import { filter } from 'rxjs/operators';
                 }
               </div>
 
-              <!-- Border Line with Gradient - Hidden on mobile home page -->
-              <div [class]="'h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 ' + (isHomePage ? 'hidden lg:block' : '')"></div>
+              <!-- Border Line with Gradient -->
+              <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
 
-              <div [class]="'bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col ' + (isHomePage ? 'p-2 pt-2 pb-2 sm:p-3 sm:pt-3 sm:pb-3 lg:h-full lg:p-5 lg:pt-6 lg:pb-6' : 'h-full p-3 pt-3 pb-3 sm:p-4 sm:pt-4 sm:pb-4 lg:p-5 lg:pt-6 lg:pb-6')">
-                <h3 
-                  [class]="'font-display font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 cursor-pointer hover:opacity-80 hover:scale-[1.02] ' + (isHomePage ? 'mobile-headline text-sm sm:text-base lg:text-lg lg:mb-1 lg:flex-grow' : 'text-sm sm:text-base lg:text-lg mb-1 sm:mb-2 lg:mb-4 flex-grow') + ' ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
-                  (click)="openNewsModal(news)"
-                  (touchstart)="onTouchStart($event, news)"
-                  (touchend)="onTouchEnd($event, news)"
-                  (touchmove)="onTouchMove($event)"
-                  style="touch-action: pan-y !important; -webkit-touch-callout: none; -webkit-overflow-scrolling: touch; -webkit-user-select: none; user-select: none;">
-                  @if (news.isTrending && !isHomePage) {
-                    <span class="inline-block mr-2 text-lg leading-none">🔥</span>
-                  }
-                  {{ getDisplayTitle(news) }}
-                </h3>
-                <div [class]="'flex items-center justify-between text-[0.65rem] sm:text-xs text-muted-foreground ' + (isHomePage ? 'mt-auto lg:mt-2' : 'mt-1.5 sm:mt-2')">
-                  <span class="text-left truncate pr-2">{{ news.author || 'News Adda India' }}</span>
-                  <span class="text-right flex-shrink-0">{{ news.date || news.time }}</span>
+              <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <h3 
+                      [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
+                      (click)="openNewsModal(news)"
+                      (touchstart)="onTouchStart($event, news)"
+                      (touchend)="onTouchEnd($event, news)"
+                      (touchmove)="onTouchMove($event)"
+                      style="touch-action: pan-x pan-y !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none;">
+                      @if (news.isTrending && !isHomePage) {
+                        <span class="inline-block mr-1 text-sm leading-none">🔥</span>
+                      }
+                      {{ getDisplayTitle(news) }}
+                    </h3>
+                    <div class="flex items-center justify-start gap-3 text-[0.65rem] sm:text-xs text-muted-foreground mt-2">
+                      <span class="flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span class="text-left">{{ news.author || 'News Adda India' }}</span>
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{{ news.date || news.time }}</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
@@ -208,7 +220,7 @@ import { filter } from 'rxjs/operators';
         max-width: 100% !important;
         min-width: 0 !important;
         flex: none !important;
-        aspect-ratio: 16/10 !important;
+        aspect-ratio: 16/9 !important;
       }
       
       /* Ensure cards don't overflow */
@@ -291,10 +303,10 @@ import { filter } from 'rxjs/operators';
         align-items: stretch !important;
         justify-content: space-between !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(h3):not(div.flex.items-center.justify-between) {
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(div.flex.items-start) {
         display: none !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card h3.mobile-headline {
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > h3 {
         margin: 0 !important;
         padding: 0 !important;
         padding-top: 0.375rem !important;
@@ -307,7 +319,7 @@ import { filter } from 'rxjs/operators';
         display: block !important;
         overflow: visible !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between {
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start {
         margin: 0 !important;
         padding: 0 !important;
         margin-top: 0.5rem !important;
@@ -318,10 +330,10 @@ import { filter } from 'rxjs/operators';
         border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
       }
       
-      .dark .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between {
+      .dark .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start {
         border-top-color: rgba(255, 255, 255, 0.1) !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card .flex.items-center.justify-between span {
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start span {
         font-size: 0.7rem !important;
         line-height: 1.2 !important;
       }

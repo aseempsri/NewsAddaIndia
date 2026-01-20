@@ -81,6 +81,10 @@ const pendingNewsSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    trendingTitleEn: {
+        type: String,
+        trim: true
+    },
     // Metadata about when this was generated
     generatedBy: {
         type: String,

@@ -110,29 +110,52 @@ class TranslationService {
         }
       }
 
-      // Generate and translate summary
+      // Translate summary if exists
+      if (newsDoc.summary && !newsDoc.summaryEn) {
+        try {
+          updates.summaryEn = await this.translateText(newsDoc.summary);
+          hasUpdates = true;
+          console.log(`[TranslationService] Translated summary for ${newsDoc._id}`);
+        } catch (error) {
+          console.error(`[TranslationService] Failed to translate summary:`, error.message);
+        }
+      }
+
+      // Generate summaries if needed (only if summary doesn't exist)
       if (newsDoc.content || newsDoc.excerpt) {
         const sourceContent = newsDoc.content || newsDoc.excerpt;
         
         // Generate Hindi summary if not exists
-        if (!newsDoc.summary) {
+        if (!newsDoc.summary && sourceContent) {
           updates.summary = this.generateSummary(sourceContent, 60);
           hasUpdates = true;
         }
 
-        // Generate English summary if not exists
-        if (!newsDoc.summaryEn) {
-          const englishContent = newsDoc.contentEn || newsDoc.excerptEn || '';
-          if (englishContent) {
-            updates.summaryEn = this.generateSummary(englishContent, 60);
-          } else if (sourceContent) {
-            // Translate first, then generate summary
+        // Generate English summary if not exists (only if summary was just generated)
+        if (!newsDoc.summaryEn && !newsDoc.summary && sourceContent) {
+          // If we just generated Hindi summary, translate it
+          if (updates.summary) {
             try {
-              const translatedContent = await this.translateText(sourceContent);
-              updates.summaryEn = this.generateSummary(translatedContent, 60);
+              updates.summaryEn = await this.translateText(updates.summary);
               hasUpdates = true;
             } catch (error) {
-              console.error(`[TranslationService] Failed to generate English summary:`, error.message);
+              console.error(`[TranslationService] Failed to translate generated summary:`, error.message);
+            }
+          } else {
+            // Otherwise generate from English content if available
+            const englishContent = newsDoc.contentEn || newsDoc.excerptEn || '';
+            if (englishContent) {
+              updates.summaryEn = this.generateSummary(englishContent, 60);
+              hasUpdates = true;
+            } else if (sourceContent) {
+              // Translate first, then generate summary
+              try {
+                const translatedContent = await this.translateText(sourceContent);
+                updates.summaryEn = this.generateSummary(translatedContent, 60);
+                hasUpdates = true;
+              } catch (error) {
+                console.error(`[TranslationService] Failed to generate English summary:`, error.message);
+              }
             }
           }
         }
@@ -146,6 +169,17 @@ class TranslationService {
           console.log(`[TranslationService] Translated content for ${newsDoc._id}`);
         } catch (error) {
           console.error(`[TranslationService] Failed to translate content:`, error.message);
+        }
+      }
+
+      // Translate trending title if exists
+      if (newsDoc.trendingTitle && !newsDoc.trendingTitleEn) {
+        try {
+          updates.trendingTitleEn = await this.translateText(newsDoc.trendingTitle);
+          hasUpdates = true;
+          console.log(`[TranslationService] Translated trending title for ${newsDoc._id}`);
+        } catch (error) {
+          console.error(`[TranslationService] Failed to translate trending title:`, error.message);
         }
       }
 
@@ -166,6 +200,7 @@ class TranslationService {
 
   /**
    * Translate all news articles (both published and pending)
+   * Uses Google Translate API
    */
   async translateAllNews() {
     if (this.isRunning) {
@@ -174,8 +209,28 @@ class TranslationService {
     }
 
     this.isRunning = true;
-    console.log('[TranslationService] Starting translation of all news articles...');
+    console.log('[TranslationService] Starting translation of all news articles using Google Translate...');
 
+    try {
+      return await this.translateAllNewsWithGoogleTranslate();
+    } catch (error) {
+      console.error('[TranslationService] Error in translateAllNews:', error);
+      return {
+        success: false,
+        message: error.message,
+        translated: 0,
+        errors: 0,
+        total: 0
+      };
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  /**
+   * Translate all news using Google Translate API
+   */
+  async translateAllNewsWithGoogleTranslate() {
     try {
       // Get all published news without English translations
       const publishedNews = await News.find({
@@ -185,7 +240,11 @@ class TranslationService {
           { excerptEn: { $exists: false } },
           { excerptEn: '' },
           { contentEn: { $exists: false } },
-          { contentEn: '' }
+          { contentEn: '' },
+          { summaryEn: { $exists: false } },
+          { summaryEn: '' },
+          { trendingTitleEn: { $exists: false } },
+          { trendingTitleEn: '' }
         ]
       }).limit(100); // Process in batches
 
@@ -197,7 +256,11 @@ class TranslationService {
           { excerptEn: { $exists: false } },
           { excerptEn: '' },
           { contentEn: { $exists: false } },
-          { contentEn: '' }
+          { contentEn: '' },
+          { summaryEn: { $exists: false } },
+          { summaryEn: '' },
+          { trendingTitleEn: { $exists: false } },
+          { trendingTitleEn: '' }
         ]
       }).limit(100);
 
@@ -241,15 +304,8 @@ class TranslationService {
         total: publishedNews.length + pendingNews.length
       };
     } catch (error) {
-      console.error('[TranslationService] Error in translateAllNews:', error);
-      return {
-        success: false,
-        message: error.message,
-        translated: 0,
-        errors: 0
-      };
-    } finally {
-      this.isRunning = false;
+      console.error('[TranslationService] Error in translateAllNewsWithGoogleTranslate:', error);
+      throw error;
     }
   }
 

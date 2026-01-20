@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -31,6 +31,7 @@ interface LiveNews {
   isFeatured: boolean;
   isTrending: boolean;
   trendingTitle?: string;
+  trendingTitleEn?: string;
   date: string;
   createdAt: string;
   updatedAt: string;
@@ -119,21 +120,12 @@ interface LiveNews {
                   <!-- Title (English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Title (English)</label>
-                    <div class="flex gap-2">
-                      <input
-                        type="text"
-                        [(ngModel)]="newsData.titleEn"
-                        name="titleEn"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      />
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('title')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      [(ngModel)]="newsData.titleEn"
+                      name="titleEn"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    />
                   </div>
 
                   <!-- Excerpt -->
@@ -151,21 +143,12 @@ interface LiveNews {
                   <!-- Excerpt (English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Excerpt (English)</label>
-                    <div class="flex gap-2">
-                      <textarea
-                        [(ngModel)]="newsData.excerptEn"
-                        name="excerptEn"
-                        rows="3"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      ></textarea>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('excerpt')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <textarea
+                      [(ngModel)]="newsData.excerptEn"
+                      name="excerptEn"
+                      rows="3"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    ></textarea>
                   </div>
 
                   <!-- Summary (60 words) -->
@@ -187,23 +170,14 @@ interface LiveNews {
                   <!-- Summary (60 words in English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Summary (60 words in English)</label>
-                    <div class="flex gap-2">
-                      <textarea
-                        [(ngModel)]="newsData.summaryEn"
-                        name="summaryEn"
-                        rows="4"
-                        maxlength="400"
-                        class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                        placeholder="Enter a concise summary in English (approximately 60 words)..."
-                      ></textarea>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('summary')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
+                    <textarea
+                      [(ngModel)]="newsData.summaryEn"
+                      name="summaryEn"
+                      rows="4"
+                      maxlength="400"
+                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                      placeholder="Enter a concise summary in English (approximately 60 words)..."
+                    ></textarea>
                     <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsData.summaryEn) }} / 60 words</p>
                   </div>
 
@@ -223,36 +197,13 @@ interface LiveNews {
                   <!-- Detailed Content (Full Article in English) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Detailed Content (Full Article in English)</label>
-                    <div class="flex gap-2">
-                      <div class="flex-1">
-                        <ckeditor
-                          [(ngModel)]="newsData.contentEn"
-                          [editor]="Editor"
-                          [config]="editorConfig"
-                          name="contentEn"
-                          class="ckeditor-custom">
-                        </ckeditor>
-                      </div>
-                      <button
-                        type="button"
-                        (click)="convertToEnglish('content')"
-                        [disabled]="isTranslating"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                        {{ isTranslating ? 'Translating...' : 'Translate' }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Convert All to English Button -->
-                  <div class="border-t-2 border-primary/30 pt-4">
-                    <button
-                      type="button"
-                      (click)="convertAllToEnglish()"
-                      [disabled]="isTranslating || !newsData.title || !newsData.excerpt"
-                      class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl">
-                      {{ isTranslating ? 'Translating All Fields...' : '🔄 Convert All to English' }}
-                    </button>
-                    <p class="text-xs text-muted-foreground mt-2 text-center">This will translate Title, Excerpt, Summary, and Content to English</p>
+                    <ckeditor
+                      [(ngModel)]="newsData.contentEn"
+                      [editor]="Editor"
+                      [config]="editorConfig"
+                      name="contentEn"
+                      class="ckeditor-custom">
+                    </ckeditor>
                   </div>
 
                   <!-- Category -->
@@ -377,20 +328,37 @@ interface LiveNews {
                     
                     <!-- Trending Title (shown only when Trending is checked) -->
                     @if (newsData.isTrending) {
-                      <div>
-                        <label class="block text-sm font-medium mb-2">
-                          Trending Title <span class="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          [(ngModel)]="newsData.trendingTitle"
-                          name="trendingTitle"
-                          required
-                          placeholder="Enter a catchy title for trending news..."
-                          class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                          [class.border-red-500]="newsData.isTrending && !newsData.trendingTitle"
-                        />
-                        <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                      <div class="space-y-4">
+                        <div>
+                          <label class="block text-sm font-medium mb-2">
+                            Trending Title <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            [(ngModel)]="newsData.trendingTitle"
+                            name="trendingTitle"
+                            required
+                            placeholder="Enter a catchy title for trending news..."
+                            class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            [class.border-red-500]="newsData.isTrending && !newsData.trendingTitle"
+                          />
+                          <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium mb-2">
+                            Trending Title (English) <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            [(ngModel)]="newsData.trendingTitleEn"
+                            name="trendingTitleEn"
+                            required
+                            placeholder="Enter a catchy title for trending news in English..."
+                            class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            [class.border-red-500]="newsData.isTrending && !newsData.trendingTitleEn"
+                          />
+                          <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section (English version)</p>
+                        </div>
                       </div>
                     }
                   </div>
@@ -597,6 +565,7 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy {
     isFeatured: false,
     isTrending: false,
     trendingTitle: '',
+    trendingTitleEn: '',
     date: '',
     createdAt: '',
     updatedAt: ''
@@ -678,7 +647,8 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
-    private adminThemeService: AdminThemeService
+    private adminThemeService: AdminThemeService,
+    private cdr: ChangeDetectorRef
   ) {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -732,36 +702,8 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy {
   }
 
   loadNews() {
-    // Try to load from sessionStorage first (from review page)
-    const storedNews = sessionStorage.getItem('editLiveNews');
-    if (storedNews) {
-      try {
-        this.newsData = JSON.parse(storedNews);
-        this.tagsInput = this.newsData.tags.join(', ');
-        if (this.newsData.image) {
-          this.currentImageUrl = this.getImageUrl(this.newsData.image);
-        }
-        // Load current images array
-        console.log('[AdminEditLivePost] Loading images from sessionStorage:', {
-          images: this.newsData.images,
-          image: this.newsData.image
-        });
-        if (this.newsData.images && Array.isArray(this.newsData.images) && this.newsData.images.length > 0) {
-          this.currentImages = this.newsData.images.map(img => this.getImageUrl(img));
-          console.log('[AdminEditLivePost] Loaded images from sessionStorage:', this.currentImages);
-        } else if (this.newsData.image) {
-          this.currentImages = [this.currentImageUrl!];
-        } else {
-          this.currentImages = [];
-        }
-        sessionStorage.removeItem('editLiveNews');
-        return;
-      } catch (e) {
-        console.error('Error parsing stored news:', e);
-      }
-    }
-
-    // Otherwise fetch from API
+    // Always fetch from API to ensure we have the complete data including content field
+    // The review page doesn't include content in list views, so sessionStorage won't have it
     this.isLoading = true;
     console.log('[AdminEditLivePost] Fetching news from API:', this.newsId);
     this.http.get<{ success: boolean; data: LiveNews; error?: string }>(
@@ -778,21 +720,59 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy {
         });
         
         if (response.success) {
+          // Log raw response to see what we're getting from API
+          console.log('[AdminEditLivePost] Raw API response data:', {
+            hasContent: !!response.data.content,
+            contentType: typeof response.data.content,
+            contentLength: response.data.content ? response.data.content.length : 0,
+            contentValue: response.data.content ? response.data.content.substring(0, 200) : 'missing',
+            contentStartsWith: response.data.content ? response.data.content.substring(0, 50) : 'N/A',
+            hasExcerpt: !!response.data.excerpt,
+            excerptLength: response.data.excerpt ? response.data.excerpt.length : 0,
+            excerptValue: response.data.excerpt ? response.data.excerpt.substring(0, 200) : 'missing',
+            excerptStartsWith: response.data.excerpt ? response.data.excerpt.substring(0, 50) : 'N/A',
+            contentEqualsExcerpt: response.data.content === response.data.excerpt
+          });
+          
+          // IMPORTANT: Use content field directly from database - DO NOT use excerpt as fallback
+          // The content field contains the full article, excerpt is just a short preview
+          const dbContent = response.data.content !== null && response.data.content !== undefined 
+            ? response.data.content 
+            : '';
+          const dbContentEn = response.data.contentEn !== null && response.data.contentEn !== undefined
+            ? response.data.contentEn 
+            : '';
+          
           this.newsData = { 
             ...response.data, 
+            // Ensure English fields are set to empty string if null/undefined (not fallback to Hindi)
+            titleEn: response.data.titleEn !== null && response.data.titleEn !== undefined ? response.data.titleEn : '',
             summary: response.data.summary || '',
-            summaryEn: response.data.summaryEn || '',
-            excerptEn: response.data.excerptEn || '',
-            contentEn: response.data.contentEn || '',
-            trendingTitle: response.data.trendingTitle || undefined
+            summaryEn: response.data.summaryEn !== null && response.data.summaryEn !== undefined ? response.data.summaryEn : '',
+            excerptEn: response.data.excerptEn !== null && response.data.excerptEn !== undefined ? response.data.excerptEn : '',
+            content: dbContent, // Use content field from DB - this is the full article
+            contentEn: dbContentEn, // Use contentEn field from DB
+            trendingTitle: response.data.trendingTitle || undefined,
+            trendingTitleEn: response.data.trendingTitleEn !== null && response.data.trendingTitleEn !== undefined ? response.data.trendingTitleEn : undefined
           };
           console.log('[AdminEditLivePost] Loaded news data:', {
             id: this.newsData._id,
             title: this.newsData.title,
+            content: this.newsData.content ? `${this.newsData.content.substring(0, 100)}...` : '(empty)',
+            contentLength: this.newsData.content ? this.newsData.content.length : 0,
+            contentStartsWith: this.newsData.content ? this.newsData.content.substring(0, 50) : 'N/A',
+            contentEn: this.newsData.contentEn ? `${this.newsData.contentEn.substring(0, 100)}...` : '(empty)',
+            contentEnLength: this.newsData.contentEn ? this.newsData.contentEn.length : 0,
+            excerpt: this.newsData.excerpt ? `${this.newsData.excerpt.substring(0, 50)}...` : '(empty)',
+            excerptLength: this.newsData.excerpt ? this.newsData.excerpt.length : 0,
             isTrending: this.newsData.isTrending,
-            trendingTitle: this.newsData.trendingTitle
+            trendingTitle: this.newsData.trendingTitle,
+            contentSource: response.data.content !== null && response.data.content !== undefined ? 'content field' : 'empty (no fallback)'
           });
           this.tagsInput = this.newsData.tags.join(', ');
+          
+          // Force change detection to update CKEditor
+          this.cdr.detectChanges();
           if (this.newsData.image) {
             this.currentImageUrl = this.getImageUrl(this.newsData.image);
           }
@@ -1063,39 +1043,64 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy {
       this.isSubmitting = false;
       return;
     }
+    if (this.newsData.isTrending && !this.newsData.trendingTitleEn?.trim()) {
+      this.submitError = 'Trending Title (English) is required when Trending is checked';
+      this.isSubmitting = false;
+      return;
+    }
 
     const formData = new FormData();
-    formData.append('title', this.newsData.title);
-    formData.append('titleEn', this.newsData.titleEn || this.newsData.title);
-    formData.append('excerpt', this.newsData.excerpt);
-    formData.append('excerptEn', this.newsData.excerptEn || '');
-    formData.append('summary', this.newsData.summary || '');
-    formData.append('summaryEn', this.newsData.summaryEn || '');
-    formData.append('content', this.newsData.content || this.newsData.excerpt);
-    formData.append('contentEn', this.newsData.contentEn || '');
-    formData.append('category', this.newsData.category);
+    // Log what we're about to send
+    console.log('[AdminEditLivePost] Form submission data:', {
+      content: this.newsData.content ? `${this.newsData.content.substring(0, 100)}...` : '(empty)',
+      contentLength: this.newsData.content ? this.newsData.content.length : 0,
+      excerpt: this.newsData.excerpt ? `${this.newsData.excerpt.substring(0, 100)}...` : '(empty)',
+      excerptLength: this.newsData.excerpt ? this.newsData.excerpt.length : 0,
+      contentEqualsExcerpt: this.newsData.content === this.newsData.excerpt
+    });
+    
+    // Send all fields as-is (empty string if cleared) - allow clearing any field
+    formData.append('title', this.newsData.title !== undefined ? this.newsData.title : '');
+    // Send titleEn as-is (empty string if cleared, don't fallback to Hindi title)
+    formData.append('titleEn', this.newsData.titleEn !== undefined ? this.newsData.titleEn : '');
+    formData.append('excerpt', this.newsData.excerpt !== undefined ? this.newsData.excerpt : '');
+    // Send excerptEn as-is (empty string if cleared)
+    formData.append('excerptEn', this.newsData.excerptEn !== undefined ? this.newsData.excerptEn : '');
+    formData.append('summary', this.newsData.summary !== undefined ? this.newsData.summary : '');
+    // Send summaryEn as-is (empty string if cleared)
+    formData.append('summaryEn', this.newsData.summaryEn !== undefined ? this.newsData.summaryEn : '');
+    // IMPORTANT: Use content field only - DO NOT fallback to excerpt
+    // Content field contains the full article, excerpt is just a preview
+    formData.append('content', this.newsData.content !== undefined ? this.newsData.content : '');
+    // Send contentEn as-is (empty string if cleared)
+    formData.append('contentEn', this.newsData.contentEn !== undefined ? this.newsData.contentEn : '');
+    formData.append('category', this.newsData.category !== undefined ? this.newsData.category : '');
     if (this.newsData.icon) {
       formData.append('icon', this.newsData.icon);
     }
     formData.append('tags', JSON.stringify(this.newsData.tags));
     formData.append('pages', JSON.stringify(this.newsData.pages));
-    formData.append('author', this.newsData.author);
+    formData.append('author', this.newsData.author !== undefined ? this.newsData.author : '');
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
     formData.append('isTrending', this.newsData.isTrending.toString());
     // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
     if (this.newsData.isTrending) {
       // If trending is checked, send trendingTitle (even if empty, backend will validate)
-      formData.append('trendingTitle', this.newsData.trendingTitle || '');
+      formData.append('trendingTitle', this.newsData.trendingTitle !== undefined ? this.newsData.trendingTitle : '');
+      // Send trendingTitleEn as-is (empty string if cleared)
+      formData.append('trendingTitleEn', this.newsData.trendingTitleEn !== undefined ? this.newsData.trendingTitleEn : '');
       console.log('[AdminEditLivePost] Sending trendingTitle (isTrending=true):', {
         isTrending: this.newsData.isTrending,
         trendingTitle: this.newsData.trendingTitle || '(empty string)',
+        trendingTitleEn: this.newsData.trendingTitleEn || '(empty string)',
         trendingTitleType: typeof this.newsData.trendingTitle,
         trendingTitleUndefined: this.newsData.trendingTitle === undefined
       });
     } else {
       // If trending is unchecked, send empty string to clear it
       formData.append('trendingTitle', '');
+      formData.append('trendingTitleEn', '');
       console.log('[AdminEditLivePost] Sending empty trendingTitle (isTrending=false)');
     }
     formData.append('published', 'true'); // Keep it published

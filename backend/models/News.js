@@ -89,6 +89,10 @@ const newsSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  trendingTitleEn: {
+    type: String,
+    trim: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -102,7 +106,9 @@ const newsSchema = new mongoose.Schema({
 // Update the updatedAt field before saving
 newsSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
-  if (!this.titleEn) {
+  // Only set titleEn default if it's truly undefined/null, NOT if it's empty string (which means user cleared it)
+  // Check for undefined/null explicitly, not just falsy values
+  if (this.titleEn === undefined || this.titleEn === null) {
     this.titleEn = this.title;
   }
   

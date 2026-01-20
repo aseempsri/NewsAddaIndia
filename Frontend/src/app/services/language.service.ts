@@ -278,6 +278,32 @@ export class LanguageService {
   }
 
   /**
+   * Get the appropriate excerpt based on current language
+   * Returns excerptEn for English, excerpt (Hindi) for Hindi
+   */
+  getDisplayExcerpt(excerpt: string, excerptEn?: string): string {
+    const lang = this.currentLanguageSubject.value;
+    if (lang === 'hi') {
+      return excerpt || ''; // Hindi excerpt
+    } else {
+      return excerptEn || excerpt || ''; // English excerpt, fallback to excerpt if excerptEn doesn't exist
+    }
+  }
+
+  /**
+   * Get the appropriate trending title based on current language
+   * Returns trendingTitleEn for English, trendingTitle (Hindi) for Hindi
+   */
+  getDisplayTrendingTitle(trendingTitle: string, trendingTitleEn?: string): string {
+    const lang = this.currentLanguageSubject.value;
+    if (lang === 'hi') {
+      return trendingTitle || ''; // Hindi trending title
+    } else {
+      return trendingTitleEn || trendingTitle || ''; // English trending title, fallback to trendingTitle if trendingTitleEn doesn't exist
+    }
+  }
+
+  /**
    * Get the appropriate content based on current language
    * Returns contentEn for English, content (Hindi) for Hindi
    */

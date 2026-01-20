@@ -614,23 +614,12 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   getDisplayContent(): string {
     if (!this.news) return '';
-    const lang = this.languageService.getCurrentLanguage();
     
-    // If translation is in progress, show loading or original
-    if (this.isTranslating && !this.translatedContent) {
-      return this.fullContent || this.news.excerpt || '';
-    }
-    
-    // If translation is available, use it
-    if (this.translatedContent) {
-      return this.translatedContent;
-    }
-    
-    // Otherwise fallback to original based on language
-    if (lang === 'en') {
-      return (this.news as any).contentEn || (this.news as any).excerptEn || this.fullContent || this.news.excerpt || '';
-    }
-    return this.fullContent || this.news.excerpt || '';
+    // Use language service to get correct content based on current language
+    return this.languageService.getDisplayContent(
+      this.news.content || this.news.excerpt || '',
+      (this.news as any).contentEn || ''
+    );
   }
 
   getModalTop(): number {

@@ -221,24 +221,42 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
       // Keep existing pages if parsing fails
     }
     
-    // Update fields
+    // Update fields - allow clearing all fields with empty strings
+    // Check if field exists in req.body (even if empty string) to allow clearing
     const updateData = {
-      title: req.body.title || pendingNews.title,
-      titleEn: req.body.titleEn !== undefined ? req.body.titleEn : (pendingNews.titleEn || req.body.title || pendingNews.title),
-      excerpt: req.body.excerpt || pendingNews.excerpt,
-      excerptEn: req.body.excerptEn !== undefined ? req.body.excerptEn : (pendingNews.excerptEn || ''),
-      summary: req.body.summary !== undefined ? req.body.summary : (pendingNews.summary || generateSummary(req.body.content !== undefined ? req.body.content : pendingNews.content, 60)),
-      summaryEn: req.body.summaryEn !== undefined ? req.body.summaryEn : (pendingNews.summaryEn || (req.body.contentEn ? generateSummary(req.body.contentEn, 60) : '')),
-      content: req.body.content !== undefined ? req.body.content : pendingNews.content,
-      contentEn: req.body.contentEn !== undefined ? req.body.contentEn : (pendingNews.contentEn || ''),
-      category: req.body.category || pendingNews.category,
+      // Preserve empty string if sent for title
+      title: 'title' in req.body ? (req.body.title !== undefined ? req.body.title : '') : pendingNews.title,
+      // Preserve empty string if sent, don't fallback to Hindi title
+      titleEn: 'titleEn' in req.body ? (req.body.titleEn !== undefined ? req.body.titleEn : '') : (pendingNews.titleEn || req.body.title || pendingNews.title),
+      // Preserve empty string if sent for excerpt
+      excerpt: 'excerpt' in req.body ? (req.body.excerpt !== undefined ? req.body.excerpt : '') : pendingNews.excerpt,
+      // Preserve empty string if sent
+      excerptEn: 'excerptEn' in req.body ? (req.body.excerptEn !== undefined ? req.body.excerptEn : '') : (pendingNews.excerptEn || ''),
+      // Handle summary - allow clearing
+      summary: 'summary' in req.body 
+        ? (req.body.summary !== undefined && req.body.summary !== '' 
+          ? req.body.summary 
+          : (req.body.summary === '' ? '' : (pendingNews.summary || generateSummary(req.body.content !== undefined ? req.body.content : pendingNews.content, 60))))
+        : (pendingNews.summary || generateSummary(req.body.content !== undefined ? req.body.content : pendingNews.content, 60)),
+      // Preserve empty string if sent
+      summaryEn: 'summaryEn' in req.body ? (req.body.summaryEn !== undefined ? req.body.summaryEn : '') : (pendingNews.summaryEn || (req.body.contentEn ? generateSummary(req.body.contentEn, 60) : '')),
+      // Preserve empty string if sent for content
+      content: 'content' in req.body ? (req.body.content !== undefined ? req.body.content : '') : pendingNews.content,
+      // Preserve empty string if sent
+      contentEn: 'contentEn' in req.body ? (req.body.contentEn !== undefined ? req.body.contentEn : '') : (pendingNews.contentEn || ''),
+      // Preserve empty string if sent for category
+      category: 'category' in req.body ? (req.body.category !== undefined ? req.body.category : '') : pendingNews.category,
       tags: tags,
       pages: pages,
-      author: req.body.author || pendingNews.author,
+      // Preserve empty string if sent for author
+      author: 'author' in req.body ? (req.body.author !== undefined ? req.body.author : '') : pendingNews.author,
       isBreaking: req.body.isBreaking === 'true' || req.body.isBreaking === true,
       isFeatured: req.body.isFeatured === 'true' || req.body.isFeatured === true,
       isTrending: req.body.isTrending === 'true' || req.body.isTrending === true,
-      trendingTitle: req.body.trendingTitle !== undefined ? req.body.trendingTitle : pendingNews.trendingTitle,
+      // Preserve empty string if sent for trendingTitle
+      trendingTitle: 'trendingTitle' in req.body ? (req.body.trendingTitle !== undefined && req.body.trendingTitle !== null && req.body.trendingTitle !== '' ? req.body.trendingTitle.trim() : '') : pendingNews.trendingTitle,
+      // Preserve empty string if sent
+      trendingTitleEn: 'trendingTitleEn' in req.body ? (req.body.trendingTitleEn !== undefined ? req.body.trendingTitleEn : '') : pendingNews.trendingTitleEn,
       updatedAt: Date.now()
     };
     

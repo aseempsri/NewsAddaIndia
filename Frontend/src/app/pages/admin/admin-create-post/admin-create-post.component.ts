@@ -29,6 +29,7 @@ interface NewsForm {
   isFeatured: boolean;
   isTrending: boolean;
   trendingTitle: string;
+  trendingTitleEn: string;
 }
 
 @Component({
@@ -108,21 +109,12 @@ interface NewsForm {
                 <!-- Title (English) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Title (English)</label>
-                  <div class="flex gap-2">
-                    <input
-                      type="text"
-                      [(ngModel)]="newsForm.titleEn"
-                      name="titleEn"
-                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                    />
-                    <button
-                      type="button"
-                      (click)="convertToEnglish('title')"
-                      [disabled]="isTranslating"
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium">
-                      {{ isTranslating ? 'Translating...' : 'Translate' }}
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    [(ngModel)]="newsForm.titleEn"
+                    name="titleEn"
+                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                  />
                 </div>
 
                 <!-- Excerpt -->
@@ -140,21 +132,12 @@ interface NewsForm {
                 <!-- Excerpt (English) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Excerpt (English)</label>
-                  <div class="flex gap-2">
-                    <textarea
-                      [(ngModel)]="newsForm.excerptEn"
-                      name="excerptEn"
-                      rows="3"
-                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                    ></textarea>
-                    <button
-                      type="button"
-                      (click)="convertToEnglish('excerpt')"
-                      [disabled]="isTranslating"
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                      {{ isTranslating ? 'Translating...' : 'Translate' }}
-                    </button>
-                  </div>
+                  <textarea
+                    [(ngModel)]="newsForm.excerptEn"
+                    name="excerptEn"
+                    rows="3"
+                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                  ></textarea>
                 </div>
 
                 <!-- Summary (60 words) -->
@@ -176,23 +159,14 @@ interface NewsForm {
                 <!-- Summary (60 words in English) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Summary (60 words in English)</label>
-                  <div class="flex gap-2">
-                    <textarea
-                      [(ngModel)]="newsForm.summaryEn"
-                      name="summaryEn"
-                      rows="4"
-                      maxlength="400"
-                      class="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      placeholder="Enter a concise summary in English (approximately 60 words)..."
-                    ></textarea>
-                    <button
-                      type="button"
-                      (click)="convertToEnglish('summary')"
-                      [disabled]="isTranslating"
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                      {{ isTranslating ? 'Translating...' : 'Translate' }}
-                    </button>
-                  </div>
+                  <textarea
+                    [(ngModel)]="newsForm.summaryEn"
+                    name="summaryEn"
+                    rows="4"
+                    maxlength="400"
+                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+                    placeholder="Enter a concise summary in English (approximately 60 words)..."
+                  ></textarea>
                   <p class="text-xs text-muted-foreground mt-1">{{ getWordCount(newsForm.summaryEn) }} / 60 words</p>
                 </div>
 
@@ -212,36 +186,13 @@ interface NewsForm {
                 <!-- Detailed Content (Full Article in English) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Detailed Content (Full Article in English)</label>
-                  <div class="flex gap-2">
-                    <div class="flex-1">
-                      <ckeditor
-                        [(ngModel)]="newsForm.contentEn"
-                        [editor]="Editor"
-                        [config]="editorConfig"
-                        name="contentEn"
-                        class="ckeditor-custom">
-                      </ckeditor>
-                    </div>
-                    <button
-                      type="button"
-                      (click)="convertToEnglish('content')"
-                      [disabled]="isTranslating"
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm font-medium self-start">
-                      {{ isTranslating ? 'Translating...' : 'Translate' }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Convert All to English Button -->
-                <div class="border-t-2 border-primary/30 pt-4">
-                  <button
-                    type="button"
-                    (click)="convertAllToEnglish()"
-                    [disabled]="isTranslating || !newsForm.title || !newsForm.excerpt"
-                    class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all shadow-lg hover:shadow-xl">
-                    {{ isTranslating ? 'Translating All Fields...' : '🔄 Convert All to English' }}
-                  </button>
-                  <p class="text-xs text-muted-foreground mt-2 text-center">This will translate Title, Excerpt, Summary, and Content to English</p>
+                  <ckeditor
+                    [(ngModel)]="newsForm.contentEn"
+                    [editor]="Editor"
+                    [config]="editorConfig"
+                    name="contentEn"
+                    class="ckeditor-custom">
+                  </ckeditor>
                 </div>
 
                 <!-- Category -->
@@ -372,20 +323,37 @@ interface NewsForm {
                   
                   <!-- Trending Title (shown only when Trending is checked) -->
                   @if (newsForm.isTrending) {
-                    <div>
-                      <label class="block text-sm font-medium mb-2">
-                        Trending Title <span class="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        [(ngModel)]="newsForm.trendingTitle"
-                        name="trendingTitle"
-                        required
-                        placeholder="Enter a catchy title for trending news..."
-                        class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                        [class.border-red-500]="newsForm.isTrending && !newsForm.trendingTitle"
-                      />
-                      <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                    <div class="space-y-4">
+                      <div>
+                        <label class="block text-sm font-medium mb-2">
+                          Trending Title <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          [(ngModel)]="newsForm.trendingTitle"
+                          name="trendingTitle"
+                          required
+                          placeholder="Enter a catchy title for trending news..."
+                          class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          [class.border-red-500]="newsForm.isTrending && !newsForm.trendingTitle"
+                        />
+                        <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section</p>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium mb-2">
+                          Trending Title (English) <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          [(ngModel)]="newsForm.trendingTitleEn"
+                          name="trendingTitleEn"
+                          required
+                          placeholder="Enter a catchy title for trending news in English..."
+                          class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          [class.border-red-500]="newsForm.isTrending && !newsForm.trendingTitleEn"
+                        />
+                        <p class="text-xs text-muted-foreground mt-1">This title will be displayed in the trending news section (English version)</p>
+                      </div>
                     </div>
                   }
                 </div>
@@ -603,7 +571,8 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
     isBreaking: false,
     isFeatured: false,
     isTrending: false,
-    trendingTitle: ''
+    trendingTitle: '',
+    trendingTitleEn: ''
   };
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
@@ -961,28 +930,46 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
       this.isSubmitting = false;
       return;
     }
+    if (this.newsForm.isTrending && !this.newsForm.trendingTitleEn?.trim()) {
+      this.submitError = 'Trending Title (English) is required when Trending is checked';
+      this.isSubmitting = false;
+      return;
+    }
 
     const formData = new FormData();
-    formData.append('title', this.newsForm.title);
-    formData.append('titleEn', this.newsForm.titleEn || this.newsForm.title);
-    formData.append('excerpt', this.newsForm.excerpt);
-    formData.append('excerptEn', this.newsForm.excerptEn || '');
-    formData.append('summary', this.newsForm.summary || '');
-    formData.append('summaryEn', this.newsForm.summaryEn || '');
-    formData.append('content', this.newsForm.content || this.newsForm.excerpt);
-    formData.append('contentEn', this.newsForm.contentEn || '');
-    formData.append('category', this.newsForm.category);
+    // Send all fields as-is (empty string if cleared) - allow clearing any field
+    formData.append('title', this.newsForm.title !== undefined ? this.newsForm.title : '');
+    // Send titleEn as-is (empty string if cleared, don't fallback to Hindi title)
+    formData.append('titleEn', this.newsForm.titleEn !== undefined ? this.newsForm.titleEn : '');
+    formData.append('excerpt', this.newsForm.excerpt !== undefined ? this.newsForm.excerpt : '');
+    // Send excerptEn as-is (empty string if cleared)
+    formData.append('excerptEn', this.newsForm.excerptEn !== undefined ? this.newsForm.excerptEn : '');
+    formData.append('summary', this.newsForm.summary !== undefined ? this.newsForm.summary : '');
+    // Send summaryEn as-is (empty string if cleared)
+    formData.append('summaryEn', this.newsForm.summaryEn !== undefined ? this.newsForm.summaryEn : '');
+    formData.append('content', this.newsForm.content !== undefined ? this.newsForm.content : (this.newsForm.excerpt || ''));
+    // Send contentEn as-is (empty string if cleared)
+    formData.append('contentEn', this.newsForm.contentEn !== undefined ? this.newsForm.contentEn : '');
+    formData.append('category', this.newsForm.category !== undefined ? this.newsForm.category : '');
     if (this.newsForm.icon) {
       formData.append('icon', this.newsForm.icon);
     }
     formData.append('tags', JSON.stringify(this.newsForm.tags));
     formData.append('pages', JSON.stringify(this.newsForm.pages));
-    formData.append('author', this.newsForm.author);
+    formData.append('author', this.newsForm.author !== undefined ? this.newsForm.author : '');
     formData.append('isBreaking', this.newsForm.isBreaking.toString());
     formData.append('isFeatured', this.newsForm.isFeatured.toString());
     formData.append('isTrending', this.newsForm.isTrending.toString());
-    if (this.newsForm.isTrending && this.newsForm.trendingTitle) {
-      formData.append('trendingTitle', this.newsForm.trendingTitle);
+    // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
+    if (this.newsForm.isTrending) {
+      // If trending is checked, send trendingTitle (even if empty, backend will validate)
+      formData.append('trendingTitle', this.newsForm.trendingTitle !== undefined ? this.newsForm.trendingTitle : '');
+      // Send trendingTitleEn as-is (empty string if cleared)
+      formData.append('trendingTitleEn', this.newsForm.trendingTitleEn !== undefined ? this.newsForm.trendingTitleEn : '');
+    } else {
+      // If trending is unchecked, send empty string to clear it
+      formData.append('trendingTitle', '');
+      formData.append('trendingTitleEn', '');
     }
     
     // Append all images (max 3)
@@ -1026,7 +1013,8 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
             isBreaking: false,
             isFeatured: false,
             isTrending: false,
-            trendingTitle: ''
+            trendingTitle: '',
+            trendingTitleEn: ''
           };
           this.tagsInput = '';
           this.previewImageUrl = null;

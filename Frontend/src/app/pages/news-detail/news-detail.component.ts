@@ -506,37 +506,21 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
 
   getDisplayExcerpt(): string {
     if (!this.news) return '';
-    // If translation is available and current, use it
-    if (this.translatedExcerpt) {
-      return this.translatedExcerpt;
-    }
-    // Otherwise fallback to original
-    const lang = this.languageService.getCurrentLanguage();
-    if (lang === 'en' && (this.news as any).excerptEn) {
-      return (this.news as any).excerptEn;
-    }
-    return this.news.excerpt || '';
+    // Use language service to get correct excerpt based on current language
+    return this.languageService.getDisplayExcerpt(
+      this.news.excerpt || '',
+      (this.news as any).excerptEn || ''
+    );
   }
 
   getDisplayContent(): string {
     if (!this.news) return '';
-    const lang = this.languageService.getCurrentLanguage();
-
-    // If translation is in progress, show loading or original
-    if (this.isTranslating && !this.translatedContent) {
-      return this.fullContent || this.news.excerpt || '';
-    }
-
-    // If translation is available, use it
-    if (this.translatedContent) {
-      return this.translatedContent;
-    }
-
-    // Otherwise fallback to original based on language
-    if (lang === 'en') {
-      return (this.news as any).contentEn || (this.news as any).excerptEn || this.fullContent || this.news.excerpt || '';
-    }
-    return this.fullContent || this.news.excerpt || '';
+    
+    // Use language service to get correct content based on current language
+    return this.languageService.getDisplayContent(
+      this.news.content || this.news.excerpt || '',
+      (this.news as any).contentEn || ''
+    );
   }
 
   getCategoryName(category: string): string {
