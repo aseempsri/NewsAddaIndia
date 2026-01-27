@@ -166,11 +166,13 @@ Save: `Ctrl+O`, `Enter`, `Ctrl+X`
 ### 4.4 Build Frontend
 
 ```bash
-# Build for production
-npm run build -- --configuration production
+# Build for production with cache-busting
+# This automatically injects a deployment timestamp into index.html
+npm run build:prod
 
 # Wait for build to complete (2-5 minutes)
 # Output: dist/news-adda-india/browser/
+# You should see: "✅ Build version injected" message after build completes
 ```
 
 ### 4.5 Deploy Frontend Files
@@ -372,6 +374,45 @@ curl -X POST http://72.60.235.158/api/admin/login \
 
 ---
 
+## 🔄 Cache-Busting Strategy (Automatic Browser Cache Clearing)
+
+After every deployment, browsers will automatically fetch the latest version thanks to multiple cache-busting mechanisms:
+
+### How It Works:
+
+1. **Angular Output Hashing**: Angular automatically generates unique filenames for JS/CSS files (e.g., `main-abc123.js`, `styles-def456.css`). When code changes, filenames change, forcing browsers to download new files.
+
+2. **Deployment Timestamp Injection**: The build process automatically injects a unique build version and deployment timestamp into `index.html`. This ensures `index.html` is always unique after each deployment.
+
+3. **Nginx Cache Headers**: 
+   - `index.html` is set to **never cache** (`no-cache, no-store, must-revalidate`)
+   - Static assets (JS/CSS) are cached for 1 year, but since filenames change with each build, old cached files become irrelevant
+
+4. **Meta Tags**: `index.html` includes cache-control meta tags that instruct browsers not to cache the HTML file.
+
+### What This Means:
+
+✅ **Users will always see the latest deployed changes**  
+✅ **No manual browser cache clearing needed**  
+✅ **Old cached files become automatically obsolete**  
+✅ **Faster page loads (static assets are cached, but always fresh when changed)**
+
+### Verification:
+
+After deployment, you can verify cache-busting is working:
+
+```bash
+# Check if build version was injected
+grep "build-version" /var/www/html/index.html
+# Should show: <meta name="build-version" content="v1234567890" />
+
+# Check deployment timestamp
+grep "deployment-timestamp" /var/www/html/index.html
+# Should show the current deployment time
+```
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Backend Not Starting
@@ -528,9 +569,9 @@ pm2 status
 ### Frontend Management
 
 ```bash
-# Rebuild and deploy frontend
+# Rebuild and deploy frontend (with cache-busting)
 cd /root/NewsAddaIndia/Frontend
-npm run build -- --configuration production
+npm run build:prod
 sudo rm -rf /var/www/html/*
 sudo cp -r dist/news-adda-india/browser/* /var/www/html/
 sudo chown -R www-data:www-data /var/www/html
