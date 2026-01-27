@@ -10,6 +10,7 @@ import { NewsArticle } from '../../../services/news.service';
 import { Subscription } from 'rxjs';
 import { DeletePasswordModalComponent } from '../../../components/delete-password-modal/delete-password-modal.component';
 import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
+import { LanguageService } from '../../../services/language.service';
 
 interface LiveNews {
   _id: string;
@@ -123,75 +124,74 @@ interface GroupedNews {
                       </span>
                     }
                   </h2>
-                  @if (getActiveFilterCount() > 0) {
-                    <button
-                      (click)="clearAllFilters()"
-                      class="text-sm text-red-500 hover:text-red-600 flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Clear All
-                    </button>
-                  }
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <!-- Search Filter -->
+                <div class="space-y-4">
+                  <!-- Search Filter - Full Width -->
                   <div class="space-y-2">
                     <label class="text-sm font-medium text-muted-foreground">Search</label>
-                    <div class="relative">
-                      <input
-                        type="text"
-                        [(ngModel)]="searchQuery"
-                        (ngModelChange)="applyFilters()"
-                        placeholder="Search by title..."
-                        class="w-full px-4 py-2 pl-10 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                      <svg class="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
+                    <div class="flex gap-2">
+                      <div class="relative flex-1" style="flex: 1.5;">
+                        <input
+                          type="text"
+                          [(ngModel)]="searchQuery"
+                          (keyup.enter)="performSearch()"
+                          class="w-full px-4 py-2 pl-10 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <svg class="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <button
+                        (click)="performSearch()"
+                        class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium whitespace-nowrap">
+                        Search
+                      </button>
                     </div>
                   </div>
 
-                  <!-- Category Filter -->
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-muted-foreground">Category</label>
-                    <select
-                      [(ngModel)]="selectedCategory"
-                      (ngModelChange)="applyFilters()"
-                      class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="">All Categories</option>
-                      @for (category of availableCategories; track category) {
-                        <option [value]="category">{{ category }}</option>
-                      }
-                    </select>
-                  </div>
+                  <!-- Category and Date Sort - Same Row -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Category Filter -->
+                    <div class="space-y-2">
+                      <label class="text-sm font-medium text-muted-foreground">Category</label>
+                      <select
+                        [(ngModel)]="selectedCategory"
+                        (ngModelChange)="applyFilters()"
+                        class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="">All Categories</option>
+                        @for (category of availableCategories; track category) {
+                          <option [value]="category">{{ category }}</option>
+                        }
+                      </select>
+                    </div>
 
-                  <!-- Date Sort -->
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-muted-foreground">Sort by Date</label>
-                    <select
-                      [(ngModel)]="dateSort"
-                      (ngModelChange)="applyFilters()"
-                      class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="latest">Latest First</option>
-                      <option value="oldest">Oldest First</option>
-                    </select>
-                  </div>
-
-                  <!-- Page Filter -->
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-muted-foreground">Visible on Page</label>
-                    <select
-                      [(ngModel)]="selectedPage"
-                      (ngModelChange)="applyFilters()"
-                      class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="">All Pages</option>
-                      @for (page of availablePages; track page) {
-                        <option [value]="page">{{ page | titlecase }}</option>
-                      }
-                    </select>
+                    <!-- Date Sort -->
+                    <div class="space-y-2">
+                      <label class="text-sm font-medium text-muted-foreground">Sort by Date</label>
+                      <select
+                        [(ngModel)]="dateSort"
+                        (ngModelChange)="applyFilters()"
+                        class="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="latest">Latest First</option>
+                        <option value="oldest">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
+
+                <!-- Clear All Filters Button -->
+                @if (getActiveFilterCount() > 0) {
+                  <div class="pt-4">
+                    <button
+                      (click)="clearAllFilters()"
+                      class="px-6 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 font-medium">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Clear All Filters
+                    </button>
+                  </div>
+                }
 
                 <!-- Toggle Filters -->
                 <div class="flex flex-wrap gap-3 pt-2">
@@ -243,10 +243,10 @@ interface GroupedNews {
                   <div class="pt-4 border-t border-border/30">
                     <p class="text-sm text-muted-foreground mb-2">Active Filters:</p>
                     <div class="flex flex-wrap gap-2">
-                      @if (searchQuery) {
+                      @if (currentSearchQuery || currentSearchQueryHi) {
                         <span class="px-3 py-1 text-xs bg-primary/10 text-primary rounded-full flex items-center gap-2">
-                          Search: "{{ searchQuery }}"
-                          <button (click)="searchQuery = ''; applyFilters()" class="hover:text-primary/70">
+                          Search: "{{ currentSearchQuery || currentSearchQueryHi }}"
+                          <button (click)="searchQuery = ''; currentSearchQuery = ''; currentSearchQueryHi = ''; loadLiveNews()" class="hover:text-primary/70">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -257,16 +257,6 @@ interface GroupedNews {
                         <span class="px-3 py-1 text-xs bg-primary/10 text-primary rounded-full flex items-center gap-2">
                           Category: {{ selectedCategory }}
                           <button (click)="selectedCategory = ''; applyFilters()" class="hover:text-primary/70">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </span>
-                      }
-                      @if (selectedPage) {
-                        <span class="px-3 py-1 text-xs bg-primary/10 text-primary rounded-full flex items-center gap-2">
-                          Page: {{ selectedPage | titlecase }}
-                          <button (click)="selectedPage = ''; applyFilters()" class="hover:text-primary/70">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -480,6 +470,7 @@ interface GroupedNews {
                   </div>
                 </div>
                 }
+
               }
             }
 
@@ -524,8 +515,9 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
 
   // Filter properties
   searchQuery = '';
+  currentSearchQuery = ''; // English search query for API
+  currentSearchQueryHi = ''; // Hindi search query for API
   selectedCategory = '';
-  selectedPage = '';
   dateSort: 'latest' | 'oldest' = 'latest';
   filters = {
     breaking: false,
@@ -535,13 +527,13 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
 
   // Available options
   availableCategories: string[] = [];
-  availablePages: string[] = [];
 
   constructor(
     private http: HttpClient,
     private router: Router,
     private modalService: ModalService,
-    private adminThemeService: AdminThemeService
+    private adminThemeService: AdminThemeService,
+    private languageService: LanguageService
   ) {
     // Check if already authenticated
     const token = localStorage.getItem('admin_token');
@@ -605,26 +597,66 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     // Include Authorization header for consistency (even though GET endpoint doesn't require it)
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
     
-    // Use a reasonable limit (200 max) to prevent connection resets
-    // The backend enforces a max of 200, so requesting more won't help
-    this.http.get<{ success: boolean; data: LiveNews[]; total?: number; hasMore?: boolean; error?: string }>(
-      `${this.getApiUrl()}/api/news?published=true&limit=200`,
+    // Build query parameters
+    // Load enough posts to get 20 per category
+    // With 8 categories, we need at least 160 posts, but load more to account for uneven distribution
+    // Load 500 posts to ensure we get at least 20 per category
+    let queryParams = 'published=true&limit=500';
+    
+    // If search query exists, send English and/or Hindi versions
+    // If user typed Hindi directly, only send searchHi
+    // If user typed English, send both search and searchHi (translated)
+    if (this.currentSearchQuery && this.currentSearchQuery.trim()) {
+      queryParams += `&search=${encodeURIComponent(this.currentSearchQuery.trim())}`;
+    }
+    if (this.currentSearchQueryHi && this.currentSearchQueryHi.trim()) {
+      queryParams += `&searchHi=${encodeURIComponent(this.currentSearchQueryHi.trim())}`;
+    }
+    
+    // If category filter is selected, include it in API call to get posts for that category
+    // Otherwise, load posts from all categories
+    if (this.selectedCategory) {
+      queryParams += `&category=${encodeURIComponent(this.selectedCategory)}`;
+    }
+    
+    // Add other filters to API call
+    if (this.filters.breaking) {
+      queryParams += '&breaking=true';
+    }
+    
+    if (this.filters.featured) {
+      queryParams += '&featured=true';
+    }
+    
+    if (this.filters.trending) {
+      queryParams += '&trending=true';
+    }
+    
+    const apiUrl = `${this.getApiUrl()}/api/news?${queryParams}`;
+    console.log('[AdminReviewLivePosts] Loading news with query:', apiUrl);
+    
+    this.http.get<{ success: boolean; data: LiveNews[]; total?: number; error?: string }>(
+      apiUrl,
       { headers }
     ).subscribe({
       next: (response) => {
+        console.log('[AdminReviewLivePosts] API response:', { 
+          success: response.success, 
+          dataLength: response.data?.length, 
+          total: response.total 
+        });
+        
         if (response.success && response.data) {
           this.liveNews = response.data;
+          console.log('[AdminReviewLivePosts] Loaded', this.liveNews.length, 'posts');
           // Use total count from backend if available, otherwise use data length
           this.totalPosts = response.total || this.liveNews.length;
           this.extractAvailableOptions();
           this.groupNewsByCategory();
-          this.applyFilters();
+          // Apply client-side filters (but don't reload - we just loaded)
+          // Pass false to prevent infinite loop
+          this.applyFilters(false);
           this.error = ''; // Clear any previous errors
-          
-          // Log warning if there are more posts than loaded
-          if (response.hasMore) {
-            console.warn(`[AdminReviewLivePosts] Loaded ${this.liveNews.length} posts, but there are more (total: ${response.total}). Showing first ${this.liveNews.length} posts. Use filters to narrow down results.`);
-          }
         } else {
           this.error = response.error || 'Failed to load live news';
           this.liveNews = [];
@@ -649,14 +681,10 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
   extractAvailableOptions() {
     // Extract unique categories
     const categories = new Set<string>();
-    const pages = new Set<string>();
 
     this.liveNews.forEach(news => {
       if (news.category) {
         categories.add(news.category);
-      }
-      if (news.pages && news.pages.length > 0) {
-        news.pages.forEach(page => pages.add(page));
       }
     });
 
@@ -665,7 +693,6 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     allCategories.forEach(cat => categories.add(cat));
 
     this.availableCategories = Array.from(categories).sort();
-    this.availablePages = Array.from(pages).sort();
   }
 
   groupNewsByCategory() {
@@ -687,13 +714,13 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       grouped[news.category].push(news);
     });
 
-    // Convert to array and sort categories
+    // Convert to array and sort categories, limit to 20 per category
     const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'];
     this.groupedNews = categoryOrder
       .filter(cat => grouped[cat] && grouped[cat].length > 0)
       .map(category => ({
         category,
-        news: grouped[category] // Already sorted by date
+        news: grouped[category].slice(0, 20) // Limit to latest 20 per category
       }));
 
     // Add any categories not in the predefined order
@@ -701,36 +728,86 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
       if (!categoryOrder.includes(category)) {
         this.groupedNews.push({
           category,
-          news: grouped[category]
+          news: grouped[category].slice(0, 20) // Limit to latest 20 per category
         });
       }
     });
   }
 
-  applyFilters() {
+  /**
+   * Check if text contains Hindi/Devanagari script
+   */
+  private isHindi(text: string): boolean {
+    // Devanagari script Unicode range: \u0900-\u097F
+    return /[\u0900-\u097F]/.test(text);
+  }
+
+  async performSearch() {
+    // Trigger search API call when Search button is clicked
+    if (this.searchQuery.trim()) {
+      const searchText = this.searchQuery.trim();
+      
+      // Check if the input is already in Hindi
+      if (this.isHindi(searchText)) {
+        // User typed Hindi - use it directly, no translation needed
+        console.log('[AdminReviewLivePosts] Hindi text detected, using directly:', searchText);
+        this.isLoading = true;
+        this.error = '';
+        this.currentSearchQuery = ''; // No English search term
+        this.currentSearchQueryHi = searchText; // Use Hindi directly
+        this.loadLiveNews();
+      } else {
+        // User typed English - translate to Hindi for bilingual search
+        try {
+          this.isLoading = true;
+          this.error = '';
+          const englishQuery = searchText;
+          console.log('[AdminReviewLivePosts] English text detected, translating:', englishQuery);
+          
+          const hindiQuery = await this.languageService.translateText(englishQuery, 'en', 'hi');
+          console.log('[AdminReviewLivePosts] Translation result:', { englishQuery, hindiQuery });
+          
+          // Store both queries for API call
+          this.currentSearchQuery = englishQuery;
+          this.currentSearchQueryHi = hindiQuery;
+          
+          // Load news with both English and Hindi search terms
+          this.loadLiveNews();
+        } catch (error) {
+          console.error('[AdminReviewLivePosts] Error translating search query:', error);
+          // If translation fails, search with English only
+          this.currentSearchQuery = searchText;
+          this.currentSearchQueryHi = '';
+          this.loadLiveNews();
+        }
+      }
+    } else {
+      // If search is cleared, reload without search
+      this.currentSearchQuery = '';
+      this.currentSearchQueryHi = '';
+      this.loadLiveNews();
+    }
+  }
+
+  applyFilters(shouldReload: boolean = true) {
+    // Don't trigger search on filter changes - search is only triggered by Search button
+    // If category filter is selected and we need to reload, do it
+    // But only if we're not already loading (to prevent infinite loops)
+    if (this.selectedCategory && shouldReload && !this.isLoading) {
+      this.loadLiveNews();
+      return;
+    }
+    
+    // Otherwise, apply client-side filters
+    // Start with all loaded news
     let filtered = [...this.liveNews];
 
-    // Search filter
-    if (this.searchQuery.trim()) {
-      const query = this.searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(news =>
-        news.title.toLowerCase().includes(query) ||
-        (news.titleEn && news.titleEn.toLowerCase().includes(query)) ||
-        news.excerpt.toLowerCase().includes(query) ||
-        (news.content && news.content.toLowerCase().includes(query))
-      );
-    }
+    // Search filter is handled by API, so we don't need client-side filtering here
+    // The API already returns filtered results when currentSearchQuery is set
 
-    // Category filter
+    // Category filter (client-side - should already be filtered by API if category was selected)
     if (this.selectedCategory) {
       filtered = filtered.filter(news => news.category === this.selectedCategory);
-    }
-
-    // Page filter
-    if (this.selectedPage) {
-      filtered = filtered.filter(news =>
-        news.pages && news.pages.includes(this.selectedPage)
-      );
     }
 
     // Breaking news filter
@@ -756,13 +833,26 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     });
 
     this.filteredNews = filtered;
+    // When grouping filtered news, limit to 20 per category only if no search query
     this.groupFilteredNews();
   }
 
   groupFilteredNews() {
     const grouped: Record<string, LiveNews[]> = {};
 
-    this.filteredNews.forEach(news => {
+    // Sort filtered news by date (latest first) before grouping
+    const sortedFilteredNews = [...this.filteredNews].sort((a, b) => {
+      const dateA = new Date(a.date || a.createdAt).getTime();
+      const dateB = new Date(b.date || b.createdAt).getTime();
+      return dateB - dateA; // Latest first
+    });
+
+    sortedFilteredNews.forEach(news => {
+      // If category filter is selected, only group posts from that category
+      if (this.selectedCategory && news.category !== this.selectedCategory) {
+        return; // Skip posts that don't match the selected category
+      }
+      
       if (!grouped[news.category]) {
         grouped[news.category] = [];
       }
@@ -770,22 +860,41 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
     });
 
     const categoryOrder = ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious'];
-    this.filteredGroupedNews = categoryOrder
-      .filter(cat => grouped[cat] && grouped[cat].length > 0)
-      .map(category => ({
-        category,
-        news: grouped[category]
-      }));
-
-    // Add any categories not in the predefined order
-    Object.keys(grouped).forEach(category => {
-      if (!categoryOrder.includes(category)) {
-        this.filteredGroupedNews.push({
-          category,
-          news: grouped[category]
-        });
+    // If search is active, show all results. Otherwise limit to 20 per category
+    const limitPerCategory = this.currentSearchQuery.trim() ? undefined : 20;
+    
+    // If a specific category is selected, only show that category
+    if (this.selectedCategory) {
+      const categoryNews = grouped[this.selectedCategory] || [];
+      // Only create the group if there are posts for this category
+      if (categoryNews.length > 0) {
+        this.filteredGroupedNews = [{
+          category: this.selectedCategory,
+          news: limitPerCategory ? categoryNews.slice(0, limitPerCategory) : categoryNews
+        }];
+      } else {
+        // No posts found for selected category
+        this.filteredGroupedNews = [];
       }
-    });
+    } else {
+      // Show all categories with latest 20 each
+      this.filteredGroupedNews = categoryOrder
+        .filter(cat => grouped[cat] && grouped[cat].length > 0)
+        .map(category => ({
+          category,
+          news: limitPerCategory ? grouped[category].slice(0, limitPerCategory) : grouped[category]
+        }));
+
+      // Add any categories not in the predefined order
+      Object.keys(grouped).forEach(category => {
+        if (!categoryOrder.includes(category)) {
+          this.filteredGroupedNews.push({
+            category,
+            news: limitPerCategory ? grouped[category].slice(0, limitPerCategory) : grouped[category]
+          });
+        }
+      });
+    }
   }
 
   toggleFilter(filterType: 'breaking' | 'featured' | 'trending') {
@@ -795,22 +904,23 @@ export class AdminReviewLivePostsComponent implements OnInit, OnDestroy {
 
   clearAllFilters() {
     this.searchQuery = '';
+    this.currentSearchQuery = '';
+    this.currentSearchQueryHi = '';
     this.selectedCategory = '';
-    this.selectedPage = '';
     this.dateSort = 'latest';
     this.filters = {
       breaking: false,
       featured: false,
       trending: false
     };
-    this.applyFilters();
+    this.loadLiveNews();
   }
 
   getActiveFilterCount(): number {
     let count = 0;
-    if (this.searchQuery.trim()) count++;
+    // Check for search query (either English or Hindi)
+    if (this.currentSearchQuery.trim() || this.currentSearchQueryHi.trim()) count++;
     if (this.selectedCategory) count++;
-    if (this.selectedPage) count++;
     if (this.filters.breaking) count++;
     if (this.filters.featured) count++;
     if (this.filters.trending) count++;
