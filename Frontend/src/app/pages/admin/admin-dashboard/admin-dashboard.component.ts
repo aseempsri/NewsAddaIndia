@@ -165,42 +165,27 @@ import { Subscription } from 'rxjs';
                 </div>
               </a>
 
-              <!-- Translate All News Option -->
-              <button
-                (click)="translateAllNews()"
-                [disabled]="isTranslating"
-                class="glass-card p-8 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer group text-left w-full">
+              <!-- Ad Management Option -->
+              <a
+                routerLink="/admin/ads"
+                class="glass-card p-8 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer group">
                 <div class="flex flex-col items-center text-center space-y-4">
-                  <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                    <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  <div class="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                    <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                     </svg>
                   </div>
-                  <h2 class="text-2xl font-bold">Translate All News</h2>
-                  <p class="text-muted-foreground">Manually trigger translation of all news articles from Hindi to English</p>
-                  @if (isTranslating) {
-                    <div class="flex items-center text-blue-500">
-                      <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      <span class="font-medium">Translating...</span>
-                    </div>
-                  } @else {
-                    <div class="flex items-center text-blue-500 group-hover:translate-x-2 transition-transform">
-                      <span class="font-medium">Start Translation</span>
-                      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  }
-                  @if (translationResult) {
-                    <div class="mt-2 text-sm" [class.text-green-500]="translationResult.success" [class.text-red-500]="!translationResult.success">
-                      {{ translationResult.message }}
-                      @if (translationResult.translated !== undefined) {
-                        <span class="block mt-1">Translated: {{ translationResult.translated }}, Errors: {{ translationResult.errors }}</span>
-                      }
-                    </div>
-                  }
+                  <h2 class="text-2xl font-bold">Ad Management</h2>
+                  <p class="text-muted-foreground">Create, manage, and monitor advertisements displayed on the website</p>
+                  <div class="flex items-center text-orange-500 group-hover:translate-x-2 transition-transform">
+                    <span class="font-medium">Go to Ad Management</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
-              </button>
+              </a>
+
             </div>
           </div>
         }
@@ -217,9 +202,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   password = '';
   loginError = '';
   isLoading = false;
-  isTranslating = false;
   authToken = '';
-  translationResult: { success: boolean; message: string; translated?: number; errors?: number } | null = null;
 
   constructor(
     private http: HttpClient,
@@ -304,37 +287,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.isAuthenticated = false;
   }
 
-  translateAllNews() {
-    if (this.isTranslating) return;
-    
-    this.isTranslating = true;
-    this.translationResult = null;
-    
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
-    
-    this.http.post<{ success: boolean; message?: string; translated?: number; errors?: number; total?: number }>(
-      `${this.getApiUrl()}/api/translation/translate-all`,
-      {},
-      { headers }
-    ).subscribe({
-      next: (response) => {
-        this.translationResult = {
-          success: response.success,
-          message: response.message || (response.success ? 'Translation completed successfully!' : 'Translation failed'),
-          translated: response.translated,
-          errors: response.errors
-        };
-        this.isTranslating = false;
-      },
-      error: (error) => {
-        this.translationResult = {
-          success: false,
-          message: error.error?.message || 'Failed to translate news. Please try again.'
-        };
-        this.isTranslating = false;
-      }
-    });
-  }
 
   private getApiUrl(): string {
     return environment.apiUrl || 'http://localhost:3000';

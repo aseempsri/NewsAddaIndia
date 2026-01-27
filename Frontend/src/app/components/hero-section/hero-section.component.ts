@@ -40,8 +40,8 @@ interface SideNews {
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
-            <article class="group h-full relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50">
-              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden">
+            <article class="group h-full relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50 flex flex-col">
+              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden flex-shrink-0">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (featuredNews.imageLoading || !featuredNews.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -98,27 +98,35 @@ interface SideNews {
               </div>
 
               <!-- Bottom Section with Headline and Read More -->
-              <div class="p-5 lg:p-6 pt-6 lg:pt-7 pb-6 lg:pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col h-full">
-                <div class="flex items-start gap-3 mb-4">
+              <div class="p-5 lg:p-6 pt-6 lg:pt-7 pb-6 lg:pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
+                <div class="flex-1 min-w-0 mb-4 min-h-0">
                   <h2
-                    [class]="'font-display text-xl lg:text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] lg:min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] flex-1 ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
+                    [class]="'font-display text-xl lg:text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] lg:min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
                     (click)="openNewsModal(featuredNews)"
                     (touchstart)="onTouchStart($event, featuredNews)"
                     (touchend)="onTouchEnd($event, featuredNews)"
                     (touchmove)="onTouchMove($event)"
                     style="touch-action: pan-y;">
-                    @if (featuredNews.isTrending && !isHomePage) {
-                      <span class="inline-block mr-2 text-xl leading-none">🔥</span>
-                    }
                     {{ getDisplayTitle(featuredNews) }}
                   </h2>
+                  <p class="text-muted-foreground text-sm lg:text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
+                    {{ featuredNews.excerpt }}
+                  </p>
                 </div>
-                <p class="text-muted-foreground text-sm lg:text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
-                  {{ featuredNews.excerpt }}
-                </p>
-                <div class="flex items-center justify-between text-xs text-muted-foreground mt-4 pt-2 border-t border-border/20" style="min-height: 24px;">
-                  <span class="text-left font-medium" style="color: rgb(113, 113, 122);">{{ featuredNews.author || 'News Adda India' }}</span>
-                  <span class="text-right font-medium" style="color: rgb(113, 113, 122);">{{ featuredNews.date || featuredNews.time || 'Just now' }}</span>
+                <!-- Author and Date - Bottom aligned -->
+                <div class="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="text-left">{{ featuredNews.author || 'News Adda India' }}</span>
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ featuredNews.date || featuredNews.time || 'Just now' }}</span>
+                  </span>
                 </div>
               </div>
             </article>
@@ -185,24 +193,32 @@ interface SideNews {
                 </div>
 
                 <!-- Bottom Section with Headline -->
-                <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col">
-                  <div class="flex items-start gap-3 mb-3">
+                <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1">
+                  <div class="flex-1 min-w-0 mb-3">
                     <h3 
-                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] flex-1 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
+                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
                       (click)="openNewsModalFromSide(news, $index)"
                       (touchstart)="onTouchStartSide($event, news, $index)"
                       (touchend)="onTouchEndSide($event, news, $index)"
                       (touchmove)="onTouchMove($event)"
                       style="touch-action: pan-y;">
-                      @if (news.isTrending && !isHomePage) {
-                        <span class="inline-block mr-2 text-lg leading-none">🔥</span>
-                      }
                       {{ getDisplayTitleForSide(news) }}
                     </h3>
                   </div>
-                  <div class="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/20" style="min-height: 24px; display: flex !important;">
-                    <span class="text-left font-medium" style="color: rgb(113, 113, 122); display: inline-block !important;">{{ news.author || 'News Adda India' }}</span>
-                    <span class="text-right font-medium" style="color: rgb(113, 113, 122); display: inline-block !important;">{{ news.date || news.time || 'Just now' }}</span>
+                  <!-- Author and Date - Bottom aligned -->
+                  <div class="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span class="text-left">{{ news.author || 'News Adda India' }}</span>
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{{ news.date || news.time || 'Just now' }}</span>
+                    </span>
                   </div>
                 </div>
               </article>

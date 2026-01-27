@@ -75,12 +75,12 @@ interface Category {
                 <div 
                   #scrollContainer
                   [attr.data-category]="getCategoryKeyByIndex(catIndex)"
-                  class="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-4 pl-2 pr-2 sm:pl-2 sm:pr-2"
+                  class="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-4 pl-2 pr-2 sm:pl-2 sm:pr-2 items-stretch"
                   style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important; touch-action: pan-x pan-y; overscroll-behavior-x: contain; overscroll-behavior-y: auto;"
                   (scroll)="onScroll(getCategoryKeyByIndex(catIndex), $event)">
                   @for (article of category.articles; track $index; let i = $index) {
-                    <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-                      <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300">
+                    <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col">
+                      <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 flex-shrink-0">
                         <!-- Loading Animation - Show while image is loading -->
                         @if (article?.imageLoading || !article?.image) {
                           <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -124,36 +124,32 @@ interface Category {
                       </div>
                       <!-- Border Line with Gradient -->
                       <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
-                      <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col">
-                        <div class="flex items-start justify-between gap-2">
-                          <div class="flex-1 min-w-0">
-                            <h3 
-                              [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
-                              (click)="openNewsModal(getCategoryKeyByIndex(catIndex), i)"
-                              (touchstart)="onTouchStart($event, getCategoryKeyByIndex(catIndex), i)"
-                              (touchend)="onTouchEnd($event, getCategoryKeyByIndex(catIndex), i)"
-                              (touchmove)="onTouchMove($event)"
-                              style="touch-action: pan-x pan-y !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none;">
-                              @if (article?.isTrending && !isHomePage) {
-                                <span class="inline-block mr-1 text-sm leading-none">🔥</span>
-                              }
-                              {{ article?.title }}
-                            </h3>
-                            <div class="flex items-center justify-start gap-3 text-[0.65rem] sm:text-xs text-muted-foreground mt-2">
-                              <span class="flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                <span class="text-left">{{ getArticleAuthor(article, category.title, i) }}</span>
-                              </span>
-                              <span class="flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{{ article?.date || article?.time }}</span>
-                              </span>
-                            </div>
-                          </div>
+                      <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1 min-h-0">
+                        <div class="flex-1 min-w-0 mb-3 min-h-0">
+                          <h3 
+                            [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
+                            (click)="openNewsModal(getCategoryKeyByIndex(catIndex), i)"
+                            (touchstart)="onTouchStart($event, getCategoryKeyByIndex(catIndex), i)"
+                            (touchend)="onTouchEnd($event, getCategoryKeyByIndex(catIndex), i)"
+                            (touchmove)="onTouchMove($event)"
+                            style="touch-action: manipulation !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;">
+                            {{ article?.title }}
+                          </h3>
+                        </div>
+                        <!-- Author and Date - Bottom aligned -->
+                        <div class="flex items-center justify-between text-[0.65rem] sm:text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                          <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span class="text-left">{{ getArticleAuthor(article, category.title, i) }}</span>
+                          </span>
+                          <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ article?.date || article?.time }}</span>
+                          </span>
                         </div>
                       </div>
                     </article>
@@ -444,13 +440,16 @@ interface Category {
         line-height: 1.5 !important;
         word-wrap: break-word !important;
         overflow-wrap: break-word !important;
-        /* CRITICAL: Allow both horizontal and vertical scrolling on mobile */
-        touch-action: pan-x pan-y !important;
-        -webkit-overflow-scrolling: touch !important;
+        /* CRITICAL: Use manipulation for tap detection, but allow parent scrolling */
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 10 !important;
       }
       
-      /* Ensure all card content allows vertical scrolling */
-      .news-card > * {
+      /* Ensure card container allows scrolling, but headline uses manipulation */
+      .news-card > div:first-child {
         touch-action: pan-x pan-y !important;
       }
     }
@@ -1100,55 +1099,62 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   private touchTarget: { categoryTitle: string; articleIndex: number } | null = null;
 
   onTouchStart(event: TouchEvent, categoryTitle: string, articleIndex: number) {
-    // Don't prevent default - allow scrolling to work naturally
+    // Store touch start info but don't prevent default - allow scrolling
     this.touchStartTime = Date.now();
     this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
     this.touchMoved = false;
     this.touchTarget = { categoryTitle, articleIndex };
-    // Don't prevent default - allow scrolling
   }
 
   onTouchMove(event: TouchEvent) {
-    // Don't prevent default - allow scrolling to work naturally
+    // Detect if touch moved significantly (indicating a scroll gesture)
     if (this.touchStartTime > 0) {
       const deltaX = Math.abs(event.touches[0].clientX - this.touchStartX);
       const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
-      // If touch moved more than 10px in any direction, consider it a scroll
-      // Allow both horizontal and vertical scrolling
-      // If vertical movement is greater, it's a page scroll - mark as moved immediately
-      if (deltaY > 10 || deltaX > 10) {
+      // If touch moved more than 5px in any direction, consider it a scroll
+      // Use smaller threshold for better tap detection
+      if (deltaY > 5 || deltaX > 5) {
         this.touchMoved = true;
-        // If primarily vertical scroll (page scroll), don't interfere at all
-        if (deltaY > deltaX) {
-          // This is a vertical page scroll - allow it completely
-          return;
-        }
       }
     }
-    // Never prevent default - always allow scrolling
   }
 
   onTouchEnd(event: TouchEvent, categoryTitle: string, articleIndex: number) {
+    // Only process if this touch matches our target
+    if (!this.touchTarget || 
+        this.touchTarget.categoryTitle !== categoryTitle || 
+        this.touchTarget.articleIndex !== articleIndex) {
+      this.resetTouchState();
+      return;
+    }
+
     const touchDuration = Date.now() - this.touchStartTime;
     const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
     const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
     
-    // Only open modal if it was a tap (not a scroll):
-    // 1. Touch didn't move much (not a scroll) - less than 10px in both directions
-    // 2. Touch was quick (less than 300ms) - deliberate tap
-    // 3. Touch target matches
-    // 4. Only prevent default if it's actually a tap
-    if (!this.touchMoved && deltaX < 10 && deltaY < 10 && touchDuration < 300 && 
-        this.touchTarget && this.touchTarget.categoryTitle === categoryTitle && this.touchTarget.articleIndex === articleIndex) {
-      // Only prevent default for actual taps, not scrolls
+    // Open modal if it was a tap (not a scroll):
+    // 1. Touch didn't move much (less than 8px) - more lenient threshold
+    // 2. Touch was quick (less than 400ms) - more lenient for slower taps
+    // 3. Touch target matches (already checked above)
+    const isTap = !this.touchMoved && deltaX < 8 && deltaY < 8 && touchDuration < 400;
+    
+    if (isTap) {
+      // Prevent default to avoid triggering click event twice
+      // But ensure modal opens via touch handler
       event.preventDefault();
       event.stopPropagation();
-      this.openNewsModal(categoryTitle, articleIndex);
+      // Small delay to ensure touch event completes before opening modal
+      setTimeout(() => {
+        this.openNewsModal(categoryTitle, articleIndex);
+      }, 10);
     }
-    // If it was a scroll, don't prevent default - allow normal scroll behavior
     
     // Reset touch state
+    this.resetTouchState();
+  }
+
+  private resetTouchState() {
     this.touchStartTime = 0;
     this.touchMoved = false;
     this.touchTarget = null;
@@ -1164,12 +1170,23 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   openNewsModal(categoryTitle: string, articleIndex: number) {
+    // Prevent multiple rapid clicks/taps
+    if (this.modalState.isOpen) {
+      return;
+    }
+
     const category = this.categories.find(c => c.title === categoryTitle);
     if (!category || !category.articles || articleIndex >= category.articles.length) {
+      console.warn(`[CategorySection] Cannot open modal: category=${categoryTitle}, index=${articleIndex}, articles=${category?.articles?.length || 0}`);
       return;
     }
 
     const article = category.articles[articleIndex];
+    if (!article) {
+      console.warn(`[CategorySection] Article not found at index ${articleIndex}`);
+      return;
+    }
+
     const originalCategoryKey = this.getOriginalCategoryKey(categoryTitle);
     const originalNews = this.originalNewsItems[originalCategoryKey];
 

@@ -118,15 +118,106 @@ const handleMulterError = (err, req, res, next) => {
 // GET /api/news - Get all news (with optional filters)
 router.get('/', async (req, res) => {
   try {
-    const { category, page, limit = 20, published = true, breaking, featured, trending, excludeBreaking } = req.query;
+    const { category, page, limit = 20, skip = 0, published = true, breaking, featured, trending, excludeBreaking, search, searchHi } = req.query;
+
+    // Debug: Log all query parameters
+    if (search) {
+      console.log('[Backend News Route] Received search parameters:', {
+        search: search,
+        searchHi: searchHi,
+        searchType: typeof search,
+        searchHiType: typeof searchHi,
+        allQueryParams: Object.keys(req.query)
+      });
+    }
 
     // Enforce maximum limit to prevent connection resets and memory issues
     // Reduced to 200 to prevent large response sizes that cause connection resets
     const maxLimit = 200;
     const requestedLimit = parseInt(limit);
     const finalLimit = requestedLimit > maxLimit ? maxLimit : requestedLimit;
+    const skipCount = parseInt(skip) || 0;
 
     const query = { published: published === 'true' || published === true };
+
+    // Search filter - search in title, titleEn, excerpt, and content
+    // Support bilingual search: search in both English and Hindi fields
+    // Handle three cases:
+    // 1. English search only (search provided, no searchHi) - search ONLY in English fields (titleEn, excerptEn, contentEn)
+    // 2. Bilingual search (both search and searchHi) - search English fields with English term, Hindi fields with Hindi term
+    // 3. Hindi search only (only searchHi provided) - search ONLY in Hindi fields (title, excerpt, content)
+    const hasEnglishSearch = search && search.trim();
+    const hasHindiSearch = searchHi && searchHi.trim();
+
+    // Declare these outside the if block so they're accessible for debugging
+    let englishTerm = null;
+    let hindiTerm = null;
+
+    if (hasEnglishSearch || hasHindiSearch) {
+      const searchTerms = [];
+      englishTerm = hasEnglishSearch ? search.trim() : null;
+      hindiTerm = hasHindiSearch ? searchHi.trim() : null;
+
+      console.log('[Backend News Route] Search parameters:', {
+        englishTerm,
+        hindiTerm,
+        searchType: hasEnglishSearch && hasHindiSearch ? 'bilingual' : (hasHindiSearch ? 'hindi-only' : 'english-only'),
+        englishTermLength: englishTerm ? englishTerm.length : 0,
+        hindiTermLength: hindiTerm ? hindiTerm.length : 0
+      });
+
+      // Escape special regex characters to prevent regex injection
+      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // If English term is provided, search ONLY in English fields
+      if (englishTerm) {
+        const englishRegex = new RegExp(escapeRegex(englishTerm), 'i');
+        searchTerms.push(
+          { titleEn: englishRegex },
+          { excerptEn: englishRegex },
+          { contentEn: englishRegex }
+        );
+        console.log('[Backend News Route] Added English search terms for:', englishTerm);
+      }
+
+      // If Hindi term is provided, search ONLY in Hindi fields
+      if (hindiTerm) {
+        const hindiRegex = new RegExp(escapeRegex(hindiTerm), 'i');
+        searchTerms.push(
+          { title: hindiRegex },
+          { excerpt: hindiRegex },
+          { content: hindiRegex }
+        );
+        console.log('[Backend News Route] Added Hindi search terms for:', hindiTerm);
+      }
+
+      // Use $or operator - document matches if ANY of these conditions are true
+      // This means: match if text is found in titleEn OR excerptEn OR contentEn OR title OR excerpt OR content
+      // IMPORTANT: $or must be an array of conditions, each condition is an object
+      query.$or = searchTerms;
+
+      console.log('[Backend News Route] Search query built with', searchTerms.length, 'OR conditions');
+      console.log('[Backend News Route] OR logic: Document matches if ANY field contains the search term(s)');
+      console.log('[Backend News Route] $or array length:', query.$or ? query.$or.length : 0);
+      console.log('[Backend News Route] $or is array?', Array.isArray(query.$or));
+
+      if (searchTerms.length > 0) {
+        console.log('[Backend News Route] Sample search conditions:', searchTerms.slice(0, 3).map(term => {
+          const key = Object.keys(term)[0];
+          return `${key}: ${term[key].toString()}`;
+        }));
+
+        // Verify the structure of the first search term
+        const firstTerm = searchTerms[0];
+        const firstKey = Object.keys(firstTerm)[0];
+        console.log('[Backend News Route] First search term structure:', {
+          key: firstKey,
+          valueType: typeof firstTerm[firstKey],
+          isRegExp: firstTerm[firstKey] instanceof RegExp,
+          pattern: firstTerm[firstKey].toString()
+        });
+      }
+    }
 
     if (category) {
       query.category = category;
@@ -162,7 +253,90 @@ router.get('/', async (req, res) => {
       : { createdAt: -1 };
 
     // Get total count for pagination info
+    // Log query structure (RegExp objects won't serialize, but we can see the structure)
+    const queryForLog = { ...query };
+    if (queryForLog.$or) {
+      queryForLog.$or = queryForLog.$or.map(term => {
+        const key = Object.keys(term)[0];
+        return { [key]: term[key].toString() };
+      });
+    }
+    console.log('[Backend News Route] MongoDB query structure:', JSON.stringify(queryForLog, null, 2));
+    console.log('[Backend News Route] Query logic: published=true AND ($or conditions)');
+    console.log('[Backend News Route] $or means: Match if ANY field contains the search term(s)');
+
+    // Test query: Get a sample document to see what fields contain
+    if ((search && search.trim()) || (searchHi && searchHi.trim())) {
+      const sampleDoc = await News.findOne({ published: true }).select('title titleEn excerpt excerptEn').lean();
+      if (sampleDoc) {
+        console.log('[Backend News Route] Sample document fields:', {
+          title: sampleDoc.title?.substring(0, 50),
+          titleEn: sampleDoc.titleEn?.substring(0, 50),
+          excerpt: sampleDoc.excerpt?.substring(0, 50),
+          excerptEn: sampleDoc.excerptEn?.substring(0, 50)
+        });
+      }
+    }
+
+    // Test the query with a simple findOne to verify it works
+    if (query.$or && query.$or.length > 0) {
+      const testResult = await News.findOne(query).select('_id title titleEn').lean();
+      console.log('[Backend News Route] Test query result (first match):', testResult ? {
+        _id: testResult._id,
+        title: testResult.title?.substring(0, 30),
+        titleEn: testResult.titleEn?.substring(0, 30)
+      } : 'No matches found');
+    }
+
+    // CRITICAL: Verify the query structure before executing
+    if (query.$or && query.$or.length > 0) {
+      console.log('[Backend News Route] Final query has $or with', query.$or.length, 'conditions');
+      // Verify each condition in $or
+      query.$or.forEach((condition, index) => {
+        const field = Object.keys(condition)[0];
+        const regex = condition[field];
+        console.log(`[Backend News Route] $or[${index}]: ${field} = ${regex.toString()}`);
+      });
+    }
+
     const totalCount = await News.countDocuments(query);
+    console.log('[Backend News Route] Total matching documents:', totalCount);
+
+    // If search is active but totalCount equals all published posts, the search filter isn't working
+    if ((search && search.trim()) || (searchHi && searchHi.trim())) {
+      const allPublishedCount = await News.countDocuments({ published: true });
+      console.log('[Backend News Route] All published posts count:', allPublishedCount);
+
+      if (totalCount === allPublishedCount) {
+        console.error('[Backend News Route] ❌ ERROR: Search filter is NOT working! Total matches equals all published posts.');
+        console.error('[Backend News Route] Query object structure:', JSON.stringify(queryForLog, null, 2));
+        console.error('[Backend News Route] This suggests the $or query is matching all documents or not being applied.');
+
+        // Try a simpler test query to debug - test with just title field
+        if (englishTerm || hindiTerm) {
+          const testTerm = hindiTerm || englishTerm;
+          const escapedTerm = testTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const testRegex = new RegExp(escapedTerm, 'i');
+          const simpleQuery = {
+            published: true,
+            $or: [{ title: testRegex }]
+          };
+          const simpleCount = await News.countDocuments(simpleQuery);
+          console.log('[Backend News Route] Simple test query (title only) count:', simpleCount);
+          console.log('[Backend News Route] Test regex pattern:', testRegex.toString());
+
+          // Also test if the issue is with the $or structure
+          const directQuery = {
+            published: true,
+            title: testRegex
+          };
+          const directCount = await News.countDocuments(directQuery);
+          console.log('[Backend News Route] Direct query (without $or) count:', directCount);
+        }
+      } else {
+        console.log('[Backend News Route] ✅ Search filter is working. Filtered from', allPublishedCount, 'to', totalCount, 'documents');
+      }
+    }
 
     // Select only necessary fields for list views to reduce response size
     // Exclude large fields like full content unless specifically needed
@@ -171,16 +345,20 @@ router.get('/', async (req, res) => {
     const news = await News.find(query)
       .select(fieldsToSelect)
       .sort(sortOrder)
+      .skip(skipCount)
       .limit(finalLimit)
       .lean() // Use lean() for better performance with large datasets
       .exec();
+
+    console.log('[Backend News Route] Found', news.length, 'news articles matching query');
 
     res.json({
       success: true,
       count: news.length,
       total: totalCount,
       limit: finalLimit,
-      hasMore: totalCount > finalLimit,
+      skip: skipCount,
+      hasMore: (skipCount + news.length) < totalCount,
       data: news
     });
   } catch (error) {

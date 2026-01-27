@@ -115,36 +115,32 @@ import { filter } from 'rxjs/operators';
               <!-- Border Line with Gradient -->
               <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
 
-              <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="flex-1 min-w-0">
-                    <h3 
-                      [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
-                      (click)="openNewsModal(news)"
-                      (touchstart)="onTouchStart($event, news)"
-                      (touchend)="onTouchEnd($event, news)"
-                      (touchmove)="onTouchMove($event)"
-                      style="touch-action: pan-x pan-y !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none;">
-                      @if (news.isTrending && !isHomePage) {
-                        <span class="inline-block mr-1 text-sm leading-none">🔥</span>
-                      }
-                      {{ getDisplayTitle(news) }}
-                    </h3>
-                    <div class="flex items-center justify-start gap-3 text-[0.65rem] sm:text-xs text-muted-foreground mt-2">
-                      <span class="flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span class="text-left">{{ news.author || 'News Adda India' }}</span>
-                      </span>
-                      <span class="flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{{ news.date || news.time }}</span>
-                      </span>
-                    </div>
-                  </div>
+              <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1">
+                <div class="flex-1 min-w-0 mb-3">
+                  <h3 
+                    [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
+                    (click)="openNewsModal(news)"
+                    (touchstart)="onTouchStart($event, news)"
+                    (touchend)="onTouchEnd($event, news)"
+                    (touchmove)="onTouchMove($event)"
+                    style="touch-action: pan-x pan-y !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none;">
+                    {{ getDisplayTitle(news) }}
+                  </h3>
+                </div>
+                <!-- Author and Date - Bottom aligned -->
+                <div class="flex items-center justify-between text-[0.65rem] sm:text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="text-left">{{ news.author || 'News Adda India' }}</span>
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ news.date || news.time }}</span>
+                  </span>
                 </div>
               </div>
             </article>

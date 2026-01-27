@@ -40,10 +40,10 @@ import { Subscription } from 'rxjs';
           <button
             (click)="close()"
             (touchend)="onCloseButtonTouch($event)"
-            class="absolute top-2 right-2 sm:top-4 sm:right-4 lg:top-6 lg:right-6 z-10 p-2.5 sm:p-2 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 border-2 border-gray-300 dark:border-gray-600 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow"
+            class="absolute top-2 right-2 sm:top-4 sm:right-4 lg:top-6 lg:right-6 z-10 p-2.5 sm:p-2 rounded-full bg-red-600 hover:bg-red-700 active:bg-red-800 border-2 border-red-500 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow"
             aria-label="Close modal"
             type="button">
-            <svg class="w-6 h-6 sm:w-6 sm:h-6 text-gray-800 dark:text-white close-icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 sm:w-6 sm:h-6 text-white close-icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -87,7 +87,11 @@ import { Subscription } from 'rxjs';
                     </div>
                   } @else {
                     <!-- Multiple Images - Vertically Scrollable -->
-                    <div class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hide" style="scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;">
+                    <div 
+                      #imageScrollContainer
+                      class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hide" 
+                      style="scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch;"
+                      (scroll)="onImageScroll($event)">
                       <div class="flex flex-col h-full">
                         @for (img of getImagesArray(); track $index) {
                           <div class="flex-shrink-0 w-full flex items-center justify-center py-2" style="scroll-snap-align: start; min-height: 50%;">
@@ -114,6 +118,18 @@ import { Subscription } from 'rxjs';
                     {{ news.category }}
                   </span>
                 </div>
+
+                <!-- Scroll Indicator - Only show on desktop when more than 1 image -->
+                @if (getImagesArray().length > 1 && showScrollIndicator) {
+                  <div class="hidden lg:flex absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20 flex-col items-center gap-2 pointer-events-none transition-opacity duration-300">
+                    <div class="bg-black/70 dark:bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 flex flex-col items-center gap-1 shadow-lg">
+                      <span class="text-white dark:text-black text-xs font-semibold uppercase tracking-wider">SCROLL</span>
+                      <svg class="w-5 h-5 text-white dark:text-black animate-bounce-scroll" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
 
@@ -135,20 +151,20 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Content (Scrollable) -->
-          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0 lg:w-3/5 xl:w-3/5" style="touch-action: pan-y;">
-            <div class="p-4 sm:p-6 lg:p-8 xl:p-10">
+          <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0 lg:w-3/5 xl:w-3/5 flex flex-col" style="touch-action: pan-y;">
+            <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex-1 flex flex-col">
               <!-- Title -->
               <h1 [class]="'font-display text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 lg:mb-6 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
                 {{ getDisplayTitle() }}
               </h1>
 
               <!-- Summary (60 words) -->
-              <div class="mb-6 text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed">
-                {{ getDisplaySummary() }}
+              <div class="mb-6 text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed flex-1">
+                {{ displaySummary }}
               </div>
 
-              <!-- Author and Date -->
-              <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-t border-border/30 pt-4">
+              <!-- Author and Date - Bottom aligned -->
+              <div class="flex items-center justify-between text-sm text-muted-foreground border-t border-border/30 pt-4 mt-auto">
                 <span class="flex items-center gap-1.5">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -218,28 +234,46 @@ import { Subscription } from 'rxjs';
         transform: scale(1);
       }
     }
+    @keyframes bounce-scroll {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
     .animate-fade-in {
       animation: fade-in 0.2s ease-out;
     }
     .animate-scale-in {
       animation: scale-in 0.3s ease-out;
     }
+    .animate-bounce-scroll {
+      animation: bounce-scroll 1.5s ease-in-out infinite;
+    }
     .touch-manipulation {
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
-    /* Glow effect for close button */
+    /* Glow effect for close button - Red background with white cross glow */
     .close-button-glow {
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5), 0 0 30px rgba(255, 255, 255, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6), 0 0 60px rgba(220, 38, 38, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: box-shadow 0.3s ease, transform 0.2s ease;
     }
-    .dark .close-button-glow {
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.4), 0 4px 6px rgba(0, 0, 0, 0.3);
+    .close-button-glow:hover {
+      box-shadow: 0 0 25px rgba(220, 38, 38, 0.9), 0 0 50px rgba(220, 38, 38, 0.7), 0 0 75px rgba(220, 38, 38, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4);
+      transform: scale(1.05);
+    }
+    .close-button-glow:active {
+      box-shadow: 0 0 15px rgba(220, 38, 38, 0.7), 0 0 30px rgba(220, 38, 38, 0.5), 0 0 45px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
+      transform: scale(0.95);
     }
     .close-icon-glow {
-      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 1)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.6));
+      transition: filter 0.3s ease;
     }
-    .dark .close-icon-glow {
-      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+    .close-button-glow:hover .close-icon-glow {
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 24px rgba(255, 255, 255, 0.7));
     }
     /* Prevent scroll on backdrop */
     .fixed.inset-0 {
@@ -358,13 +392,16 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   translatedContent: string = '';
   translatedTitle: string = '';
   translatedExcerpt: string = '';
+  displaySummary: string = '';
   isTranslating: boolean = false;
   showFullContent: boolean = false;
+  showScrollIndicator: boolean = true;
   t: any = {};
   images: string[] = []; // Array to hold multiple images
   private apiUrl = environment.apiUrl || 'http://localhost:3000';
   private languageSubscription?: Subscription;
   private modalSubscription?: Subscription;
+  private imageScrollContainer?: HTMLElement;
   
   // Initialize tags as empty array if not provided
   get tagsArray(): string[] {
@@ -395,7 +432,10 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     if (this.news && this.isOpen) {
       this.loadFullContent();
       // Translate after content is loaded
-      setTimeout(() => this.translateContent(), 100);
+      setTimeout(async () => {
+        await this.translateContent();
+        await this.updateDisplaySummary();
+      }, 100);
     }
     // Subscribe to language changes
     console.log('[NewsDetailModal] Subscribing to language changes...');
@@ -410,6 +450,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       this.cdr.detectChanges();
       console.log('[NewsDetailModal] Starting content translation...');
       await this.translateContent();
+      await this.updateDisplaySummary();
       console.log('[NewsDetailModal] Content translation complete');
       // Trigger change detection after translation completes
       this.cdr.detectChanges();
@@ -434,10 +475,15 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
           this.translatedTitle = '';
           this.translatedExcerpt = '';
           this.translatedContent = '';
+          // Reset scroll indicator when modal opens (only show if more than 1 image)
+          this.showScrollIndicator = this.getImagesArray().length > 1;
           // Always fetch fresh data from API to get latest tags
           this.loadFullContent();
           // Translate after content is loaded
-          setTimeout(() => this.translateContent(), 100);
+          setTimeout(async () => {
+            await this.translateContent();
+            await this.updateDisplaySummary();
+          }, 100);
         } else if (!this.isOpen) {
           this.restoreBodyScroll();
           this.showFullContent = false;
@@ -449,11 +495,14 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['isOpen']) {
-      if (this.isOpen) {
+        if (this.isOpen) {
         this.preventBodyScroll();
         this.showFullContent = false; // Reset when modal opens
         if (this.news) {
           this.loadFullContent();
+          setTimeout(async () => {
+            await this.updateDisplaySummary();
+          }, 100);
         }
       } else {
         this.restoreBodyScroll();
@@ -463,6 +512,9 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     if (changes['news'] && this.news && this.isOpen) {
       this.showFullContent = false; // Reset when news changes
       this.loadFullContent();
+      setTimeout(async () => {
+        await this.updateDisplaySummary();
+      }, 100);
     }
   }
 
@@ -473,11 +525,12 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     this.modalSubscription?.unsubscribe();
   }
 
-  updateTranslations() {
+  async updateTranslations() {
     this.t = this.languageService.getTranslations();
     // Translate content when language changes
     if (this.news && this.isOpen) {
-      this.translateContent();
+      await this.translateContent();
+      await this.updateDisplaySummary();
     }
   }
 
@@ -604,12 +657,37 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
     return this.languageService.getDisplayTitle(this.news.title, this.news.titleEn);
   }
 
-  getDisplaySummary(): string {
-    if (!this.news) return '';
-    return this.languageService.getDisplaySummary(
-      (this.news as any).summary || this.news.excerpt || '',
-      (this.news as any).summaryEn || ''
-    );
+  async updateDisplaySummary() {
+    if (!this.news) {
+      this.displaySummary = '';
+      return;
+    }
+    
+    const currentLang = this.languageService.getCurrentLanguage();
+    const hindiSummary = (this.news as any).summary || this.news.excerpt || '';
+    const englishSummary = (this.news as any).summaryEn || '';
+    
+    if (currentLang === 'hi') {
+      this.displaySummary = hindiSummary;
+    } else {
+      // If English summary exists and is not empty, use it
+      if (englishSummary && englishSummary.trim()) {
+        this.displaySummary = englishSummary;
+      } else if (hindiSummary && hindiSummary.trim()) {
+        // If English summary is missing but Hindi summary exists, translate it
+        try {
+          const translated = await this.languageService.translateText(hindiSummary, 'hi', 'en');
+          this.displaySummary = translated;
+        } catch (error) {
+          console.error('[NewsDetailModal] Error translating summary:', error);
+          // Fallback to Hindi if translation fails
+          this.displaySummary = hindiSummary;
+        }
+      } else {
+        this.displaySummary = '';
+      }
+    }
+    this.cdr.detectChanges();
   }
 
   getDisplayContent(): string {
@@ -812,6 +890,8 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       console.log('[NewsDetailModal] loadFullContent: No news or news.id');
       // Still try to parse images from news object
       this.images = this.getImagesArray();
+      // Update display summary even without API call
+      this.updateDisplaySummary();
       return;
     }
 
@@ -828,7 +908,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       // Add cache-busting parameter to ensure fresh data
       const cacheBuster = `?t=${Date.now()}`;
       this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}${cacheBuster}`).subscribe({
-        next: (response) => {
+        next: async (response) => {
           if (response.success && response.data) {
             // Store both Hindi and English content if available
             // Hindi content (default)
@@ -840,6 +920,12 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
             }
             if (response.data.excerptEn) {
               (this.news as any).excerptEn = response.data.excerptEn;
+            }
+            if (response.data.summaryEn) {
+              (this.news as any).summaryEn = response.data.summaryEn;
+            }
+            if (response.data.summary) {
+              (this.news as any).summary = response.data.summary;
             }
             // Also store English content/excerpt in the news object for easy access
             if (response.data.content) {
@@ -893,11 +979,16 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
             (this.news as any).images = this.images;
             console.log('[NewsDetailModal] Images loaded from API:', this.images);
             
+            // Update display summary based on current language
+            await this.updateDisplaySummary();
+            
             // Trigger change detection to update UI
             this.cdr.detectChanges();
           } else {
             this.fullContent = this.news.excerpt;
             console.log('[NewsDetailModal] API response not successful or no data');
+            // Update display summary even if API fails
+            await this.updateDisplaySummary();
           }
         },
         error: (error) => {
@@ -918,6 +1009,8 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
             console.log('[NewsDetailModal] Tags from news object (after API error):', this.tags);
             this.cdr.detectChanges();
           }
+          // Update display summary even if API fails
+          this.updateDisplaySummary();
         }
       });
     } else {
@@ -1107,6 +1200,28 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
+  }
+
+  onImageScroll(event: Event) {
+    const target = event.target as HTMLElement;
+    if (target) {
+      const scrollTop = target.scrollTop;
+      const scrollHeight = target.scrollHeight;
+      const clientHeight = target.clientHeight;
+      
+      // Hide scroll indicator when user scrolls down (more than 10% scrolled)
+      if (scrollTop > scrollHeight * 0.1) {
+        this.showScrollIndicator = false;
+      } else {
+        // Show again if scrolled back to top
+        this.showScrollIndicator = true;
+      }
+      
+      // Also hide if near bottom (less than 10% remaining)
+      if (scrollTop + clientHeight >= scrollHeight * 0.9) {
+        this.showScrollIndicator = false;
+      }
+    }
   }
 }
 

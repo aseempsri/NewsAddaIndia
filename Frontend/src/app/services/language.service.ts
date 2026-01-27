@@ -438,12 +438,24 @@ export class LanguageService {
       if (response.ok) {
         const data = await response.json();
         console.log('[LanguageService] Translation response data:', data);
-        if (data && data[0] && data[0][0] && data[0][0][0]) {
-          const translated = data[0][0][0];
-          console.log('[LanguageService] Translated text:', translated.substring(0, 50) + '...');
-          // Cache the translation
-          this.setCachedTranslation(text, translated, sourceLang, targetLang);
-          return translated;
+        if (data && data[0] && Array.isArray(data[0])) {
+          // Google Translate returns an array of translation segments
+          // Each segment is: [translatedText, originalText, ...]
+          // We need to concatenate all segments
+          const translatedSegments: string[] = [];
+          for (const segment of data[0]) {
+            if (segment && segment[0] && typeof segment[0] === 'string') {
+              translatedSegments.push(segment[0]);
+            }
+          }
+          
+          if (translatedSegments.length > 0) {
+            const translated = translatedSegments.join('');
+            console.log('[LanguageService] Translated text:', translated.substring(0, 50) + '...');
+            // Cache the translation
+            this.setCachedTranslation(text, translated, sourceLang, targetLang);
+            return translated;
+          }
         }
       } else {
         console.error('[LanguageService] Translation API error - response not OK:', response.status, response.statusText);
