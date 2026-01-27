@@ -128,7 +128,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     overflow-x: hidden;
     width: 100%;
     max-width: 100vw;
@@ -198,7 +198,7 @@
   h4,
   h5,
   h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     /* Prevent Hindi text clipping from top */
     line-height: 1.6;
     padding-top: 0.25rem;
@@ -304,16 +304,64 @@
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
 
-  /* Better Hindi font for card headlines and text */
+  /* All text inside news cards should use Arial/Helvetica for English text */
+  .news-card,
+  .news-card h1,
   .news-card h2,
   .news-card h3,
   .news-card h4,
+  .news-card h5,
+  .news-card h6,
   .news-card p,
+  .news-card span,
+  .news-card div,
+  .news-card a,
+  .news-card button,
+  .news-card label,
+  article,
+  article h1,
   article h2,
   article h3,
   article h4,
-  article p {
-    font-family: 'Noto Sans Devanagari', 'DM Sans', sans-serif;
+  article h5,
+  article h6,
+  article p,
+  article span,
+  article div,
+  article a,
+  article button,
+  article label {
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  /* Hindi text inside cards should use Noto Sans Devanagari */
+  .news-card [lang="hi"],
+  .news-card [lang="hi"] *,
+  article [lang="hi"],
+  article [lang="hi"] * {
+    font-family: 'Noto Sans Devanagari', Arial, Helvetica, sans-serif !important;
+  }
+  
+  /* Ensure all English text uses Arial/Helvetica */
+  p, span, div, a, button, input, textarea, select, label, li, td, th {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  /* Hindi text should use Noto Sans Devanagari */
+  [lang="hi"] p,
+  [lang="hi"] span,
+  [lang="hi"] div,
+  [lang="hi"] a,
+  [lang="hi"] button,
+  [lang="hi"] input,
+  [lang="hi"] textarea,
+  [lang="hi"] select,
+  [lang="hi"] label,
+  [lang="hi"] li,
+  [lang="hi"] td,
+  [lang="hi"] th,
+  *:lang(hi) {
+    font-family: 'Noto Sans Devanagari', Arial, Helvetica, sans-serif !important;
   }
 
   .news-card:hover {

@@ -16,9 +16,11 @@ import { DeletePasswordService } from '../../services/delete-password.service';
               <h2 class="text-2xl font-bold text-red-600">Confirm Permanent Deletion</h2>
               <button
                 (click)="close()"
-                class="text-muted-foreground hover:text-foreground transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                class="p-2 rounded-full bg-red-600 hover:bg-red-700 active:bg-red-800 border-2 border-red-500 shadow-lg transition-all touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center close-button-glow-modal"
+                aria-label="Close modal"
+                type="button">
+                <svg class="w-6 h-6 text-white close-icon-glow-modal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -82,7 +84,28 @@ import { DeletePasswordService } from '../../services/delete-password.service';
       </div>
     }
   `,
-  styles: []
+  styles: [`
+    /* Glow effect for close button - Red background with white cross glow */
+    .close-button-glow-modal {
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6), 0 0 60px rgba(220, 38, 38, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: box-shadow 0.3s ease, transform 0.2s ease;
+    }
+    .close-button-glow-modal:hover {
+      box-shadow: 0 0 25px rgba(220, 38, 38, 0.9), 0 0 50px rgba(220, 38, 38, 0.7), 0 0 75px rgba(220, 38, 38, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4);
+      transform: scale(1.05);
+    }
+    .close-button-glow-modal:active {
+      box-shadow: 0 0 15px rgba(220, 38, 38, 0.7), 0 0 30px rgba(220, 38, 38, 0.5), 0 0 45px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
+      transform: scale(0.95);
+    }
+    .close-icon-glow-modal {
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 1)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.6));
+      transition: filter 0.3s ease;
+    }
+    .close-button-glow-modal:hover .close-icon-glow-modal {
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 24px rgba(255, 255, 255, 0.7));
+    }
+  `]
 })
 export class DeletePasswordModalComponent {
   @Input() isOpen = false;

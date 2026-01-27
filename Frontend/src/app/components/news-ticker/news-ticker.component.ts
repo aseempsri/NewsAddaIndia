@@ -45,7 +45,7 @@ import { LanguageService } from '../../services/language.service';
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                       <!-- Trending title in box -->
-                      <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap text-purple-800 dark:text-purple-200 group-hover:text-pink-700 dark:group-hover:text-pink-300 transition-colors duration-300" style="font-family: 'Arial', 'Helvetica Neue', sans-serif; line-height: 1.4; display: inline-block; text-shadow: 0 1px 2px rgba(255,255,255,0.5);">
+                      <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap text-purple-800 dark:text-purple-200 group-hover:text-pink-700 dark:group-hover:text-pink-300 transition-colors duration-300" style="font-family: Arial, Helvetica, sans-serif; line-height: 1.4; display: inline-block; text-shadow: 0 1px 2px rgba(255,255,255,0.5);">
                         {{ getDisplayTitle(news) }}
                       </span>
                     </div>
