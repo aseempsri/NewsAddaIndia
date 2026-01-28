@@ -38,6 +38,9 @@ cd /root/NewsAddaIndia
 # Configure Git pull behavior (to avoid merge conflicts)
 git config pull.rebase false
 
+
+###git checkout -- backend/package-lock.json
+
 # Pull latest code
 git pull origin main
 

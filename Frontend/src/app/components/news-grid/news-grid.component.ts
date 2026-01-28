@@ -53,7 +53,7 @@ import { filter } from 'rxjs/operators';
         <!-- News Grid - Show when items are available (even if still loading images) -->
         @if (newsItems.length > 0) {
           <div [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 sm:gap-4 lg:gap-6' : 'gap-2 sm:gap-5 lg:gap-6')">
-            @for (news of newsItems; track news.id; let i = $index) {
+            @for (news of newsItems; track trackByNewsId($index, news); let i = $index) {
             <article
               [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
               [style.animation-delay]="i * 100 + 'ms'">
@@ -198,7 +198,7 @@ import { filter } from 'rxjs/operators';
         padding-right: 0 !important;
       }
       
-      /* Better card spacing on mobile */
+      /* Better card spacing on mobile - fixed height for 65/35 split */
       .news-card {
         margin-bottom: 0 !important;
         width: 100% !important;
@@ -210,17 +210,35 @@ import { filter } from 'rxjs/operators';
         margin-right: 0 !important;
         display: flex !important;
         flex-direction: column !important;
-        height: auto !important;
+        height: 420px !important; /* Fixed height for consistent proportions */
       }
       
-      /* Fix the image container - remove flex constraints */
+      /* Image container - 65% of card height */
       .news-card > div:first-child {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
+        flex: 0 0 65% !important; /* 65% of card height */
+        height: 273px !important; /* 65% of 420px */
+        aspect-ratio: unset !important; /* Remove aspect-ratio constraint */
+        overflow: hidden !important;
+      }
+      
+      /* Border line - minimal height */
+      .news-card > div.h-\[2px\] {
         flex-shrink: 0 !important;
         flex-grow: 0 !important;
-        aspect-ratio: 16/9 !important;
+        height: 2px !important;
+      }
+      
+      /* Content area (headline + signature/date) - 35% of card height */
+      .news-card > div.bg-gradient-to-br {
+        flex: 0 0 calc(35% - 2px) !important; /* 35% minus border line */
+        min-height: 145px !important; /* 35% of 420px */
+        max-height: 145px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
       }
       
       /* Ensure cards don't overflow */
@@ -237,13 +255,13 @@ import { filter } from 'rxjs/operators';
         object-fit: cover !important;
       }
       
-      /* Fix card content padding on mobile - ensure flex layout */
+      /* Fix card content padding on mobile - ensure flex layout fits in 35% */
       .news-card .bg-gradient-to-br {
-        padding: 0.625rem !important;
+        padding: 0.5rem 0.625rem !important; /* Reduced vertical padding */
         display: flex !important;
         flex-direction: column !important;
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
+        height: 100% !important;
+        justify-content: space-between !important;
       }
       
       /* Ensure title container takes available space */
@@ -251,12 +269,21 @@ import { filter } from 'rxjs/operators';
         flex: 1 1 auto !important;
         min-width: 0 !important;
         min-height: 0 !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        margin-bottom: 0.25rem !important; /* Reduced margin */
       }
       
-      /* Ensure author/date stays at bottom */
+      /* Ensure author/date stays at bottom and is visible */
       .news-card .bg-gradient-to-br > div:last-child {
         margin-top: auto !important;
         flex-shrink: 0 !important;
+        padding-top: 0.375rem !important; /* Reduced padding */
+        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      .dark .news-card .bg-gradient-to-br > div:last-child {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
       }
       
       /* Ensure text doesn't overflow */
@@ -289,7 +316,7 @@ import { filter } from 'rxjs/operators';
         gap: 1.5rem;
       }
     }
-    /* Mobile home page: reduce card size and spacing */
+    /* Mobile home page: ensure proper card layout */
     @media (max-width: 1023px) {
       .news-grid-container.home-page .news-card.home-page-card {
         min-height: auto !important;
@@ -299,60 +326,60 @@ import { filter } from 'rxjs/operators';
         padding: 0 !important;
         gap: 0 !important;
         align-items: stretch !important;
+        display: flex !important;
+        flex-direction: column !important;
       }
       .news-grid-container.home-page .news-card.home-page-card .relative {
-        flex: 0 0 50% !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
         border-radius: 0.5rem 0.5rem 0 0 !important;
         margin: 0 !important;
         padding: 0 !important;
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0 !important;
       }
       .news-grid-container.home-page .news-card.home-page-card > div:last-child {
-        padding: 0.25rem 0.375rem !important;
+        padding: 0.625rem !important;
         border-radius: 0 0 0.5rem 0.5rem !important;
         margin: 0 !important;
         gap: 0 !important;
         height: auto !important;
-        min-height: auto !important;
+        min-height: 0 !important;
         max-height: none !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: stretch !important;
-        justify-content: space-between !important;
+        flex: 1 1 auto !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > *:not(div.flex.items-start) {
-        display: none !important;
+      /* Ensure title container takes space */
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div:first-child {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        margin-bottom: 0.75rem !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > h3 {
-        margin: 0 !important;
-        padding: 0 !important;
-        padding-top: 0.375rem !important;
-        font-size: 1rem !important;
-        line-height: 1.35 !important;
-        min-height: auto !important;
-        flex-grow: 1 !important;
-        word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-        display: block !important;
-        overflow: visible !important;
-      }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start {
-        margin: 0 !important;
-        padding: 0 !important;
-        margin-top: 0.5rem !important;
-        padding-top: 0.5rem !important;
-        font-size: 0.7rem !important;
+      /* Ensure author/date is visible and at bottom */
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div:last-child {
+        display: flex !important;
+        margin-top: auto !important;
         flex-shrink: 0 !important;
-        line-height: 1.2 !important;
-        border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+        padding-top: 0.5rem !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
       }
-      
-      .dark .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start {
+      .dark .news-grid-container.home-page .news-card.home-page-card > div:last-child > div:last-child {
         border-top-color: rgba(255, 255, 255, 0.1) !important;
       }
-      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div.flex.items-start > div.flex-1 > div.flex.items-center.justify-start span {
-        font-size: 0.7rem !important;
-        line-height: 1.2 !important;
+      /* Title styling */
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div:first-child h3 {
+        font-size: 0.8125rem !important;
+        line-height: 1.3 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      /* Author/date text styling */
+      .news-grid-container.home-page .news-card.home-page-card > div:last-child > div:last-child {
+        font-size: 0.65rem !important;
       }
     }
   `]
@@ -410,7 +437,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
             if (news && news.length > 0) {
               const uniqueNews = this.removeDuplicates(news);
               const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
-              this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+              const deduplicated = this.finalDeduplicate(filteredNews);
+              this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
               
               if (this.newsItems.length > 0) {
                 this.newsItems.forEach(item => {
@@ -560,9 +588,10 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                   console.warn('[NewsGrid] Not enough items after filtering, fetching additional news...');
                   await this.fetchAdditionalNews(filteredNews, NewsGridComponent.LATEST_STORIES_COUNT);
                 } else {
-                  const displayedIds = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  const deduplicated = this.finalDeduplicate(filteredNews);
+                  const displayedIds = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
                   this.displayedNewsService.registerDisplayedMultiple(displayedIds);
-                  this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                   
                   this.newsItems.forEach(item => {
                     if (item.imageLoading === undefined) {
@@ -648,7 +677,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                   const uniqueUnfiltered = this.removeDuplicates(unfilteredAll);
                   if (uniqueUnfiltered.length > 0) {
                     console.log('[NewsGrid] Using', uniqueUnfiltered.length, 'unfiltered items as fallback');
-                    this.newsItems = uniqueUnfiltered.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                    const deduplicated = this.finalDeduplicate(uniqueUnfiltered);
+                    this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                     const displayedIds = this.newsItems.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
                     this.displayedNewsService.registerDisplayedMultiple(displayedIds);
                     
@@ -681,7 +711,9 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                   console.log('[NewsGrid] 🔵 Displayed IDs after registration:', Array.from(this.displayedNewsService.getDisplayedIds()));
                   
                   // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
-                  this.newsItems = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  // Final deduplication before assigning
+                  const deduplicatedNews = this.finalDeduplicate(allNews);
+                  this.newsItems = deduplicatedNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                   
                   // Ensure all items have imageLoading set
                   this.newsItems.forEach(item => {
@@ -751,7 +783,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         } else {
           // We have enough breaking news, just use it
           // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
-          this.newsItems = filteredBreakingNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+          const deduplicated = this.finalDeduplicate(filteredBreakingNews);
+          this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
           
           // Ensure all items have imageLoading set
           this.newsItems.forEach(item => {
@@ -798,7 +831,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                 const displayedIds = filteredErrorNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
                 this.displayedNewsService.registerDisplayedMultiple(displayedIds);
                 
-                this.newsItems = filteredErrorNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                const deduplicated = this.finalDeduplicate(filteredErrorNews);
+                this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                 
                 // Ensure all items have imageLoading set and placeholders
                 this.newsItems.forEach(item => {
@@ -878,7 +912,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
         this.displayedNewsService.registerDisplayedMultiple(displayedIds);
         
         // CRITICAL: Always show exactly targetCount (6) items - this rule should never change
-        this.newsItems = itemsToRegister;
+        const deduplicated = this.finalDeduplicate(itemsToRegister);
+        this.newsItems = deduplicated;
         
         // Ensure all items have imageLoading set
         this.newsItems.forEach(item => {
@@ -906,7 +941,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
                 if (finalNews && finalNews.length > 0) {
                   const uniqueFinal = this.removeDuplicates(finalNews);
                   // Don't filter by displayed - just show the first 6 items
-                  this.newsItems = uniqueFinal.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  const deduplicated = this.finalDeduplicate(uniqueFinal);
+                  this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                   
                   this.newsItems.forEach(item => {
                     if (item.imageLoading === undefined) {
@@ -1086,7 +1122,8 @@ export class NewsGridComponent implements OnInit, OnDestroy {
           if (news && news.length > 0) {
             const uniqueNews = this.removeDuplicates(news);
             const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
-            this.newsItems = filteredNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+            const deduplicated = this.finalDeduplicate(filteredNews);
+            this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
             
             if (this.newsItems.length > 0) {
               this.newsItems.forEach(item => {
@@ -1318,6 +1355,47 @@ export class NewsGridComponent implements OnInit, OnDestroy {
 
   closeModal() {
     this.modalService.closeModal();
+  }
+
+  /**
+   * TrackBy function for Angular's @for loop to prevent duplicate rendering
+   * Uses ID if available, otherwise falls back to title + index
+   */
+  trackByNewsId(index: number, news: NewsArticle): string {
+    if (news && news.id) {
+      const id = typeof news.id === 'string' ? news.id : news.id.toString();
+      return id;
+    }
+    // Fallback: use title + index for unique tracking
+    const title = news?.title || 'unknown';
+    return `${title}_${index}`;
+  }
+
+  /**
+   * Final deduplication step - ensures no duplicates before rendering
+   * This is a safety net in case removeDuplicates missed something
+   */
+  private finalDeduplicate(news: NewsArticle[]): NewsArticle[] {
+    const seen = new Map<string, NewsArticle>();
+    
+    news.forEach((item, index) => {
+      let key: string;
+      if (item.id) {
+        key = typeof item.id === 'string' ? item.id : item.id.toString();
+      } else {
+        // Use title + index as fallback key
+        key = `${item.title || 'unknown'}_${index}`;
+      }
+      
+      // Only keep first occurrence
+      if (!seen.has(key)) {
+        seen.set(key, item);
+      } else {
+        console.warn('[NewsGrid] Final deduplication: Removed duplicate:', key, item.title?.substring(0, 30));
+      }
+    });
+    
+    return Array.from(seen.values());
   }
 }
 
