@@ -448,12 +448,12 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
 
   getWeatherIcon(iconType: string): string {
     const iconColors: Record<string, string> = {
-      'sun': 'text-yellow-500',
-      'cloud': 'text-gray-500',
-      'rain': 'text-blue-500',
-      'partly-cloudy': 'text-blue-400'
+      'sun': 'text-yellow-500 dark:text-yellow-400',
+      'cloud': 'text-gray-600 dark:text-gray-300',
+      'rain': 'text-cyan-600 dark:text-cyan-400',
+      'partly-cloudy': 'text-cyan-500 dark:text-cyan-400'
     };
-    const color = iconColors[iconType] || 'text-gray-500';
+    const color = iconColors[iconType] || 'text-gray-600 dark:text-gray-300';
     
     const icons: Record<string, string> = {
       'sun': `<svg class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ${color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`,
@@ -465,83 +465,118 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   getTemperatureColor(): string {
-    if (!this.weatherData) return '#1f2937';
+    const isDark = this.isDarkMode();
+    if (!this.weatherData) return isDark ? '#22d3ee' : '#0e7490'; // Cyan
     const temp = this.weatherData.temperature;
-    if (temp >= 35) return '#dc2626'; // Red for very hot
-    if (temp >= 30) return '#ea580c'; // Orange for hot
-    if (temp >= 25) return '#f59e0b'; // Amber for warm
-    if (temp >= 20) return '#10b981'; // Green for mild
-    if (temp >= 15) return '#3b82f6'; // Blue for cool
-    if (temp >= 10) return '#6366f1'; // Indigo for cold
-    return '#8b5cf6'; // Purple for very cold
+    // Use cyan/purple theme for weather widget
+    if (temp >= 35) return isDark ? '#fca5a5' : '#dc2626'; // Red
+    if (temp >= 30) return isDark ? '#fb923c' : '#ea580c'; // Orange
+    if (temp >= 25) return isDark ? '#fcd34d' : '#f59e0b'; // Amber
+    if (temp >= 20) return isDark ? '#22d3ee' : '#06b6d4'; // Cyan
+    if (temp >= 15) return isDark ? '#06b6d4' : '#0891b2'; // Darker cyan
+    if (temp >= 10) return isDark ? '#a78bfa' : '#7c3aed'; // Purple
+    return isDark ? '#818cf8' : '#6366f1'; // Indigo
   }
 
   getDescriptionColor(): string {
-    if (!this.weatherData) return '#6b7280';
+    const isDark = this.isDarkMode();
+    if (!this.weatherData) return isDark ? '#22d3ee' : '#0891b2'; // Cyan
     const desc = this.weatherData.description.toLowerCase();
-    if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return '#2563eb';
-    if (desc.includes('cloud') || desc.includes('overcast')) return '#64748b';
-    if (desc.includes('clear') || desc.includes('sun')) return '#f59e0b';
-    if (desc.includes('thunder') || desc.includes('storm')) return '#7c3aed';
-    if (desc.includes('fog')) return '#94a3b8';
-    return '#6b7280';
+    // Use cyan/purple theme
+    if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return isDark ? '#22d3ee' : '#0891b2'; // Cyan
+    if (desc.includes('cloud') || desc.includes('overcast')) return isDark ? '#a78bfa' : '#7c3aed'; // Purple
+    if (desc.includes('clear') || desc.includes('sun')) return isDark ? '#fcd34d' : '#f59e0b'; // Amber
+    if (desc.includes('thunder') || desc.includes('storm')) return isDark ? '#818cf8' : '#6366f1'; // Indigo
+    if (desc.includes('fog')) return isDark ? '#67e8f9' : '#06b6d4'; // Light cyan
+    return isDark ? '#22d3ee' : '#0891b2'; // Default cyan
+  }
+
+  isDarkMode(): boolean {
+    return document.documentElement.classList.contains('dark');
   }
 
   getBackgroundGradient(): string {
-    if (!this.weatherData) return 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
+    const isDark = this.isDarkMode();
+    if (!this.weatherData) {
+      return isDark 
+        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
+        : 'linear-gradient(135deg, #ecfeff 0%, #cffafe 50%, #a5f3fc 100%)'; // Light cyan
+    }
     const temp = this.weatherData.temperature;
     const icon = this.weatherData.icon;
     
-    // Weather-based gradients
+    // Weather-based gradients - Cyan/Purple theme
     if (icon === 'rain') {
-      return 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
+        : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 50%, #67e8f9 100%)'; // Light cyan
     }
     if (icon === 'sun') {
-      return 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)' // Dark yellow
+        : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)'; // Light yellow
     }
     if (icon === 'cloud') {
-      return 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
+        : 'linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
     }
     if (icon === 'partly-cloudy') {
-      return 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #155e75 0%, #0e7490 50%, #0891b2 100%)' // Dark light cyan
+        : 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)'; // Light cyan
     }
     
-    // Temperature-based gradients
+    // Temperature-based gradients - Cyan/Purple theme
     if (temp >= 35) {
-      return 'linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #fca5a5 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%)' // Dark red
+        : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #fca5a5 100%)'; // Light red
     }
     if (temp >= 30) {
-      return 'linear-gradient(135deg, #fed7aa 0%, #fdba74 50%, #fb923c 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #fed7aa 0%, #fdba74 50%, #fb923c 100%)'; // Light orange
     }
     if (temp >= 25) {
-      return 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)' // Dark yellow
+        : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)'; // Light yellow
     }
     if (temp >= 20) {
-      return 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
+        : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 50%, #67e8f9 100%)'; // Light cyan
     }
     if (temp >= 15) {
-      return 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #155e75 0%, #0e7490 50%, #0891b2 100%)' // Dark light cyan
+        : 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)'; // Light cyan
     }
     if (temp >= 10) {
-      return 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
+        : 'linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
     }
-    return 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)';
+    return isDark
+      ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
+      : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
   }
 
   getGradientOverlay(): string {
-    if (!this.weatherData) return 'radial-gradient(circle at top right, #3b82f6, transparent)';
+    if (!this.weatherData) return 'radial-gradient(circle at top right, #06b6d4, transparent)'; // Cyan
     const icon = this.weatherData.icon;
     
     if (icon === 'sun') {
-      return 'radial-gradient(circle at top right, #fbbf24, transparent)';
+      return 'radial-gradient(circle at top right, #fbbf24, transparent)'; // Yellow
     }
     if (icon === 'rain') {
-      return 'radial-gradient(circle at top right, #3b82f6, transparent)';
+      return 'radial-gradient(circle at top right, #06b6d4, transparent)'; // Cyan
     }
     if (icon === 'cloud') {
-      return 'radial-gradient(circle at top right, #64748b, transparent)';
+      return 'radial-gradient(circle at top right, #7c3aed, transparent)'; // Purple
     }
-    return 'radial-gradient(circle at top right, #60a5fa, transparent)';
+    return 'radial-gradient(circle at top right, #22d3ee, transparent)'; // Light cyan
   }
 
 }

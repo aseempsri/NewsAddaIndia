@@ -37,33 +37,33 @@ interface Match {
       <div class="relative z-10">
         <div class="flex items-center justify-between mb-2 sm:mb-3 gap-2">
           <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-            <svg class="w-5 h-5 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-500 dark:text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-orange-500 dark:text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 class="font-display text-base sm:text-lg lg:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate">Live Cricket</h3>
+            <h3 class="font-display text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-orange-100 truncate">Live Cricket</h3>
           </div>
           @if (selectedMatch && (selectedMatch.matchStarted && !selectedMatch.matchEnded)) {
             <span class="text-xs sm:text-sm lg:text-base px-2 sm:px-2.5 lg:px-3 py-1 sm:py-1.5 lg:py-2 bg-green-500/30 text-green-700 dark:text-green-300 rounded-full font-bold flex-shrink-0 animate-pulse">LIVE</span>
           } @else if (selectedMatch && selectedMatch.matchEnded) {
-            <span class="text-xs sm:text-sm lg:text-base px-2 sm:px-2.5 lg:px-3 py-1 sm:py-1.5 lg:py-2 bg-gray-500/30 text-gray-700 dark:text-gray-300 rounded-full font-bold flex-shrink-0">ENDED</span>
+            <span class="text-xs sm:text-sm lg:text-base px-2 sm:px-2.5 lg:px-3 py-1 sm:py-1.5 lg:py-2 bg-gray-500/30 dark:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full font-bold flex-shrink-0">ENDED</span>
           }
         </div>
 
         @if (isLoading) {
           <div class="flex items-center justify-center py-4 sm:py-5 lg:py-6">
-            <div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-orange-500 dark:border-orange-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
         } @else if (error) {
           <div class="text-center py-2 sm:py-3">
-            <p class="text-xs sm:text-sm text-red-500 font-medium">{{ error }}</p>
-            <p class="text-[0.65rem] sm:text-xs text-red-400 mt-1">Unable to load matches</p>
+            <p class="text-xs sm:text-sm text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+            <p class="text-[0.65rem] sm:text-xs text-red-500 dark:text-red-400/80 mt-1">Unable to load matches</p>
           </div>
         } @else if (allMatches.length === 0) {
           <div class="text-center py-3 sm:py-4">
-            <svg class="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-gray-500 dark:text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p class="text-xs sm:text-sm text-gray-500">No matches available</p>
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">No matches available</p>
           </div>
         } @else {
           <!-- Match Selector Dropdown -->
@@ -73,7 +73,7 @@ interface Match {
               [ngModel]="selectedMatchId" 
               (ngModelChange)="onMatchChange($event)"
               [disabled]="isLoading"
-              class="w-full px-2 py-1.5 sm:py-2 lg:py-2.5 text-xs sm:text-sm lg:text-base rounded-lg bg-white/90 dark:bg-gray-800/90 border-2 border-yellow-400/60 text-foreground focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-300/50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all shadow-sm">
+              class="w-full px-2 py-1.5 sm:py-2 lg:py-2.5 text-xs sm:text-sm lg:text-base rounded-lg bg-white/90 dark:bg-gray-900/90 border-2 border-orange-400/60 dark:border-orange-500/60 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-orange-500 dark:focus:border-orange-400 focus:ring-2 focus:ring-orange-300/50 dark:focus:ring-orange-500/50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all shadow-sm">
               @for (match of allMatches; track match.id) {
                 <option [value]="match.id">{{ match.name }}</option>
               }
@@ -110,7 +110,7 @@ interface Match {
               <div class="pt-1.5 sm:pt-2 lg:pt-3 border-t-2" [style.border-color]="getStatusBorderColor()">
                 <p class="text-sm sm:text-base lg:text-lg font-semibold text-center break-words" [style.color]="getStatusColor()">{{ selectedMatch.status }}</p>
                 @if (selectedMatch.venue) {
-                  <p class="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-400 text-center mt-1.5 lg:mt-2 break-words flex items-center justify-center gap-1">
+                  <p class="text-xs sm:text-sm lg:text-base text-gray-700 dark:text-gray-300 text-center mt-1.5 lg:mt-2 break-words flex items-center justify-center gap-1">
                     <span>📍</span>
                     <span>{{ selectedMatch.venue }}</span>
                   </p>
@@ -373,80 +373,95 @@ export class CricketScoreWidgetComponent implements OnInit, OnDestroy, AfterView
     }
   }
 
+  isDarkMode(): boolean {
+    return document.documentElement.classList.contains('dark');
+  }
+
   getBackgroundGradient(): string {
-    if (!this.selectedMatch) return 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+    const isDark = this.isDarkMode();
+    if (!this.selectedMatch) {
+      return isDark
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%)'; // Light orange
+    }
 
     if (this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded) {
-      // Live match - green gradient
-      return 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%)';
+      // Live match - green gradient (sports theme)
+      return isDark
+        ? 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)' // Dark green
+        : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #86efac 100%)'; // Light green
     } else if (this.selectedMatch.matchEnded) {
       // Ended match - gray gradient
-      return 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%)';
+      return isDark
+        ? 'linear-gradient(135deg, #374151 0%, #4b5563 50%, #6b7280 100%)' // Dark gray
+        : 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%)'; // Light gray
     } else {
-      // Upcoming match - yellow/orange gradient
-      return 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+      // Upcoming match - orange/red gradient (sports theme)
+      return isDark
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%)'; // Light orange
     }
   }
 
   getGradientOverlay(): string {
-    if (!this.selectedMatch) return 'radial-gradient(circle at top right, #fbbf24, transparent)';
+    if (!this.selectedMatch) return 'radial-gradient(circle at top right, #f97316, transparent)'; // Orange
 
     if (this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded) {
-      return 'radial-gradient(circle at top right, #10b981, transparent)';
+      return 'radial-gradient(circle at top right, #10b981, transparent)'; // Green
     } else if (this.selectedMatch.matchEnded) {
-      return 'radial-gradient(circle at top right, #6b7280, transparent)';
+      return 'radial-gradient(circle at top right, #6b7280, transparent)'; // Gray
     }
-    return 'radial-gradient(circle at top right, #fbbf24, transparent)';
+    return 'radial-gradient(circle at top right, #f97316, transparent)'; // Orange
   }
 
   getMatchTypeColor(): string {
-    if (!this.selectedMatch) return '#fef3c7';
+    if (!this.selectedMatch) return '#fff7ed'; // Orange
     const matchType = this.selectedMatch.matchType.toLowerCase();
 
-    if (matchType.includes('t20')) return '#fef3c7'; // Yellow
-    if (matchType.includes('odi')) return '#dbeafe'; // Blue
-    if (matchType.includes('test')) return '#e0e7ff'; // Indigo
+    if (matchType.includes('t20')) return '#fff7ed'; // Orange
+    if (matchType.includes('odi')) return '#fee2e2'; // Red
+    if (matchType.includes('test')) return '#dcfce7'; // Green
     return '#f3f4f6'; // Gray default
   }
 
   getMatchTypeTextColor(): string {
-    if (!this.selectedMatch) return '#92400e';
+    if (!this.selectedMatch) return '#c2410c'; // Dark orange
     const matchType = this.selectedMatch.matchType.toLowerCase();
 
-    if (matchType.includes('t20')) return '#92400e'; // Dark yellow
-    if (matchType.includes('odi')) return '#1e40af'; // Dark blue
-    if (matchType.includes('test')) return '#4338ca'; // Dark indigo
+    if (matchType.includes('t20')) return '#c2410c'; // Dark orange
+    if (matchType.includes('odi')) return '#991b1b'; // Dark red
+    if (matchType.includes('test')) return '#166534'; // Dark green
     return '#374151'; // Dark gray
   }
 
   getTeamCardColor(index: number): string {
     if (!this.selectedMatch) return '#f3f4f6';
 
-    // Different colors for each team
+    // Different colors for each team - Orange/Red theme
     if (index === 0) {
-      // First team - blue tones
+      // First team - orange tones
       return this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded
-        ? 'rgba(59, 130, 246, 0.15)'
-        : 'rgba(59, 130, 246, 0.1)';
+        ? 'rgba(249, 115, 22, 0.2)' // Orange
+        : 'rgba(249, 115, 22, 0.15)';
     } else {
-      // Second team - red/orange tones
+      // Second team - red tones
       return this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded
-        ? 'rgba(239, 68, 68, 0.15)'
-        : 'rgba(239, 68, 68, 0.1)';
+        ? 'rgba(239, 68, 68, 0.2)' // Red
+        : 'rgba(239, 68, 68, 0.15)';
     }
   }
 
   getTeamBorderColor(index: number): string {
     if (index === 0) {
-      return 'rgba(59, 130, 246, 0.4)'; // Blue border
+      return 'rgba(249, 115, 22, 0.5)'; // Orange border
     } else {
-      return 'rgba(239, 68, 68, 0.4)'; // Red border
+      return 'rgba(239, 68, 68, 0.5)'; // Red border
     }
   }
 
   getTeamTextColor(index: number): string {
     if (index === 0) {
-      return '#1e40af'; // Dark blue
+      return '#c2410c'; // Dark orange
     } else {
       return '#991b1b'; // Dark red
     }
@@ -454,38 +469,39 @@ export class CricketScoreWidgetComponent implements OnInit, OnDestroy, AfterView
 
   getScoreColor(index: number): string {
     if (index === 0) {
-      return '#2563eb'; // Blue
+      return '#ea580c'; // Orange
     } else {
       return '#dc2626'; // Red
     }
   }
 
   getStatusColor(): string {
-    if (!this.selectedMatch) return '#6b7280';
+    const isDark = this.isDarkMode();
+    if (!this.selectedMatch) return isDark ? '#fb923c' : '#c2410c'; // Orange
 
     const status = this.selectedMatch.status.toLowerCase();
 
     if (this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded) {
-      return '#059669'; // Green for live
+      return isDark ? '#34d399' : '#059669'; // Green for live
     } else if (this.selectedMatch.matchEnded) {
-      return '#6b7280'; // Gray for ended
+      return isDark ? '#9ca3af' : '#6b7280'; // Gray for ended
     } else if (status.includes('won')) {
-      return '#2563eb'; // Blue for winner
+      return isDark ? '#fb923c' : '#ea580c'; // Orange for winner
     } else if (status.includes('tie') || status.includes('draw')) {
-      return '#7c3aed'; // Purple for tie
+      return isDark ? '#f87171' : '#dc2626'; // Red for tie
     }
-    return '#92400e'; // Yellow for upcoming
+    return isDark ? '#fb923c' : '#c2410c'; // Orange for upcoming
   }
 
   getStatusBorderColor(): string {
-    if (!this.selectedMatch) return 'rgba(251, 191, 36, 0.3)';
+    if (!this.selectedMatch) return 'rgba(249, 115, 22, 0.4)'; // Orange
 
     if (this.selectedMatch.matchStarted && !this.selectedMatch.matchEnded) {
-      return 'rgba(16, 185, 129, 0.3)'; // Green
+      return 'rgba(16, 185, 129, 0.4)'; // Green
     } else if (this.selectedMatch.matchEnded) {
-      return 'rgba(107, 114, 128, 0.3)'; // Gray
+      return 'rgba(107, 114, 128, 0.4)'; // Gray
     }
-    return 'rgba(251, 191, 36, 0.3)'; // Yellow
+    return 'rgba(249, 115, 22, 0.4)'; // Orange
   }
 
 }
