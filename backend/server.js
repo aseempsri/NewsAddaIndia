@@ -26,6 +26,7 @@ app.use('/api/pending-news', require('./routes/pendingNews'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/translation', require('./routes/translation'));
+app.use('/api/cricket', require('./routes/cricket'));
 
 // Initialize scheduled translation job (runs daily at 1 AM)
 const translationService = require('./services/translation.service');
@@ -40,6 +41,12 @@ app.get('/health', (req, res) => {
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newsaddaindia')
   .then(() => {
     console.log('Connected to MongoDB');
+    
+    // Initialize scheduled cricket data refresh (runs every 2 minutes)
+    // Start only after MongoDB connection is established
+    const cricketService = require('./services/cricket.service');
+    cricketService.startScheduledRefresh();
+    console.log('Cricket service initialized and scheduled refresh started');
   })
   .catch((error) => {
     console.error('MongoDB connection error:', error);

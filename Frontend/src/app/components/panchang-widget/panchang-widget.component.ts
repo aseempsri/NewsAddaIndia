@@ -51,6 +51,7 @@ interface PanchangData {
           <!-- Date -->
           <div class="text-center pb-2 sm:pb-2.5 lg:pb-3 border-b-2 border-gradient-to-r from-orange-300 to-amber-300 bg-gradient-to-r from-orange-100/50 to-amber-100/50 dark:from-orange-900/30 dark:to-amber-900/30 rounded-lg p-1.5 sm:p-2">
             <p class="text-base sm:text-sm font-bold bg-gradient-to-r from-orange-700 to-amber-700 dark:from-orange-300 dark:to-amber-300 bg-clip-text text-transparent break-words">{{ panchangData.date }}</p>
+            <p class="text-xs sm:text-xs text-orange-600 dark:text-orange-400 mt-1 opacity-80">📍 {{ cityName }}, India</p>
           </div>
 
           <!-- Main Panchang Info -->
@@ -245,13 +246,15 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
   panchangData: PanchangData | null = null;
   isLoading = true;
   error: string | null = null;
+  cityName = 'Delhi'; // Always use Delhi for panchang calculations
   private refreshInterval: any;
 
-  // Delhi coordinates for Panchang calculation
-  private latitude = 28.6139;
-  private longitude = 77.2090;
+  // Always use Delhi, India coordinates for Panchang calculation
+  // Delhi: 28.6139° N, 77.2090° E
+  private readonly latitude = 28.6139;
+  private readonly longitude = 77.2090;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   ngOnInit() {
     this.loadPanchang();
@@ -283,9 +286,10 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
     // Using a free panchang API - trying multiple endpoints
     // Option 1: Try Drik Panchang API (may require backend proxy)
     // Option 2: Use a public panchang service
-    
-    // Using a free panchang calculation API
+
+    // Using Drik Panchang API - Always for Delhi, India
     // Format: https://api.drikpanchang.com/v1/panchang/day?date=YYYY-MM-DD&lat=LAT&lon=LON&tz=5.5
+    // Timezone: 5.5 (IST - Indian Standard Time)
     const panchangUrl = `https://api.drikpanchang.com/v1/panchang/day?date=${dateStr}&lat=${this.latitude}&lon=${this.longitude}&tz=5.5`;
 
     this.http.get<any>(panchangUrl).pipe(
@@ -317,29 +321,29 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
   processPanchangData(data: any) {
     // Process API response based on structure
     const panchang = data.panchang || data.day || data;
-    
+
     // Extract panchang details from API response
     const tithi = panchang.tithi?.name || panchang.tithi?.name_hindi || panchang.tithi || '';
     const nakshatra = panchang.nakshatra?.name || panchang.nakshatra?.name_hindi || panchang.nakshatra || '';
     const yoga = panchang.yoga?.name || panchang.yoga?.name_hindi || panchang.yoga || '';
     const karana = panchang.karana?.name || panchang.karana?.name_hindi || panchang.karana || '';
-    
+
     // Extract timings
     const sunrise = panchang.sunrise || panchang.sun?.rise || '';
     const sunset = panchang.sunset || panchang.sun?.set || '';
     const moonrise = panchang.moonrise || panchang.moon?.rise || '';
     const moonset = panchang.moonset || panchang.moon?.set || '';
-    
+
     // Extract muhurat timings
     const muhurat = panchang.muhurat || {};
     const abhijit = muhurat.abhijit || panchang.abhijitMuhurat || '';
     const amrit = muhurat.amrit || panchang.amritKaal || '';
     const brahma = muhurat.brahma || panchang.brahmaMuhurat || '';
-    
+
     // Get current day for paksha calculation
     const today = new Date();
     const day = today.getDate();
-    
+
     this.panchangData = {
       date: this.formatDate(today),
       tithi: tithi || 'कृष्ण पक्ष षष्ठी',
@@ -363,51 +367,52 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
   calculateEnhancedPanchang(day: number, month: number, year: number) {
     // Enhanced calculation with more accurate panchang data
     const today = new Date(year, month - 1, day);
-    
+
     // Tithi calculation (simplified - actual calculation is complex)
     const tithis = [
-      'प्रतिपदा', 'द्वितीया', 'तृतीया', 'चतुर्थी', 'पंचमी', 
-      'षष्ठी', 'सप्तमी', 'अष्टमी', 'नवमी', 'दशमी', 
+      'प्रतिपदा', 'द्वितीया', 'तृतीया', 'चतुर्थी', 'पंचमी',
+      'षष्ठी', 'सप्तमी', 'अष्टमी', 'नवमी', 'दशमी',
       'एकादशी', 'द्वादशी', 'त्रयोदशी', 'चतुर्दशी', 'पूर्णिमा', 'अमावस्या'
     ];
-    
+
     const nakshatras = [
-      'अश्विनी', 'भरणी', 'कृत्तिका', 'रोहिणी', 'मृगशिरा', 'आर्द्रा', 
-      'पुनर्वसु', 'पुष्य', 'अश्लेषा', 'मघा', 'पूर्व फाल्गुनी', 'उत्तर फाल्गुनी', 
-      'हस्त', 'चित्रा', 'स्वाती', 'विशाखा', 'अनुराधा', 'ज्येष्ठा', 
-      'मूल', 'पूर्वाषाढ़ा', 'उत्तराषाढ़ा', 'श्रवण', 'धनिष्ठा', 
+      'अश्विनी', 'भरणी', 'कृत्तिका', 'रोहिणी', 'मृगशिरा', 'आर्द्रा',
+      'पुनर्वसु', 'पुष्य', 'अश्लेषा', 'मघा', 'पूर्व फाल्गुनी', 'उत्तर फाल्गुनी',
+      'हस्त', 'चित्रा', 'स्वाती', 'विशाखा', 'अनुराधा', 'ज्येष्ठा',
+      'मूल', 'पूर्वाषाढ़ा', 'उत्तराषाढ़ा', 'श्रवण', 'धनिष्ठा',
       'शतभिषा', 'पूर्व भाद्रपद', 'उत्तर भाद्रपद', 'रेवती'
     ];
-    
+
     const yogas = [
-      'विष्कुम्भ', 'प्रीति', 'आयुष्मान', 'सौभाग्य', 'शोभन', 'अतिगण्ड', 
-      'सुकर्मा', 'धृति', 'शूल', 'गण्ड', 'वृद्धि', 'ध्रुव', 
-      'व्याघात', 'हर्षण', 'वज्र', 'सिद्धि', 'व्यतिपात', 'वरीयान', 
-      'परिघ', 'शिव', 'सिद्ध', 'साध्य', 'शुभ', 'शुक्ल', 
+      'विष्कुम्भ', 'प्रीति', 'आयुष्मान', 'सौभाग्य', 'शोभन', 'अतिगण्ड',
+      'सुकर्मा', 'धृति', 'शूल', 'गण्ड', 'वृद्धि', 'ध्रुव',
+      'व्याघात', 'हर्षण', 'वज्र', 'सिद्धि', 'व्यतिपात', 'वरीयान',
+      'परिघ', 'शिव', 'सिद्ध', 'साध्य', 'शुभ', 'शुक्ल',
       'ब्रह्म', 'इन्द्र', 'वैधृति'
     ];
-    
+
     const karanas = [
-      'बव', 'बालव', 'कौलव', 'तैतिल', 'गर', 'वणिज', 
+      'बव', 'बालव', 'कौलव', 'तैतिल', 'गर', 'वणिज',
       'विष्टि', 'शकुनि', 'चतुष्पाद', 'नाग', 'किंस्तुघ्न'
     ];
-    
+
     // Calculate indices (simplified algorithm)
     const daysSinceStart = Math.floor((today.getTime() - new Date(2024, 0, 1).getTime()) / (1000 * 60 * 60 * 24));
     const tithiIndex = daysSinceStart % 16;
     const nakshatraIndex = daysSinceStart % 27;
     const yogaIndex = daysSinceStart % 27;
     const karanaIndex = daysSinceStart % 11;
-    
+
     // Determine paksha based on lunar phase approximation
     const paksha = day <= 15 ? 'शुक्ल' : 'कृष्ण';
-    
-    // Calculate sunrise/sunset times (approximate for Delhi)
+
+    // Calculate sunrise/sunset times for Delhi, India
+    // These are approximate values - actual times vary by season
     const sunriseHour = 7;
     const sunriseMin = 14;
     const sunsetHour = 17;
     const sunsetMin = 53;
-    
+
     this.panchangData = {
       date: this.formatDate(today),
       tithi: `${paksha} पक्ष ${tithis[tithiIndex]}`,
@@ -445,11 +450,11 @@ export class PanchangWidgetComponent implements OnInit, OnDestroy {
   }
 
   formatDate(date: Date): string {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     };
     return date.toLocaleDateString('hi-IN', options);
   }
