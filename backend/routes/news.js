@@ -375,10 +375,28 @@ router.get('/:id', async (req, res) => {
   try {
     console.log('[Backend GET /api/news/:id] Fetching news:', req.params.id);
 
+    // Check if ID is a valid MongoDB ObjectId format (24 hex characters)
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(req.params.id) && 
+                            req.params.id.length === 24 && 
+                            /^[0-9a-fA-F]{24}$/.test(req.params.id);
+
+    if (!isValidObjectId) {
+      console.log('[Backend GET /api/news/:id] Invalid ObjectId format:', req.params.id);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid article ID format. Expected MongoDB ObjectId.'
+      });
+    }
+
     // Try direct MongoDB query to bypass any Mongoose transformations
     const db = mongoose.connection.db;
     const collection = db.collection('news');
-    const directQuery = await collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+    let directQuery = null;
+    try {
+      directQuery = await collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+    } catch (err) {
+      console.error('[Backend GET /api/news/:id] Error in direct MongoDB query:', err.message);
+    }
 
     console.log('[Backend GET /api/news/:id] Direct MongoDB query result:', {
       found: !!directQuery,

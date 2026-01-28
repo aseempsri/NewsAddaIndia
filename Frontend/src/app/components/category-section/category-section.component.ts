@@ -848,18 +848,16 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       
       this.newsService.fetchNewsByPage(config.slug, fetchCount).subscribe({
         next: async (news) => {
-          // CRITICAL: Ensure all articles have consistent IDs (same method as NewsGridComponent)
-          // This ensures articles without backend IDs get the same ID in both components
+          // CRITICAL: Ensure all articles use MongoDB _id from database
+          // Only normalize existing IDs - don't assign fallback IDs for database articles
           const newsWithIds = news.map(item => {
             // Normalize ID to string for consistent comparison
+            // Database articles should always have _id, so preserve it
             if (item.id) {
               item.id = typeof item.id === 'string' ? item.id : item.id.toString();
-            } else if (item.title) {
-              // Use title hash for consistent ID (same as NewsGridComponent)
-              const titleHash = this.hashString(item.title.trim());
-              item.id = `title_hash_${titleHash}`;
-              console.log(`[CategorySection] Assigned title-based ID to article: ${item.id}, Title: ${item.title.substring(0, 30)}`);
             }
+            // Don't assign fallback IDs - articles without IDs are from external sources
+            // and shouldn't have "Read more" buttons anyway
             return item;
           });
           

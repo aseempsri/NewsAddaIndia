@@ -530,8 +530,11 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   loadNews(newsId: string) {
     this.isLoading = true;
 
-    // Try to fetch from backend first
-    if (newsId.length === 24 || newsId.match(/^[0-9a-fA-F]{24}$/)) {
+    // Always try to fetch from backend first (for MongoDB ObjectIds)
+    // Check if it looks like a MongoDB ObjectId (24 hex characters)
+    const isObjectIdFormat = newsId.length === 24 && /^[0-9a-fA-F]{24}$/.test(newsId);
+    
+    if (isObjectIdFormat) {
       // Add cache-busting parameter to ensure fresh data
       const cacheBuster = `?t=${Date.now()}`;
       this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/api/news/${newsId}${cacheBuster}`).subscribe({
@@ -638,13 +641,15 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
             this.isLoading = false;
           }
         },
-        error: () => {
+        error: (error) => {
+          console.error('[NewsDetailPage] Error fetching news from backend:', error);
           // Fallback: try to find in cached news
           this.findNewsInCache(newsId);
         }
       });
     } else {
-      // Try to find in cached news
+      // Not a valid ObjectId format - try to find in cached news (might be from external sources)
+      console.warn('[NewsDetailPage] Invalid ObjectId format, trying cache:', newsId);
       this.findNewsInCache(newsId);
     }
   }

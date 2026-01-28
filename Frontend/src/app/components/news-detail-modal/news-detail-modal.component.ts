@@ -134,7 +134,7 @@ import { Subscription } from 'rxjs';
             </div>
 
             <!-- Read More Button - Under Image (Hidden on mobile, shown on desktop) -->
-            @if (news.id) {
+            @if (hasId()) {
               <div class="hidden lg:block mt-4 lg:mt-6 xl:mt-8">
                 <button
                   (click)="navigateToFullArticle(); $event.stopPropagation()"
@@ -183,7 +183,7 @@ import { Subscription } from 'rxjs';
 
           <!-- Footer Actions - Hidden on desktop, shown on mobile -->
           <div class="lg:hidden p-4 sm:p-6 border-t border-border/30 bg-secondary/20 flex-shrink-0">
-            @if (news.id) {
+            @if (hasId()) {
               <button
                 (click)="navigateToFullArticle(); $event.stopPropagation()"
                 (touchend)="navigateToFullArticle(); $event.stopPropagation(); $event.preventDefault()"
@@ -1054,6 +1054,14 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       .join('');
   }
 
+  /**
+   * Check if news article has an ID (for showing Read more button)
+   * Show button for all articles with IDs - let backend handle validation
+   */
+  hasId(): boolean {
+    return !!(this.news && this.news.id);
+  }
+
   close() {
     this.restoreBodyScroll();
     this.modalService.closeModal();
@@ -1083,6 +1091,7 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   navigateToFullArticle() {
     if (this.news && this.news.id) {
       const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
+      
       console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
       
       // Get the scroll position from modal service (saved when modal was opened)

@@ -208,6 +208,9 @@ import { filter } from 'rxjs/operators';
         padding: 0 !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
       }
       
       /* Fix the image container - remove flex constraints */
@@ -215,7 +218,8 @@ import { filter } from 'rxjs/operators';
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
-        flex: none !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
         aspect-ratio: 16/9 !important;
       }
       
@@ -233,9 +237,26 @@ import { filter } from 'rxjs/operators';
         object-fit: cover !important;
       }
       
-      /* Fix card content padding on mobile */
+      /* Fix card content padding on mobile - ensure flex layout */
       .news-card .bg-gradient-to-br {
         padding: 0.625rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+      }
+      
+      /* Ensure title container takes available space */
+      .news-card .bg-gradient-to-br > div:first-child {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+      }
+      
+      /* Ensure author/date stays at bottom */
+      .news-card .bg-gradient-to-br > div:last-child {
+        margin-top: auto !important;
+        flex-shrink: 0 !important;
       }
       
       /* Ensure text doesn't overflow */
@@ -1005,25 +1026,34 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     const result: NewsArticle[] = [];
     
     news.forEach(item => {
-      // Normalize ID to string for consistent comparison
-      let id: string;
-      if (!item.id) {
-        // Use title hash for consistent ID across components
-        // This ensures the same article gets the same ID in both NewsGrid and CategorySection
+      // CRITICAL: Preserve MongoDB _id from database articles
+      // Database articles should ALWAYS have _id from fetchFromBackend
+      // Only assign hash-based ID if article truly has no ID (shouldn't happen for DB articles)
+      
+      let id: string | null = null;
+      
+      if (item.id) {
+        // Article has an ID - normalize to string and preserve it
+        id = typeof item.id === 'string' ? item.id : item.id.toString();
+        item.id = id; // Update item.id to normalized string
+        
+        // Log if ID is not a MongoDB ObjectId (for debugging)
+        if (id.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(id)) {
+          console.warn('[NewsGrid] Article has non-ObjectId ID:', id, 'Title:', item.title?.substring(0, 30));
+        }
+      } else {
+        // Article has no ID - this shouldn't happen for database articles
+        // Only assign hash ID for external sources (but log a warning)
         const titleHash = this.hashString((item.title || '').trim());
         id = `title_hash_${titleHash}`;
         item.id = id;
-        console.warn('[NewsGrid] Article missing ID, assigned title-based ID:', id, 'Title:', item.title?.substring(0, 30));
-      } else {
-        // Normalize to string (same as DisplayedNewsService)
-        id = typeof item.id === 'string' ? item.id : item.id.toString();
-        item.id = id; // Update item.id to normalized string
+        console.error('[NewsGrid] ⚠️ Article missing MongoDB _id! Assigned hash ID:', id, 'Title:', item.title?.substring(0, 30), 'This should not happen for database articles!');
       }
       
-      if (!seen.has(id)) {
+      if (id && !seen.has(id)) {
         seen.add(id);
         result.push(item);
-      } else {
+      } else if (id) {
         console.log('[NewsGrid] Duplicate article filtered:', id, item.title?.substring(0, 30));
       }
     });

@@ -547,8 +547,13 @@ export class NewsService {
               imagesArray = [imageUrl];
             }
 
+            // CRITICAL: Always use MongoDB _id, convert to string, never use numeric fallback
+            const articleId = article._id 
+              ? (typeof article._id === 'string' ? article._id : article._id.toString())
+              : (article.id ? (typeof article.id === 'string' ? article.id : article.id.toString()) : null);
+
             const newsArticle = {
-              id: article._id || index + 1,
+              id: articleId, // Always use MongoDB _id, never numeric fallback
               category: article.category,
               title: article.title,
               titleEn: article.titleEn || article.title,
@@ -678,8 +683,25 @@ export class NewsService {
             imageUrl = '';
           }
           
+          // CRITICAL: Always use MongoDB _id, convert to string, never use numeric fallback
+          const articleId = article._id
+            ? (typeof article._id === 'string' ? article._id : article._id.toString())
+            : (article.id ? (typeof article.id === 'string' ? article.id : article.id.toString()) : null);
+
+          // Log if ID is not a MongoDB ObjectId (for debugging)
+          if (articleId && (articleId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(articleId))) {
+            console.warn('[NewsService] fetchBreakingNews: Non-ObjectId ID detected:', {
+              id: articleId,
+              idType: typeof articleId,
+              idLength: articleId?.length,
+              _id: article._id,
+              articleId: article.id,
+              title: article.title?.substring(0, 30)
+            });
+          }
+
           const newsArticle: NewsArticle = {
-            id: article._id || 1,
+            id: articleId,
             category: article.category,
             title: article.title,
             titleEn: article.titleEn || article.title,
@@ -827,8 +849,13 @@ export class NewsService {
               imageUrl = `${this.backendApiUrl}${imageUrl}`;
             }
 
+            // CRITICAL: Always use MongoDB _id, convert to string, never use numeric fallback
+            const articleId = article._id 
+              ? (typeof article._id === 'string' ? article._id : article._id.toString())
+              : (article.id ? (typeof article.id === 'string' ? article.id : article.id.toString()) : null);
+
             return {
-              id: article._id || article.id,
+              id: articleId,
               category: article.category,
               title: article.title,
               titleEn: article.titleEn || article.title,
