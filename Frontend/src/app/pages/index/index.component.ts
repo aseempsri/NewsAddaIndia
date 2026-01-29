@@ -44,21 +44,23 @@ import { filter } from 'rxjs/operators';
         <div class="absolute inset-0 bg-gradient-to-tr from-blue-900/50 via-purple-800/30 to-pink-900/50 animate-pulse"></div>
         
         <!-- Video Player - Responsive with better mobile handling -->
-        <video
-          #loadingVideo
-          autoplay
-          muted
-          loop
-          playsinline
-          preload="auto"
-          class="loading-video relative z-10"
-          (canplay)="onLoadingVideoCanPlay()"
-          (error)="onLoadingVideoError()"
-          (loadeddata)="onLoadingVideoLoaded()"
-        >
-          <source src="assets/videos/output.mp4" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
+        <div class="loading-video-wrapper">
+          <video
+            #loadingVideo
+            autoplay
+            muted
+            playsinline
+            preload="auto"
+            class="loading-video relative z-10"
+            (canplay)="onLoadingVideoCanPlay()"
+            (error)="onLoadingVideoError()"
+            (loadeddata)="onLoadingVideoLoaded()"
+            (ended)="onLoadingVideoEnded()"
+          >
+            <source src="assets/videos/output.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
       </div>
     }
 
@@ -260,6 +262,15 @@ import { filter } from 'rxjs/operators';
       animation: shimmer 3s ease-in-out infinite;
     }
     
+    @keyframes border-glow {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+    
     /* Loading video container - glassmorphism with gradient background */
     .loading-video-container {
       position: fixed;
@@ -278,15 +289,42 @@ import { filter } from 'rxjs/operators';
       justify-content: center;
     }
     
-    /* Loading video - desktop full screen with glow */
+    /* Video wrapper for border and glow effects - Desktop */
+    .loading-video-wrapper {
+      width: 96%;
+      max-width: 96%;
+      height: 90vh;
+      max-height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 6px;
+      border-radius: 32px;
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(59, 130, 246, 0.8), rgba(236, 72, 153, 0.8));
+      background-size: 300% 300%;
+      animation: border-glow 3s ease infinite;
+      box-shadow: 
+        0 0 30px rgba(147, 51, 234, 0.7),
+        0 0 60px rgba(59, 130, 246, 0.6),
+        0 0 90px rgba(236, 72, 153, 0.5),
+        0 0 120px rgba(147, 51, 234, 0.4);
+    }
+    
+    /* Loading video - desktop full screen with glow, fully visible */
     .loading-video {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain; /* Changed from cover to contain to show full video */
       object-position: center;
       margin: 0;
       padding: 0;
-      box-shadow: 0 0 60px rgba(147, 51, 234, 0.3), 0 0 120px rgba(59, 130, 246, 0.2);
+      border-radius: 26px; /* Rounded edges */
+      border: 3px solid rgba(255, 255, 255, 0.3); /* Inner border */
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      position: relative;
+      z-index: 1;
     }
     
     @media (max-width: 768px) {
@@ -309,25 +347,40 @@ import { filter } from 'rxjs/operators';
         justify-content: center;
       }
       
-      .loading-video {
-        width: 95%;
-        max-width: 95%;
+      .loading-video-wrapper {
+        width: 92%;
+        max-width: 92%;
         height: auto;
-        max-height: 90vh;
-        max-height: 90dvh;
-        object-fit: contain;
+        max-height: 85vh;
+        max-height: 85dvh;
+        position: relative;
+        padding: 4px;
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(59, 130, 246, 0.8), rgba(236, 72, 153, 0.8));
+        background-size: 300% 300%;
+        animation: border-glow 3s ease infinite;
+        box-shadow: 
+          0 0 20px rgba(147, 51, 234, 0.6),
+          0 0 40px rgba(59, 130, 246, 0.5),
+          0 0 60px rgba(236, 72, 153, 0.4),
+          0 0 80px rgba(147, 51, 234, 0.3);
+      }
+      
+      .loading-video {
+        width: 100%;
+        height: auto;
+        max-height: 100%;
+        object-fit: contain; /* Ensure full video is visible */
         object-position: center;
         margin: 0;
         padding: 0;
         display: block;
-        border-radius: 20px;
-        box-shadow: 
-          0 0 40px rgba(147, 51, 234, 0.4),
-          0 0 80px rgba(59, 130, 246, 0.3),
-          0 0 120px rgba(236, 72, 153, 0.2);
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 24px; /* Rounded edges */
+        border: 2px solid rgba(255, 255, 255, 0.3); /* Inner border */
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
+        position: relative;
+        z-index: 1;
       }
       
       /* Prevent body scroll on mobile when loading */
@@ -405,6 +458,7 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   newsGridImagesLoaded = false;
   categorySectionLoaded = false;
   widgetsLoaded = false;
+  videoEnded = false; // Track if loading video has finished playing
   showScrollIndicator = false;
   currentTheme: Theme = 'light';
   private themeSubscription?: Subscription;
@@ -456,8 +510,9 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
       // This is the first app load, show loading screen
       IndexComponent.hasAppLoaded = true;
       this.isPageLoading = true;
+      this.videoEnded = false; // Reset video ended flag
       
-      // Prevent body scroll on mobile when loading starts
+      // Prevent body scroll when loading starts
       if (typeof document !== 'undefined') {
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
@@ -519,13 +574,15 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
     
-    // OPTIMIZATION: Reduced timeout from 30s to 15s as fallback
+    // OPTIMIZATION: Timeout as fallback (increased to 30s to allow video to finish)
     setTimeout(() => {
       if (this.isPageLoading) {
         console.warn('Page loading timeout - showing page anyway');
+        this.videoEnded = true; // Force video ended flag
         this.isPageLoading = false;
+        this.restoreBodyScroll();
       }
-    }, 15000); // Reduced from 30s to 15s
+    }, 30000); // 30s timeout to allow video to finish playing
     
     // Check scroll position on init and show indicator after page loads
     setTimeout(() => {
@@ -833,19 +890,36 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   onLoadingVideoError() {
     // If video fails to load, fallback to spinner (optional)
     console.warn('[IndexComponent] Loading video failed to load, continuing with page load');
+    // If video fails, mark as ended so page can still load
+    this.videoEnded = true;
+    this.checkIfAllLoaded();
+  }
+
+  onLoadingVideoEnded() {
+    // Video has finished playing
+    console.log('[IndexComponent] Loading video ended');
+    this.videoEnded = true;
+    this.checkIfAllLoaded();
   }
 
   checkIfAllLoaded() {
-    if (this.heroImagesLoaded && this.newsGridImagesLoaded && this.categorySectionLoaded && this.widgetsLoaded) {
+    // Wait for both: video to end AND all content to be loaded
+    if (this.videoEnded && this.heroImagesLoaded && this.newsGridImagesLoaded && this.categorySectionLoaded && this.widgetsLoaded) {
       // Small delay to ensure smooth transition
       setTimeout(() => {
         this.isPageLoading = false;
-        // Re-enable body scroll on mobile after loading completes
-        if (typeof document !== 'undefined') {
-          document.body.style.overflow = '';
-          document.body.style.position = '';
-        }
-      }, 200); // Reduced from 300ms to 200ms for faster display
+        this.restoreBodyScroll();
+      }, 200);
+    }
+  }
+
+  restoreBodyScroll() {
+    // Re-enable body scroll after loading completes
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
     }
   }
 }

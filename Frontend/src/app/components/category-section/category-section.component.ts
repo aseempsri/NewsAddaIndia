@@ -129,9 +129,9 @@ interface Category {
                         <div class="flex-1 min-w-0 mb-3 min-h-0">
                           <h3 
                             [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
-                            (click)="openNewsModal(getCategoryKeyByIndex(catIndex), i)"
-                            (touchstart)="onTouchStart($event, getCategoryKeyByIndex(catIndex), i)"
-                            (touchend)="onTouchEnd($event, getCategoryKeyByIndex(catIndex), i)"
+                            (click)="openNewsModal(category.title, i)"
+                            (touchstart)="onTouchStart($event, category.title, i)"
+                            (touchend)="onTouchEnd($event, category.title, i)"
                             (touchmove)="onTouchMove($event)"
                             style="touch-action: manipulation !important; -webkit-touch-callout: none; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;">
                             {{ article?.title }}
@@ -1177,7 +1177,18 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       return;
     }
 
-    const category = this.categories.find(c => c.title === categoryTitle);
+    // Find category by title (works for both English and translated titles)
+    let category = this.categories.find(c => c.title === categoryTitle);
+    
+    // If not found by title, try to find by English key (for backward compatibility)
+    if (!category) {
+      const categoryKey = this.getCategoryKey(categoryTitle);
+      const categoryIndex = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'].indexOf(categoryKey);
+      if (categoryIndex >= 0 && categoryIndex < this.categories.length) {
+        category = this.categories[categoryIndex];
+      }
+    }
+    
     if (!category || !category.articles || articleIndex >= category.articles.length) {
       console.warn(`[CategorySection] Cannot open modal: category=${categoryTitle}, index=${articleIndex}, articles=${category?.articles?.length || 0}`);
       return;
@@ -1189,6 +1200,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       return;
     }
 
+    // Get original category key (English) for looking up originalNewsItems
     const originalCategoryKey = this.getOriginalCategoryKey(categoryTitle);
     const originalNews = this.originalNewsItems[originalCategoryKey];
 
