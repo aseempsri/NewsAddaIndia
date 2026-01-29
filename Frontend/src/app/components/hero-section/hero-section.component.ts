@@ -149,11 +149,16 @@ interface SideNews {
                     />
                   } @else if (getAdMediaType('ad1') === 'video') {
                     <video
+                      #ad1VideoMobile
                       [src]="getAdMediaUrl('ad1')"
                       autoplay
                       muted
                       loop
                       playsinline
+                      preload="auto"
+                      (canplay)="onAdVideoCanPlay('ad1', $event)"
+                      (error)="onAdVideoError('ad1', $event)"
+                      (loadeddata)="onAdVideoLoaded('ad1', $event)"
                       class="w-full h-full object-cover"
                     ></video>
                   }
@@ -273,11 +278,16 @@ interface SideNews {
                         />
                       } @else if (getAdMediaType('ad2') === 'video') {
                         <video
+                          #ad2VideoMobile
                           [src]="getAdMediaUrl('ad2')"
                           autoplay
                           muted
                           loop
                           playsinline
+                          preload="auto"
+                          (canplay)="onAdVideoCanPlay('ad2', $event)"
+                          (error)="onAdVideoError('ad2', $event)"
+                          (loadeddata)="onAdVideoLoaded('ad2', $event)"
                           class="w-full h-full object-cover"
                         ></video>
                       }
@@ -990,6 +1000,42 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
 
   hasAdMedia(adId: string): boolean {
     return this.adService.hasAdMedia(adId);
+  }
+
+  onAdVideoCanPlay(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    if (video) {
+      // Ensure video is muted for autoplay
+      video.muted = true;
+      // Try to play the video
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn(`[HeroSection] Autoplay prevented for ${adId}:`, error);
+        });
+      }
+    }
+  }
+
+  onAdVideoLoaded(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    if (video) {
+      // Ensure video is muted and try to play
+      video.muted = true;
+      video.play().catch((error) => {
+        console.warn(`[HeroSection] Video play failed for ${adId}:`, error);
+      });
+    }
+  }
+
+  onAdVideoError(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    console.error(`[HeroSection] Video error for ${adId}:`, {
+      error: video?.error,
+      code: video?.error?.code,
+      message: video?.error?.message,
+      src: video?.src
+    });
   }
 
 }

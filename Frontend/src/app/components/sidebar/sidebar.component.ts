@@ -35,11 +35,16 @@ import { Subscription } from 'rxjs';
                 />
               } @else if (getAdMediaType('ad3') === 'video') {
                 <video
+                  #ad3Video
                   [src]="getAdMediaUrl('ad3')"
                   autoplay
                   muted
                   loop
                   playsinline
+                  preload="auto"
+                  (canplay)="onAdVideoCanPlay('ad3', $event)"
+                  (error)="onAdVideoError('ad3', $event)"
+                  (loadeddata)="onAdVideoLoaded('ad3', $event)"
                   class="w-full h-full object-cover"
                 ></video>
               }
@@ -74,11 +79,16 @@ import { Subscription } from 'rxjs';
                 />
               } @else if (getAdMediaType('ad4') === 'video') {
                 <video
+                  #ad4Video
                   [src]="getAdMediaUrl('ad4')"
                   autoplay
                   muted
                   loop
                   playsinline
+                  preload="auto"
+                  (canplay)="onAdVideoCanPlay('ad4', $event)"
+                  (error)="onAdVideoError('ad4', $event)"
+                  (loadeddata)="onAdVideoLoaded('ad4', $event)"
                   class="w-full h-full object-cover"
                 ></video>
               }
@@ -113,11 +123,16 @@ import { Subscription } from 'rxjs';
                 />
               } @else if (getAdMediaType('ad5') === 'video') {
                 <video
+                  #ad5Video
                   [src]="getAdMediaUrl('ad5')"
                   autoplay
                   muted
                   loop
                   playsinline
+                  preload="auto"
+                  (canplay)="onAdVideoCanPlay('ad5', $event)"
+                  (error)="onAdVideoError('ad5', $event)"
+                  (loadeddata)="onAdVideoLoaded('ad5', $event)"
                   class="w-full h-full object-cover"
                 ></video>
               }
@@ -237,6 +252,42 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   hasAdMedia(adId: string): boolean {
     return this.adService.hasAdMedia(adId);
+  }
+
+  onAdVideoCanPlay(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    if (video) {
+      // Ensure video is muted for autoplay
+      video.muted = true;
+      // Try to play the video
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn(`[Sidebar] Autoplay prevented for ${adId}:`, error);
+        });
+      }
+    }
+  }
+
+  onAdVideoLoaded(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    if (video) {
+      // Ensure video is muted and try to play
+      video.muted = true;
+      video.play().catch((error) => {
+        console.warn(`[Sidebar] Video play failed for ${adId}:`, error);
+      });
+    }
+  }
+
+  onAdVideoError(adId: string, event: Event) {
+    const video = event.target as HTMLVideoElement;
+    console.error(`[Sidebar] Video error for ${adId}:`, {
+      error: video?.error,
+      code: video?.error?.code,
+      message: video?.error?.message,
+      src: video?.src
+    });
   }
 
   updateTranslations() {
