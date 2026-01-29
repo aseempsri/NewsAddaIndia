@@ -85,11 +85,22 @@ const pendingNewsSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    // Source information for NewsData.io articles
+    source: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    sourceName: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     // Metadata about when this was generated
     generatedBy: {
         type: String,
         default: 'openai',
-        enum: ['openai', 'admin', 'manual']
+        enum: ['openai', 'admin', 'manual', 'newsdata']
     },
     generatedAt: {
         type: Date,

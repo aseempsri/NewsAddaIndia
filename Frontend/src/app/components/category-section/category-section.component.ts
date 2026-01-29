@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
 interface Article {
+  id?: string | number; // Add ID field to preserve MongoDB _id
   title: string;
   image: string;
   time: string;
@@ -806,6 +807,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               }
             }
             return {
+              id: newsItem.id, // Preserve MongoDB _id
               title: translatedTitle,
               image: newsItem.image || '',
               time: newsItem.time,
@@ -930,6 +932,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                 console.warn(`Failed to translate title for ${config.key}:`, error);
               }
               return {
+                id: newsItem.id, // Preserve MongoDB _id
                 title: translatedTitle,
                 image: newsItem.image || '',
                 time: newsItem.time,
@@ -962,6 +965,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                   console.warn(`Failed to translate title for ${config.key}:`, error);
                 }
                 return {
+                  id: newsItem.id, // Preserve MongoDB _id
                   title: translatedTitle,
                   image: newsItem.image || '',
                   time: newsItem.time,
@@ -1189,13 +1193,14 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     const originalNews = this.originalNewsItems[originalCategoryKey];
 
     if (originalNews && originalNews[articleIndex]) {
-      // Use the original NewsArticle from the service
+      // Use the original NewsArticle from the service (has full data including MongoDB _id)
       const newsArticle = originalNews[articleIndex];
       this.modalService.openModal(newsArticle, false);
-    } else {
-      // Fallback: create a NewsArticle from the Article interface
+    } else if (article.id) {
+      // Article has an ID - create NewsArticle with the actual ID from the article
+      // This ensures we use the MongoDB _id even if originalNewsItems lookup fails
       const newsArticle: NewsArticle = {
-        id: articleIndex + 10000, // Temporary ID
+        id: article.id, // Use the actual MongoDB _id from the article
         category: originalCategoryKey,
         title: article.title,
         titleEn: article.title,
@@ -1204,9 +1209,16 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         imageLoading: article.imageLoading || false,
         time: article.time,
         author: 'News Adda India',
-        date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+        date: article.date || new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+        isTrending: article.isTrending || false,
+        isBreaking: article.isBreaking || false,
+        isFeatured: article.isFeatured || false
       };
       this.modalService.openModal(newsArticle, false);
+    } else {
+      // No ID available - this shouldn't happen for database articles
+      console.warn(`[CategorySection] Article at index ${articleIndex} in category ${categoryTitle} has no ID. Cannot open detail page.`);
+      // Don't open modal if there's no valid ID
     }
   }
 
@@ -1314,6 +1326,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               console.warn(`Failed to translate title for ${config.key}:`, error);
             }
             return {
+              id: newsItem.id, // Preserve MongoDB _id
               title: translatedTitle,
               image: newsItem.image || '',
               time: newsItem.time,

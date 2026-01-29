@@ -34,7 +34,13 @@ class CricketService {
         timeout: 10000 // 10 second timeout
       });
 
-      if (response.data && response.data.status === 'success' && response.data.data) {
+      // Check response structure
+      if (!response.data) {
+        throw new Error('No data in API response');
+      }
+
+      // Handle API response
+      if (response.data.status === 'success' && response.data.data && Array.isArray(response.data.data)) {
         const matches = response.data.data;
         console.log(`[CricketService] Received ${matches.length} matches from API`);
 
@@ -49,8 +55,33 @@ class CricketService {
 
         this.isRunning = false;
         return { success: true, count: matches.length, documentId: doc._id };
+      } else if (response.data.status === 'failure') {
+        // Handle API failures gracefully (rate limits, etc.)
+        const reason = response.data.reason || 'Unknown error';
+        const info = response.data.info || {};
+        
+        console.warn(`[CricketService] API failure: ${reason}`);
+        if (info.hitsLimit && info.hitsToday) {
+          console.warn(`[CricketService] Rate limit exceeded: ${info.hitsToday}/${info.hitsLimit} hits. Using cached data.`);
+        }
+        
+        // Don't throw error - just log and return failure
+        // The frontend will use cached data from database
+        this.isRunning = false;
+        return { 
+          success: false, 
+          error: reason,
+          rateLimited: reason.includes('hits') || reason.includes('limit'),
+          apiInfo: info
+        };
       } else {
-        throw new Error('Invalid API response structure');
+        // Unexpected response structure
+        const errorMsg = `Invalid API response structure. Status: ${response.data?.status}, Has data: ${!!response.data?.data}, Data is array: ${Array.isArray(response.data?.data)}`;
+        console.error('[CricketService]', errorMsg);
+        console.error('[CricketService] Full response:', JSON.stringify(response.data, null, 2));
+        
+        this.isRunning = false;
+        return { success: false, error: errorMsg };
       }
     } catch (error) {
       this.isRunning = false;
@@ -59,7 +90,16 @@ class CricketService {
       console.error('[CricketService] Error fetching cricket matches:', error.message);
       if (error.response) {
         console.error('[CricketService] API Error Status:', error.response.status);
-        console.error('[CricketService] API Error Data:', error.response.data);
+        console.error('[CricketService] API Error Headers:', error.response.headers);
+        console.error('[CricketService] API Error Data:', JSON.stringify(error.response.data, null, 2));
+      } else if (error.request) {
+        console.error('[CricketService] No response received. Request details:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          params: error.config?.params
+        });
+      } else {
+        console.error('[CricketService] Error setting up request:', error.message);
       }
       
       return { success: false, error: error.message };

@@ -9,6 +9,7 @@ import { AdminReviewPostsComponent } from './pages/admin/admin-review-posts/admi
 import { AdminReviewLivePostsComponent } from './pages/admin/admin-review-live-posts/admin-review-live-posts.component';
 import { AdminEditPostComponent } from './pages/admin/admin-edit-post/admin-edit-post.component';
 import { AdminEditLivePostComponent } from './pages/admin/admin-edit-live-post/admin-edit-live-post.component';
+import { AdminAdsComponent } from './pages/admin/admin-ads/admin-ads.component';
 
 export const routes: Routes = [
   { path: '', component: IndexComponent },
@@ -28,6 +29,7 @@ export const routes: Routes = [
   { path: 'admin/review-live', component: AdminReviewLivePostsComponent },
   { path: 'admin/edit/:id', component: AdminEditPostComponent },
   { path: 'admin/edit-live/:id', component: AdminEditLivePostComponent },
+  { path: 'admin/ads', component: AdminAdsComponent },
   { path: '**', component: NotFoundComponent }
 ];
 

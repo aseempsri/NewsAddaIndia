@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LanguageService } from '../../services/language.service';
+import { AdService } from '../../services/ad.service';
 import { WeatherWidgetComponent } from '../weather-widget/weather-widget.component';
 import { CricketScoreWidgetComponent } from '../cricket-score-widget/cricket-score-widget.component';
 import { PanchangWidgetComponent } from '../panchang-widget/panchang-widget.component';
@@ -17,15 +18,117 @@ import { Subscription } from 'rxjs';
         <app-weather-widget (dataLoaded)="onWidgetLoaded('weather')" />
       </div>
 
+      <!-- Ad 3 - After Weather Widget -->
+      @if (isAdEnabled('ad3')) {
+        <div class="mb-4 sm:mb-5 lg:mb-6 w-full min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
+          <a
+            [href]="getAdLink('ad3') || 'javascript:void(0)'"
+            [target]="getAdLink('ad3') ? '_blank' : '_self'"
+            [rel]="getAdLink('ad3') ? 'noopener noreferrer' : ''"
+            class="block w-full h-full cursor-pointer">
+            @if (hasAdMedia('ad3')) {
+              @if (getAdMediaType('ad3') === 'image') {
+                <img
+                  [src]="getAdMediaUrl('ad3')"
+                  [alt]="getAdAltText('ad3')"
+                  class="w-full h-full object-cover"
+                />
+              } @else if (getAdMediaType('ad3') === 'video') {
+                <video
+                  [src]="getAdMediaUrl('ad3')"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  class="w-full h-full object-cover"
+                ></video>
+              }
+            } @else {
+              <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 3</span>
+              </div>
+            }
+          </a>
+        </div>
+      }
+
       <!-- Cricket Score Widget -->
       <div class="mb-4 sm:mb-5 lg:mb-6">
         <app-cricket-score-widget (dataLoaded)="onWidgetLoaded('cricket')" />
       </div>
 
+      <!-- Ad 4 - After Cricket Widget -->
+      @if (isAdEnabled('ad4')) {
+        <div class="mb-4 sm:mb-5 lg:mb-6 w-full min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
+          <a
+            [href]="getAdLink('ad4') || 'javascript:void(0)'"
+            [target]="getAdLink('ad4') ? '_blank' : '_self'"
+            [rel]="getAdLink('ad4') ? 'noopener noreferrer' : ''"
+            class="block w-full h-full cursor-pointer">
+            @if (hasAdMedia('ad4')) {
+              @if (getAdMediaType('ad4') === 'image') {
+                <img
+                  [src]="getAdMediaUrl('ad4')"
+                  [alt]="getAdAltText('ad4')"
+                  class="w-full h-full object-cover"
+                />
+              } @else if (getAdMediaType('ad4') === 'video') {
+                <video
+                  [src]="getAdMediaUrl('ad4')"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  class="w-full h-full object-cover"
+                ></video>
+              }
+            } @else {
+              <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 4</span>
+              </div>
+            }
+          </a>
+        </div>
+      }
+
       <!-- Panchang Widget -->
       <div class="mb-4 sm:mb-5 lg:mb-6">
         <app-panchang-widget (dataLoaded)="onWidgetLoaded('panchang')" />
       </div>
+
+      <!-- Ad 5 - After Panchang Widget -->
+      @if (isAdEnabled('ad5')) {
+        <div class="mb-4 sm:mb-5 lg:mb-6 w-full min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
+          <a
+            [href]="getAdLink('ad5') || 'javascript:void(0)'"
+            [target]="getAdLink('ad5') ? '_blank' : '_self'"
+            [rel]="getAdLink('ad5') ? 'noopener noreferrer' : ''"
+            class="block w-full h-full cursor-pointer">
+            @if (hasAdMedia('ad5')) {
+              @if (getAdMediaType('ad5') === 'image') {
+                <img
+                  [src]="getAdMediaUrl('ad5')"
+                  [alt]="getAdAltText('ad5')"
+                  class="w-full h-full object-cover"
+                />
+              } @else if (getAdMediaType('ad5') === 'video') {
+                <video
+                  [src]="getAdMediaUrl('ad5')"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  class="w-full h-full object-cover"
+                ></video>
+              }
+            } @else {
+              <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 5</span>
+              </div>
+            }
+          </a>
+        </div>
+      }
 
       <!-- Subscribe Card - Desktop only (hidden on mobile, shown before footer) -->
       <div class="hidden lg:block mb-0">
@@ -90,9 +193,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
   @Output() widgetsLoaded = new EventEmitter<boolean>();
   t: any = {};
   private languageSubscription?: Subscription;
+  private adSubscription?: Subscription;
   private loadedWidgets = new Set<string>();
 
-  constructor(private languageService: LanguageService) {}
+  constructor(
+    private languageService: LanguageService,
+    private adService: AdService
+  ) {}
 
   ngOnInit() {
     this.updateTranslations();
@@ -105,6 +212,31 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.adSubscription?.unsubscribe();
+  }
+
+  isAdEnabled(adId: string): boolean {
+    return this.adService.isAdEnabled(adId);
+  }
+
+  getAdMediaUrl(adId: string): string | null {
+    return this.adService.getAdMediaUrl(adId);
+  }
+
+  getAdLink(adId: string): string | null {
+    return this.adService.getAdLink(adId);
+  }
+
+  getAdAltText(adId: string): string {
+    return this.adService.getAdAltText(adId);
+  }
+
+  getAdMediaType(adId: string): 'image' | 'video' | null {
+    return this.adService.getAdMediaType(adId);
+  }
+
+  hasAdMedia(adId: string): boolean {
+    return this.adService.hasAdMedia(adId);
   }
 
   updateTranslations() {

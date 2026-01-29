@@ -41,6 +41,28 @@ const upload = multer({
   }
 });
 
+// Helper function to filter out paid/premium text
+function filterPaidPlansText(text) {
+  if (!text) return '';
+  const paidKeywords = [
+    'only available in paid plans',
+    'only available in paid version',
+    'paid version',
+    'premium version',
+    'paid content',
+    'members only',
+    'only available in paid',
+    'paid plans',
+    'premium plans'
+  ];
+  let filtered = text;
+  for (const keyword of paidKeywords) {
+    const regex = new RegExp(keyword, 'gi');
+    filtered = filtered.replace(regex, '');
+  }
+  return filtered.replace(/\s+/g, ' ').trim();
+}
+
 // Helper function to generate 60-word summary
 function generateSummary(content, maxWords = 60) {
   if (!content || !content.trim()) {
@@ -128,15 +150,38 @@ router.get('/', authenticateAdmin, async (req, res) => {
       .skip(parseInt(skip));
     
     // Add source field to distinguish between pending and unpublished
-    const pendingWithSource = pendingNews.map(item => ({
-      ...item.toObject(),
-      source: 'pending'
-    }));
+    // Also filter out paid plans text from content fields
+    const pendingWithSource = pendingNews.map(item => {
+      const itemObj = item.toObject();
+      return {
+        ...itemObj,
+        source: 'pending',
+        sourceUrl: itemObj.source || null, // Map source field to sourceUrl for frontend
+        sourceName: itemObj.sourceName || null,
+        content: filterPaidPlansText(itemObj.content || ''),
+        contentEn: filterPaidPlansText(itemObj.contentEn || ''),
+        excerpt: filterPaidPlansText(itemObj.excerpt || ''),
+        excerptEn: filterPaidPlansText(itemObj.excerptEn || ''),
+        summary: filterPaidPlansText(itemObj.summary || ''),
+        summaryEn: filterPaidPlansText(itemObj.summaryEn || '')
+      };
+    });
     
-    const unpublishedWithSource = unpublishedNews.map(item => ({
-      ...item.toObject(),
-      source: 'unpublished'
-    }));
+    const unpublishedWithSource = unpublishedNews.map(item => {
+      const itemObj = item.toObject();
+      return {
+        ...itemObj,
+        source: 'unpublished',
+        sourceUrl: itemObj.source || null,
+        sourceName: itemObj.sourceName || null,
+        content: filterPaidPlansText(itemObj.content || ''),
+        contentEn: filterPaidPlansText(itemObj.contentEn || ''),
+        excerpt: filterPaidPlansText(itemObj.excerpt || ''),
+        excerptEn: filterPaidPlansText(itemObj.excerptEn || ''),
+        summary: filterPaidPlansText(itemObj.summary || ''),
+        summaryEn: filterPaidPlansText(itemObj.summaryEn || '')
+      };
+    });
     
     // Combine and sort by createdAt
     const allUnpublished = [...pendingWithSource, ...unpublishedWithSource]
@@ -168,7 +213,16 @@ router.get('/:id', authenticateAdmin, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Pending news not found' });
     }
     
-    res.json({ success: true, data: pendingNews });
+    // Filter out paid plans text from content fields before returning
+    const cleanedData = pendingNews.toObject();
+    cleanedData.content = filterPaidPlansText(cleanedData.content || '');
+    cleanedData.contentEn = filterPaidPlansText(cleanedData.contentEn || '');
+    cleanedData.excerpt = filterPaidPlansText(cleanedData.excerpt || '');
+    cleanedData.excerptEn = filterPaidPlansText(cleanedData.excerptEn || '');
+    cleanedData.summary = filterPaidPlansText(cleanedData.summary || '');
+    cleanedData.summaryEn = filterPaidPlansText(cleanedData.summaryEn || '');
+    
+    res.json({ success: true, data: cleanedData });
   } catch (error) {
     console.error('Error fetching pending news:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch pending news' });
@@ -424,6 +478,21 @@ router.post('/:id/publish', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error publishing news:', error);
     res.status(500).json({ success: false, error: 'Failed to publish news' });
+  }
+});
+
+// DELETE all pending news (Admin only) - for clearing before refetch
+router.delete('/all', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await PendingNews.deleteMany({});
+    res.json({
+      success: true,
+      message: `Deleted ${result.deletedCount} pending news articles`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting all pending news:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete all pending news' });
   }
 });
 

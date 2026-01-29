@@ -727,12 +727,14 @@ export class NewsService {
             map(translatedNews => translatedNews[0])
           );
         }
-        throw new Error('No breaking news found');
+        // No breaking news found - return default/empty news instead of falling back to featured
+        console.warn('No breaking news found - returning default news');
+        return of(this.getDefaultNews());
       }),
       catchError(error => {
-        console.warn('No breaking news from backend, falling back to featured:', error);
-        // Fallback to regular featured news
-        return this.fetchFeaturedNews('National');
+        console.warn('Error fetching breaking news:', error);
+        // Return default news instead of falling back to featured
+        return of(this.getDefaultNews());
       })
     );
   }
@@ -900,15 +902,20 @@ export class NewsService {
 
   /**
    * Fetch side news (2-3 articles) - uses cache if available
+   * Excludes breaking news - breaking news should only appear in breaking news section
    */
   fetchSideNews(categories: string[] = ['Sports', 'Business']): Observable<NewsArticle[]> {
     const observables = categories.map(cat =>
-      this.fetchNewsByCategory(cat, 1).pipe(
+      this.fetchFromBackend(cat, 1, undefined, true).pipe( // excludeBreaking = true
         map(articles => articles[0])
       )
     );
     return forkJoin(observables).pipe(
-      map(articles => articles.filter(a => a !== undefined))
+      map(articles => articles.filter(a => a !== undefined)),
+      switchMap(news => {
+        // Translate news if Hindi is selected
+        return this.translateNewsIfNeeded(news);
+      })
     );
   }
 

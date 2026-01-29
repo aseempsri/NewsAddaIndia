@@ -662,6 +662,41 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
 
+  // CKEditor Configuration
+  public Editor = ClassicEditor;
+  public editorConfig = {
+    toolbar: {
+      items: [
+        'heading', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+        'bulletedList', 'numberedList', '|',
+        'alignment', '|',
+        'outdent', 'indent', '|',
+        'link', 'blockQuote', 'insertTable', 'imageUpload', '|',
+        'undo', 'redo'
+      ],
+      shouldNotGroupWhenFull: true
+    },
+    language: 'en',
+    image: {
+      toolbar: [
+        'imageTextAlternative',
+        'toggleImageCaption',
+        'imageStyle:inline',
+        'imageStyle:block',
+        'imageStyle:side'
+      ]
+    },
+    table: {
+      contentToolbar: [
+        'tableColumn',
+        'tableRow',
+        'mergeTableCells'
+      ]
+    }
+  };
+
   // Icon functionality removed
 
   constructor(
@@ -723,12 +758,46 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Filter out "ONLY AVAILABLE IN PAID PLANS" and similar paid/premium text
+   */
+  private filterPaidPlansText(text: string): string {
+    if (!text) return '';
+    const paidKeywords = [
+      'only available in paid plans',
+      'only available in paid version',
+      'paid version',
+      'premium version',
+      'paid content',
+      'members only',
+      'only available in paid',
+      'paid plans',
+      'premium plans'
+    ];
+    let filteredText = text;
+    for (const keyword of paidKeywords) {
+      const regex = new RegExp(keyword, 'gi');
+      filteredText = filteredText.replace(regex, '');
+    }
+    return filteredText.replace(/\s+/g, ' ').trim();
+  }
+
   loadNews() {
     // Try to load from sessionStorage first (from review page)
     const storedNews = sessionStorage.getItem('editNews');
     if (storedNews) {
       try {
-        this.newsData = JSON.parse(storedNews);
+        const parsedData = JSON.parse(storedNews);
+        // Filter out paid plans text from all content fields
+        this.newsData = {
+          ...parsedData,
+          content: this.filterPaidPlansText(parsedData.content || ''),
+          contentEn: this.filterPaidPlansText(parsedData.contentEn || ''),
+          excerpt: this.filterPaidPlansText(parsedData.excerpt || ''),
+          excerptEn: this.filterPaidPlansText(parsedData.excerptEn || ''),
+          summary: this.filterPaidPlansText(parsedData.summary || ''),
+          summaryEn: this.filterPaidPlansText(parsedData.summaryEn || '')
+        };
         this.tagsInput = this.newsData.tags.join(', ');
         if (this.newsData.image) {
           this.currentImageUrl = this.getImageUrl(this.newsData.image);
@@ -763,12 +832,15 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (response.success) {
+          // Filter out paid plans text from all content fields
           this.newsData = { 
             ...response.data, 
-            summary: response.data.summary || '',
-            summaryEn: response.data.summaryEn || '',
-            excerptEn: response.data.excerptEn || '',
-            contentEn: response.data.contentEn || ''
+            summary: this.filterPaidPlansText(response.data.summary || ''),
+            summaryEn: this.filterPaidPlansText(response.data.summaryEn || ''),
+            excerpt: this.filterPaidPlansText(response.data.excerpt || ''),
+            excerptEn: this.filterPaidPlansText(response.data.excerptEn || ''),
+            content: this.filterPaidPlansText(response.data.content || ''),
+            contentEn: this.filterPaidPlansText(response.data.contentEn || '')
           };
           this.tagsInput = this.newsData.tags.join(', ');
           if (this.newsData.image) {

@@ -21,7 +21,7 @@ import { filter } from 'rxjs/operators';
         <!-- Section Header -->
         <div class="flex items-center justify-between mb-8">
           <div>
-            <h2 class="font-display text-2xl lg:text-3xl font-bold leading-relaxed pt-2 pb-1">
+            <h2 class="font-display text-2xl lg:text-3xl font-bold leading-relaxed pt-2 pb-1 latest-stories-headline">
               {{ t.latestStories }}
             </h2>
             <p class="text-muted-foreground mt-1">{{ t.stayUpdated }}</p>
@@ -174,6 +174,12 @@ import { filter } from 'rxjs/operators';
         margin: 0 !important;
         padding: 0 !important;
       }
+      
+      /* Increase Latest Stories headline font size by 30% on mobile */
+      .latest-stories-headline {
+        font-size: 1.95rem !important; /* 30% increase from text-2xl (1.5rem) */
+        line-height: 1.2 !important;
+      }
       .grid {
         display: grid !important;
         grid-template-columns: 1fr !important;
@@ -224,8 +230,8 @@ import { filter } from 'rxjs/operators';
         overflow: hidden !important;
       }
       
-      /* Border line - minimal height */
-      .news-card > div.h-\[2px\] {
+      /* Border line - minimal height (targeting the gradient border div) */
+      .news-card > div[class*="bg-gradient-to-r"] {
         flex-shrink: 0 !important;
         flex-grow: 0 !important;
         height: 2px !important;

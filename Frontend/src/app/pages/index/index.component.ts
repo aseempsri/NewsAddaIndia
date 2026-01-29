@@ -5,6 +5,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
 import { LanguageService, Language } from '../../services/language.service';
 import { ScrollRestorationService } from '../../services/scroll-restoration.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
+import { AdService } from '../../services/ad.service';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { VideoBannerComponent } from '../../components/video-banner/video-banner.component';
@@ -53,7 +54,81 @@ import { filter } from 'rxjs/operators';
       <!-- Spacer for fixed header on desktop - accounts for navigation bar (~64px, reduced by 20%) + top bar (~32px, reduced by 20%) = ~96px -->
       <div class="lg:h-[96px]"></div>
       
-      <app-video-banner [imagesLoaded]="!isPageLoading" />
+      <!-- Video Banner with Ad Spaces (Desktop Only) -->
+      <div class="hidden lg:flex lg:items-center lg:justify-center lg:gap-6 lg:px-4 lg:relative">
+        <!-- Ad 1 - Left Side -->
+        @if (isAdEnabled('ad1')) {
+          <a
+            [href]="getAdLink('ad1') || 'javascript:void(0)'"
+            [target]="getAdLink('ad1') ? '_blank' : '_self'"
+            [rel]="getAdLink('ad1') ? 'noopener noreferrer' : ''"
+            class="flex-shrink-0 w-[300px] h-[400px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg cursor-pointer">
+            @if (hasAdMedia('ad1')) {
+              @if (getAdMediaType('ad1') === 'image') {
+                <img
+                  [src]="getAdMediaUrl('ad1')"
+                  [alt]="getAdAltText('ad1')"
+                  class="w-full h-full object-cover"
+                />
+              } @else if (getAdMediaType('ad1') === 'video') {
+                <video
+                  [src]="getAdMediaUrl('ad1')"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  class="w-full h-full object-cover"
+                ></video>
+              }
+            } @else {
+              <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                <span class="text-purple-600 dark:text-purple-400 font-semibold text-lg">Ad 1</span>
+              </div>
+            }
+          </a>
+        }
+        
+        <!-- Video Banner (Original Size Preserved - No wrapper constraints) -->
+        <app-video-banner [imagesLoaded]="!isPageLoading" />
+        
+        <!-- Ad 2 - Right Side -->
+        @if (isAdEnabled('ad2')) {
+          <a
+            [href]="getAdLink('ad2') || 'javascript:void(0)'"
+            [target]="getAdLink('ad2') ? '_blank' : '_self'"
+            [rel]="getAdLink('ad2') ? 'noopener noreferrer' : ''"
+            class="flex-shrink-0 w-[300px] h-[400px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg cursor-pointer">
+            @if (hasAdMedia('ad2')) {
+              @if (getAdMediaType('ad2') === 'image') {
+                <img
+                  [src]="getAdMediaUrl('ad2')"
+                  [alt]="getAdAltText('ad2')"
+                  class="w-full h-full object-cover"
+                />
+              } @else if (getAdMediaType('ad2') === 'video') {
+                <video
+                  [src]="getAdMediaUrl('ad2')"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  class="w-full h-full object-cover"
+                ></video>
+              }
+            } @else {
+              <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                <span class="text-purple-600 dark:text-purple-400 font-semibold text-lg">Ad 2</span>
+              </div>
+            }
+          </a>
+        }
+      </div>
+      
+      <!-- Video Banner (Mobile Only) -->
+      <div class="lg:hidden">
+        <app-video-banner [imagesLoaded]="!isPageLoading" />
+      </div>
+      
       <app-news-ticker />
       
       <!-- Mobile Top Bar - Below News Ticker -->
@@ -211,13 +286,26 @@ export class IndexComponent implements OnInit, OnDestroy {
   private languageSubscription?: Subscription;
   private weatherRefreshInterval: any;
 
+  ad1Enabled = false;
+  ad2Enabled = false;
+  ad1MediaUrl: string | null = null;
+  ad2MediaUrl: string | null = null;
+  ad1MediaType: 'image' | 'video' | null = null;
+  ad2MediaType: 'image' | 'video' | null = null;
+  ad1Link: string | null = null;
+  ad2Link: string | null = null;
+  ad1AltText = 'Ad 1';
+  ad2AltText = 'Ad 2';
+  private adSubscription?: Subscription;
+
   constructor(
     private themeService: ThemeService,
     private languageService: LanguageService,
     private scrollRestorationService: ScrollRestorationService,
     private displayedNewsService: DisplayedNewsService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private adService: AdService
   ) {}
 
   ngOnInit() {
@@ -304,6 +392,48 @@ export class IndexComponent implements OnInit, OnDestroy {
 
     // Initialize mobile top bar data
     this.initializeMobileTopBar();
+
+    // Subscribe to ad changes
+    this.adSubscription = this.adService.ads$.subscribe(ads => {
+      this.updateAdData();
+    });
+  }
+
+  updateAdData() {
+    this.ad1Enabled = this.adService.isAdEnabled('ad1');
+    this.ad2Enabled = this.adService.isAdEnabled('ad2');
+    this.ad1MediaUrl = this.adService.getAdMediaUrl('ad1');
+    this.ad2MediaUrl = this.adService.getAdMediaUrl('ad2');
+    this.ad1Link = this.adService.getAdLink('ad1');
+    this.ad2Link = this.adService.getAdLink('ad2');
+    this.ad1AltText = this.adService.getAdAltText('ad1');
+    this.ad2AltText = this.adService.getAdAltText('ad2');
+    this.ad1MediaType = this.adService.getAdMediaType('ad1');
+    this.ad2MediaType = this.adService.getAdMediaType('ad2');
+  }
+
+  isAdEnabled(adId: string): boolean {
+    return this.adService.isAdEnabled(adId);
+  }
+
+  getAdMediaUrl(adId: string): string | null {
+    return this.adService.getAdMediaUrl(adId);
+  }
+
+  getAdLink(adId: string): string | null {
+    return this.adService.getAdLink(adId);
+  }
+
+  getAdAltText(adId: string): string {
+    return this.adService.getAdAltText(adId);
+  }
+
+  getAdMediaType(adId: string): 'image' | 'video' | null {
+    return this.adService.getAdMediaType(adId);
+  }
+
+  hasAdMedia(adId: string): boolean {
+    return this.adService.hasAdMedia(adId);
   }
 
   initializeMobileTopBar() {
@@ -417,6 +547,7 @@ export class IndexComponent implements OnInit, OnDestroy {
     // Cleanup subscriptions
     this.themeSubscription?.unsubscribe();
     this.languageSubscription?.unsubscribe();
+    this.adSubscription?.unsubscribe();
     if (this.weatherRefreshInterval) {
       clearInterval(this.weatherRefreshInterval);
     }

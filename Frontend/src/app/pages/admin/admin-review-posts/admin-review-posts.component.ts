@@ -6,6 +6,9 @@ import { Router, RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { DeletePasswordModalComponent } from '../../../components/delete-password-modal/delete-password-modal.component';
 import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
+import { ModalService } from '../../../services/modal.service';
+import { NewsDetailModalComponent } from '../../../components/news-detail-modal/news-detail-modal.component';
+import { NewsArticle } from '../../../services/news.service';
 import { Subscription } from 'rxjs';
 
 interface PendingNews {
@@ -13,6 +16,7 @@ interface PendingNews {
   title: string;
   titleEn: string;
   excerpt: string;
+  summary?: string;
   content: string;
   category: string;
   tags: string[];
@@ -26,12 +30,14 @@ interface PendingNews {
   createdAt: string;
   updatedAt: string;
   source?: 'pending' | 'unpublished'; // 'pending' from PendingNews, 'unpublished' from News
+  sourceName?: string; // Source name (e.g., 'NewsData.io')
+  sourceUrl?: string; // Source URL
 }
 
 @Component({
   selector: 'app-admin-review-posts',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, DeletePasswordModalComponent],
+  imports: [CommonModule, FormsModule, RouterModule, DeletePasswordModalComponent, NewsDetailModalComponent],
   template: `
     <div class="min-h-screen bg-background py-8">
       <div class="container mx-auto px-4 max-w-7xl">
@@ -148,7 +154,7 @@ interface PendingNews {
                         {{ news.title }}
                       </h3>
                       <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
-                        {{ news.excerpt }}
+                        {{ filterPaidPlansText(news.excerpt) }}
                       </p>
 
                       <!-- Meta Info -->
@@ -166,35 +172,56 @@ interface PendingNews {
                         </div>
                       }
 
+                      <!-- Pages -->
+                      @if (news.pages && news.pages.length > 0) {
+                        <div class="mb-4">
+                          <p class="text-xs text-muted-foreground mb-1">Visible on:</p>
+                          <div class="flex flex-wrap gap-1">
+                            @for (page of news.pages; track page) {
+                              <span class="px-2 py-1 text-xs bg-primary/10 text-primary rounded-md">{{ page }}</span>
+                            }
+                          </div>
+                        </div>
+                      }
+
                       <!-- Action Buttons -->
-                      <div class="flex gap-2 pt-4 border-t border-border/30">
-                        <button
-                          (click)="publishNews(news._id)"
-                          [disabled]="processingIds.has(news._id)"
-                          class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                          @if (processingIds.has(news._id)) {
-                            <span class="flex items-center justify-center gap-2">
-                              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Publishing...
-                            </span>
-                          } @else {
-                            Post
-                          }
-                        </button>
-                        <button
-                          (click)="editNews(news)"
-                          class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
-                          Edit
-                        </button>
-                        <button
-                          (click)="deleteNews(news._id)"
-                          [disabled]="processingIds.has(news._id)"
-                          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50">
-                          Delete
-                        </button>
+                      <div class="space-y-2 pt-4 border-t border-border/30">
+                        <div class="flex gap-2">
+                          <button
+                            (click)="viewNews(news)"
+                            class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                            View
+                          </button>
+                          <button
+                            (click)="editNews(news)"
+                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                            Edit
+                          </button>
+                        </div>
+                        <div class="flex gap-2">
+                          <button
+                            (click)="publishNews(news._id)"
+                            [disabled]="processingIds.has(news._id)"
+                            class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            @if (processingIds.has(news._id)) {
+                              <span class="flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Publishing...
+                              </span>
+                            } @else {
+                              PUBLISH
+                            }
+                          </button>
+                          <button
+                            (click)="deleteNews(news._id)"
+                            [disabled]="processingIds.has(news._id)"
+                            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50">
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -210,6 +237,16 @@ interface PendingNews {
           </div>
         }
       </div>
+      
+      <!-- News Detail Modal -->
+      @if (modalState.isOpen && modalState.news) {
+        <app-news-detail-modal
+          [news]="modalState.news"
+          [isOpen]="modalState.isOpen"
+          [isBreaking]="modalState.isBreaking || false"
+          (closeModal)="closeModal()">
+        </app-news-detail-modal>
+      }
       
       <!-- Delete Password Modal -->
       <app-delete-password-modal
@@ -232,11 +269,17 @@ export class AdminReviewPostsComponent implements OnInit, OnDestroy {
   processingIds = new Set<string>();
   showPasswordModal = false;
   pendingDeleteId: string | null = null;
+  modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
+    isOpen: false,
+    news: null,
+    isBreaking: false
+  };
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private adminThemeService: AdminThemeService
+    private adminThemeService: AdminThemeService,
+    private modalService: ModalService
   ) {
     // Check if already authenticated
     const token = localStorage.getItem('admin_token');
@@ -256,6 +299,11 @@ export class AdminReviewPostsComponent implements OnInit, OnDestroy {
     // Subscribe to theme changes
     this.adminThemeSubscription = this.adminThemeService.theme$.subscribe(theme => {
       this.currentAdminTheme = theme;
+    });
+    
+    // Subscribe to modal state changes
+    this.modalService.getModalState().subscribe(state => {
+      this.modalState = state;
     });
     
     if (this.isAuthenticated) {
@@ -339,6 +387,27 @@ export class AdminReviewPostsComponent implements OnInit, OnDestroy {
     });
   }
 
+  viewNews(news: PendingNews) {
+    // Convert PendingNews to NewsArticle format for modal
+    const newsArticle: NewsArticle = {
+      id: news._id,
+      category: news.category,
+      title: news.title,
+      titleEn: news.titleEn || news.title,
+      excerpt: news.excerpt,
+      image: news.image,
+      time: this.formatDate(news.createdAt),
+      author: news.author,
+      date: this.formatDate(news.createdAt),
+      isBreaking: news.isBreaking,
+      isFeatured: news.isFeatured,
+      isTrending: false
+    };
+    
+    // Open modal with news details
+    this.modalService.openModal(newsArticle, news.isBreaking || false);
+  }
+
   editNews(news: PendingNews) {
     // Store news in sessionStorage for edit page
     if (news.source === 'unpublished') {
@@ -406,6 +475,10 @@ export class AdminReviewPostsComponent implements OnInit, OnDestroy {
     });
   }
 
+  closeModal() {
+    this.modalService.closeModal();
+  }
+
   ngOnDestroy() {
     this.adminThemeSubscription?.unsubscribe();
   }
@@ -449,6 +522,39 @@ export class AdminReviewPostsComponent implements OnInit, OnDestroy {
 
   private getApiUrl(): string {
     return environment.apiUrl || 'http://localhost:3000';
+  }
+
+  /**
+   * Filter out "ONLY AVAILABLE IN PAID PLANS" and similar paid/premium text from content
+   */
+  filterPaidPlansText(text: string): string {
+    if (!text) return '';
+    
+    // List of paid/premium keywords to filter out
+    const paidKeywords = [
+      'only available in paid plans',
+      'only available in paid version',
+      'paid version',
+      'premium version',
+      'paid content',
+      'members only',
+      'only available in paid',
+      'paid plans',
+      'premium plans'
+    ];
+    
+    let filteredText = text;
+    
+    // Remove each keyword (case insensitive)
+    for (const keyword of paidKeywords) {
+      const regex = new RegExp(keyword, 'gi');
+      filteredText = filteredText.replace(regex, '');
+    }
+    
+    // Clean up extra spaces and newlines
+    filteredText = filteredText.replace(/\s+/g, ' ').trim();
+    
+    return filteredText;
   }
 }
 

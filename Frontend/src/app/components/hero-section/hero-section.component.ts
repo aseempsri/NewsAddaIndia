@@ -7,6 +7,7 @@ import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { AdService } from '../../services/ad.service';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
@@ -37,11 +38,266 @@ interface SideNews {
       <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="container mx-auto px-4 relative">
-        <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Mobile Layout: Vertical Stack -->
+        <div class="flex flex-col gap-6 lg:hidden">
+          <!-- Featured News (1st News) -->
+          <article class="group w-full relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50 flex flex-col">
+            <div class="relative aspect-[16/10] overflow-hidden flex-shrink-0">
+              <!-- Loading Animation - Show while image is loading -->
+              @if (featuredNews.imageLoading || !featuredNews.image) {
+                <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                  <div class="flex flex-col items-center gap-3">
+                    <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-sm text-muted-foreground">Loading image...</span>
+                  </div>
+                </div>
+              }
+              <!-- Image - Only show when loaded -->
+              @if (featuredNews.image && !featuredNews.imageLoading) {
+                <img
+                  [src]="featuredNews.image"
+                  [alt]="featuredNews.title"
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  loading="eager"
+                  decoding="async"
+                  style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
+              }
+              <!-- Category Badge - Top Left -->
+              @if (!isHomePage) {
+                <div class="absolute top-5 left-5 z-20 flex gap-2 flex-wrap">
+                  @if (featuredNews.isTrending) {
+                    <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                      <svg class="w-4 h-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                      <span class="text-sm leading-none">🔥</span>
+                      <span>TRENDING</span>
+                      <span class="text-sm leading-none">🔥</span>
+                    </span>
+                  }
+                  @if (featuredNews.isBreaking) {
+                    <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                      <svg class="w-4 h-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                      <span>{{ t.breaking }}</span>
+                    </span>
+                  }
+                  @if (featuredNews.isFeatured) {
+                    <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                      <svg class="w-4 h-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                      <span>FEATURED</span>
+                    </span>
+                  }
+                  <span [class]="'inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-full shadow-lg text-white ' + getCategoryColor(featuredNews.category)">
+                    {{ getCategoryName(featuredNews.category) }}
+                  </span>
+                </div>
+              }
+            </div>
+
+            <!-- Bottom Section with Headline and Read More -->
+            <div class="p-5 pt-6 pb-6 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
+              <div class="flex-1 min-w-0 mb-4 min-h-0">
+                <h2
+                  [class]="'font-display text-xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
+                  (click)="openNewsModal(featuredNews)"
+                  (touchstart)="onTouchStart($event, featuredNews)"
+                  (touchend)="onTouchEnd($event, featuredNews)"
+                  (touchmove)="onTouchMove($event)"
+                  style="touch-action: pan-y;">
+                  {{ getDisplayTitle(featuredNews) }}
+                </h2>
+                <p class="text-muted-foreground text-sm mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
+                  {{ featuredNews.excerpt }}
+                </p>
+              </div>
+              <!-- Author and Date - Bottom aligned -->
+              <div class="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                <span class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span class="text-left">{{ featuredNews.author || 'News Adda India' }}</span>
+                </span>
+                <span class="flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{{ featuredNews.date || featuredNews.time || 'Just now' }}</span>
+                </span>
+              </div>
+            </div>
+          </article>
+          
+          <!-- Ad 1 - After Featured News (Mobile Only, Between 1st and 2nd News) -->
+          @if (isAdEnabled('ad1')) {
+            <div class="w-full min-h-[200px] sm:min-h-[250px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
+              <a
+                [href]="getAdLink('ad1') || 'javascript:void(0)'"
+                [target]="getAdLink('ad1') ? '_blank' : '_self'"
+                [rel]="getAdLink('ad1') ? 'noopener noreferrer' : ''"
+                class="block w-full h-full cursor-pointer">
+                @if (hasAdMedia('ad1')) {
+                  @if (getAdMediaType('ad1') === 'image') {
+                    <img
+                      [src]="getAdMediaUrl('ad1')"
+                      [alt]="getAdAltText('ad1')"
+                      class="w-full h-full object-cover"
+                    />
+                  } @else if (getAdMediaType('ad1') === 'video') {
+                    <video
+                      [src]="getAdMediaUrl('ad1')"
+                      autoplay
+                      muted
+                      loop
+                      playsinline
+                      class="w-full h-full object-cover"
+                    ></video>
+                  }
+                } @else {
+                  <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                    <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 1</span>
+                  </div>
+                }
+              </a>
+            </div>
+          }
+
+          <!-- Side News Items (2nd and 3rd News) -->
+          @for (news of sideNews; track $index; let i = $index) {
+              <article
+                class="group flex-1 relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50 hover:-translate-y-1"
+                [style.animation-delay]="i * 100 + 'ms'">
+                <div class="relative aspect-[16/10] overflow-hidden">
+                  <!-- Loading Animation - Show while image is loading -->
+                  @if (news.imageLoading || !news.image) {
+                    <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
+                      <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  }
+                  <!-- Image - Only show when loaded -->
+                  @if (news.image && !news.imageLoading) {
+                    <img
+                      [src]="news.image"
+                      [alt]="news.title"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
+                      style="filter: none !important; -webkit-filter: none !important; backdrop-filter: none !important; blur: none !important; image-rendering: auto !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; backface-visibility: hidden; transform: translateZ(0); will-change: transform;" />
+                  }
+                  
+                  <!-- Category Badge -->
+                  @if (!isHomePage) {
+                    <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
+                      @if (news.isTrending) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                          </svg>
+                          <span class="text-xs leading-none">🔥</span>
+                          <span>TRENDING</span>
+                          <span class="text-xs leading-none">🔥</span>
+                        </span>
+                      }
+                      @if (news.isBreaking) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                          </svg>
+                          <span>BREAKING</span>
+                        </span>
+                      }
+                      @if (news.isFeatured) {
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          <span>FEATURED</span>
+                        </span>
+                      }
+                      <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-bold rounded-full shadow-lg text-white ' + getCategoryColor(news.category)">
+                        {{ getCategoryName(news.category) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Bottom Section with Headline -->
+                <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1">
+                  <div class="flex-1 min-w-0 mb-3">
+                    <h3 
+                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
+                      (click)="openNewsModalFromSide(news, $index)"
+                      (touchstart)="onTouchStartSide($event, news, $index)"
+                      (touchend)="onTouchEndSide($event, news, $index)"
+                      (touchmove)="onTouchMove($event)"
+                      style="touch-action: pan-y;">
+                      {{ getDisplayTitleForSide(news) }}
+                    </h3>
+                  </div>
+                  <!-- Author and Date - Bottom aligned -->
+                  <div class="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span class="text-left">{{ news.author || 'News Adda India' }}</span>
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{{ news.date || news.time || 'Just now' }}</span>
+                    </span>
+                  </div>
+                </div>
+              </article>
+              
+              <!-- Ad 2 - After 1st Side News (Mobile Only, Between 2nd and 3rd News) -->
+              @if (i === 0 && isAdEnabled('ad2')) {
+                <div class="w-full min-h-[200px] sm:min-h-[250px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
+                  <a
+                    [href]="getAdLink('ad2') || 'javascript:void(0)'"
+                    [target]="getAdLink('ad2') ? '_blank' : '_self'"
+                    [rel]="getAdLink('ad2') ? 'noopener noreferrer' : ''"
+                    class="block w-full h-full cursor-pointer">
+                    @if (hasAdMedia('ad2')) {
+                      @if (getAdMediaType('ad2') === 'image') {
+                        <img
+                          [src]="getAdMediaUrl('ad2')"
+                          [alt]="getAdAltText('ad2')"
+                          class="w-full h-full object-cover"
+                        />
+                      } @else if (getAdMediaType('ad2') === 'video') {
+                        <video
+                          [src]="getAdMediaUrl('ad2')"
+                          autoplay
+                          muted
+                          loop
+                          playsinline
+                          class="w-full h-full object-cover"
+                        ></video>
+                      }
+                    } @else {
+                      <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
+                        <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 2</span>
+                      </div>
+                    }
+                  </a>
+                </div>
+              }
+          }
+        </div>
+
+        <!-- Desktop Layout: Grid -->
+        <div class="hidden lg:grid lg:grid-cols-3 gap-6">
           <!-- Main Featured Article -->
           <div class="lg:col-span-2">
             <article class="group h-full relative overflow-hidden rounded-2xl bg-background shadow-lg hover:shadow-2xl transition-all duration-500 border border-border/50 flex flex-col">
-              <div class="relative aspect-[16/10] lg:aspect-[16/9] overflow-hidden flex-shrink-0">
+              <div class="relative aspect-[16/9] overflow-hidden flex-shrink-0">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (featuredNews.imageLoading || !featuredNews.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -98,10 +354,10 @@ interface SideNews {
               </div>
 
               <!-- Bottom Section with Headline and Read More -->
-              <div class="p-5 lg:p-6 pt-6 lg:pt-7 pb-6 lg:pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
+              <div class="p-6 pt-7 pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
                 <div class="flex-1 min-w-0 mb-4 min-h-0">
                   <h2
-                    [class]="'font-display text-xl lg:text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] lg:min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
+                    [class]="'font-display text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
                     (click)="openNewsModal(featuredNews)"
                     (touchstart)="onTouchStart($event, featuredNews)"
                     (touchend)="onTouchEnd($event, featuredNews)"
@@ -109,7 +365,7 @@ interface SideNews {
                     style="touch-action: pan-y;">
                     {{ getDisplayTitle(featuredNews) }}
                   </h2>
-                  <p class="text-muted-foreground text-sm lg:text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
+                  <p class="text-muted-foreground text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
                     {{ featuredNews.excerpt }}
                   </p>
                 </div>
@@ -287,7 +543,8 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     private modalService: ModalService,
     private languageService: LanguageService,
     private displayedNewsService: DisplayedNewsService,
-    private router: Router
+    private router: Router,
+    private adService: AdService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -394,9 +651,22 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   loadNews() {
     const imagePromises: Promise<void>[] = [];
 
-    // Load breaking news for hero section (falls back to featured if no breaking news)
+    // Load breaking news for hero section - ONLY shows news with isBreaking: true
+    // If no breaking news found, shows default/empty news
     this.newsService.fetchBreakingNews().subscribe({
       next: (news) => {
+        // Only display if it's actually breaking news (isBreaking: true)
+        // If no breaking news found, news will be default/empty
+        if (!news.isBreaking && news.id) {
+          console.warn('[HeroSection] Non-breaking news received, skipping display:', {
+            id: news.id,
+            title: news.title,
+            isBreaking: news.isBreaking
+          });
+          // Don't display non-breaking news in breaking news section
+          return;
+        }
+
         // Ensure titleEn is set (for translation)
         if (!news.titleEn) {
           news.titleEn = news.title;
@@ -695,6 +965,31 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
       'Technology': 'text-cyan-600',
     };
     return colors[category] || 'text-primary';
+  }
+
+  // Ad service helper methods
+  isAdEnabled(adId: string): boolean {
+    return this.adService.isAdEnabled(adId);
+  }
+
+  getAdMediaUrl(adId: string): string | null {
+    return this.adService.getAdMediaUrl(adId);
+  }
+
+  getAdLink(adId: string): string | null {
+    return this.adService.getAdLink(adId);
+  }
+
+  getAdAltText(adId: string): string {
+    return this.adService.getAdAltText(adId);
+  }
+
+  getAdMediaType(adId: string): 'image' | 'video' | null {
+    return this.adService.getAdMediaType(adId);
+  }
+
+  hasAdMedia(adId: string): boolean {
+    return this.adService.hasAdMedia(adId);
   }
 
 }

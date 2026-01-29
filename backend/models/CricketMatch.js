@@ -5,8 +5,7 @@ const cricketMatchSchema = new mongoose.Schema({
   dataType: {
     type: String,
     default: 'currentMatches',
-    unique: true,
-    index: true
+    unique: true
   },
   // Array of all matches
   matches: {
