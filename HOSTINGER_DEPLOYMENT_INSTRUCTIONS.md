@@ -40,6 +40,7 @@ git config pull.rebase false
 
 
 ###git checkout -- backend/package-lock.json
+###git checkout -- Frontend/.angular/cache/18.2.21/news-adda-india/.tsbuildinfo
 
 # Pull latest code
 git pull origin main
