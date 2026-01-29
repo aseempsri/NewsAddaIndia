@@ -609,6 +609,22 @@ git reset --hard origin/main
 git pull origin main
 ```
 
+### Manual API Triggers
+
+```bash
+# Manually trigger NewsData.io fetch (fetches Hindi news for all categories)
+curl -X POST http://72.60.235.158/api/newsdata/fetch
+
+# With verbose output to see response
+curl -X POST http://72.60.235.158/api/newsdata/fetch -v
+
+# Format JSON response (if python3 is available)
+curl -X POST http://72.60.235.158/api/newsdata/fetch | python3 -m json.tool
+
+# Or use localhost if running directly on server
+curl -X POST http://localhost:3000/api/newsdata/fetch
+```
+
 ---
 
 ## 🎯 Deployment Checklist
