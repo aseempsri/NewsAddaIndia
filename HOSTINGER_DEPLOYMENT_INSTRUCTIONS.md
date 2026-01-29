@@ -226,6 +226,9 @@ server {
     root /var/www/html;
     index index.html;
 
+    # Allow large file uploads (for videos and images)
+    client_max_body_size 100M;
+
     # Backend API routes - MUST come before location /
     location /api {
         proxy_pass http://localhost:3000;
@@ -508,6 +511,32 @@ node -e "require('dotenv').config(); console.log('MongoDB:', process.env.MONGODB
    sudo nginx -t
    sudo systemctl reload nginx
    ```
+
+### 413 Request Entity Too Large (Video Upload Error)
+
+**Symptoms:** Getting `413 Request Entity Too Large` when uploading videos or large images to ad spaces
+
+**Fix:**
+1. Update Nginx config to allow larger file uploads:
+   ```bash
+   sudo nano /etc/nginx/sites-available/news-adda
+   ```
+   
+2. Add `client_max_body_size 100M;` right after the `server_name` line (see Step 5.1 for exact location)
+
+3. Test and reload Nginx:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+4. Verify the setting is applied:
+   ```bash
+   sudo grep "client_max_body_size" /etc/nginx/sites-available/news-adda
+   ```
+   Should show: `client_max_body_size 100M;`
+
+**Note:** The backend already supports up to 50MB file uploads. The Nginx `client_max_body_size` must be equal to or greater than the backend limit.
 
 ### Admin Password Not Accepted
 
