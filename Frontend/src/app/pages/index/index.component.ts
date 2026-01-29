@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, OnDestroy } from '@angular/core';
+import { Component, OnInit, HostListener, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header.component';
 import { ThemeService, Theme } from '../../services/theme.service';
@@ -38,14 +38,27 @@ import { filter } from 'rxjs/operators';
   template: `
     <!-- Full Page Loading Overlay - Show while images are loading -->
     @if (isPageLoading) {
-      <div class="fixed inset-0 bg-background z-50 flex items-center justify-center">
-        <div class="flex flex-col items-center gap-4">
-          <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <div class="text-center">
-            <p class="text-lg font-semibold text-foreground mb-2">Loading News</p>
-            <!-- <p class="text-sm text-muted-foreground">Fetching images based on headlines...</p> -->
-          </div>
-        </div>
+      <div class="loading-video-container fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
+        <!-- Animated gradient background that complements video -->
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 animate-gradient-shift"></div>
+        <div class="absolute inset-0 bg-gradient-to-tr from-blue-900/50 via-purple-800/30 to-pink-900/50 animate-pulse"></div>
+        
+        <!-- Video Player - Responsive with better mobile handling -->
+        <video
+          #loadingVideo
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+          class="loading-video relative z-10"
+          (canplay)="onLoadingVideoCanPlay()"
+          (error)="onLoadingVideoError()"
+          (loadeddata)="onLoadingVideoLoaded()"
+        >
+          <source src="assets/videos/output.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
       </div>
     }
 
@@ -214,7 +227,116 @@ import { filter } from 'rxjs/operators';
     </div>
   `,
   styles: [`
-    @media (max-width: 640px) {
+    /* Animated gradient background */
+    @keyframes gradient-shift {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+    
+    @keyframes shimmer {
+      0% {
+        opacity: 0.3;
+        transform: translateX(-100%);
+      }
+      50% {
+        opacity: 0.6;
+      }
+      100% {
+        opacity: 0.3;
+        transform: translateX(100%);
+      }
+    }
+    
+    .animate-gradient-shift {
+      background-size: 200% 200%;
+      animation: gradient-shift 8s ease infinite;
+    }
+    
+    .animate-shimmer {
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    
+    /* Loading video container - glassmorphism with gradient background */
+    .loading-video-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Loading video - desktop full screen with glow */
+    .loading-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      margin: 0;
+      padding: 0;
+      box-shadow: 0 0 60px rgba(147, 51, 234, 0.3), 0 0 120px rgba(59, 130, 246, 0.2);
+    }
+    
+    @media (max-width: 768px) {
+      /* Mobile-specific - glassmorphism video frame */
+      .loading-video-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 100vw;
+        max-height: 100vh;
+        max-height: 100dvh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .loading-video {
+        width: 95%;
+        max-width: 95%;
+        height: auto;
+        max-height: 90vh;
+        max-height: 90dvh;
+        object-fit: contain;
+        object-position: center;
+        margin: 0;
+        padding: 0;
+        display: block;
+        border-radius: 20px;
+        box-shadow: 
+          0 0 40px rgba(147, 51, 234, 0.4),
+          0 0 80px rgba(59, 130, 246, 0.3),
+          0 0 120px rgba(236, 72, 153, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+      }
+      
+      /* Prevent body scroll on mobile when loading */
+      body {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
       .container {
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
@@ -276,7 +398,8 @@ import { filter } from 'rxjs/operators';
     }
   `]
 })
-export class IndexComponent implements OnInit, OnDestroy {
+export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
+  private static hasAppLoaded = false; // Static flag to track first app load across component instances
   isPageLoading = true;
   heroImagesLoaded = false;
   newsGridImagesLoaded = false;
@@ -308,6 +431,8 @@ export class IndexComponent implements OnInit, OnDestroy {
   ad2AltText = 'Ad 2';
   private adSubscription?: Subscription;
 
+  @ViewChild('loadingVideo', { static: false }) loadingVideoRef?: ElementRef<HTMLVideoElement>;
+
   constructor(
     private themeService: ThemeService,
     private languageService: LanguageService,
@@ -319,6 +444,28 @@ export class IndexComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // Only show loading video on first initial app load, not on subsequent navigations
+    if (IndexComponent.hasAppLoaded) {
+      // App has already loaded before, this is a navigation - skip loading screen
+      this.isPageLoading = false;
+      this.heroImagesLoaded = true;
+      this.newsGridImagesLoaded = true;
+      this.categorySectionLoaded = true;
+      this.widgetsLoaded = true;
+    } else {
+      // This is the first app load, show loading screen
+      IndexComponent.hasAppLoaded = true;
+      this.isPageLoading = true;
+      
+      // Prevent body scroll on mobile when loading starts
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+      }
+    }
+    
     // Clear displayed news when entering home page to start fresh
     this.displayedNewsService.clear();
     
@@ -650,11 +797,54 @@ export class IndexComponent implements OnInit, OnDestroy {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Ensure video plays when view is initialized
+    if (this.loadingVideoRef?.nativeElement) {
+      const video = this.loadingVideoRef.nativeElement;
+      video.muted = true;
+      video.play().catch((error) => {
+        console.warn('[IndexComponent] Loading video autoplay prevented:', error);
+      });
+    }
+  }
+
+  onLoadingVideoCanPlay() {
+    // Video is ready to play
+    if (this.loadingVideoRef?.nativeElement) {
+      const video = this.loadingVideoRef.nativeElement;
+      video.muted = true;
+      video.play().catch((error) => {
+        console.warn('[IndexComponent] Loading video autoplay prevented:', error);
+      });
+    }
+  }
+
+  onLoadingVideoLoaded() {
+    // Video has loaded, ensure it plays
+    if (this.loadingVideoRef?.nativeElement) {
+      const video = this.loadingVideoRef.nativeElement;
+      video.muted = true;
+      video.play().catch((error) => {
+        console.warn('[IndexComponent] Loading video play failed:', error);
+      });
+    }
+  }
+
+  onLoadingVideoError() {
+    // If video fails to load, fallback to spinner (optional)
+    console.warn('[IndexComponent] Loading video failed to load, continuing with page load');
+  }
+
   checkIfAllLoaded() {
     if (this.heroImagesLoaded && this.newsGridImagesLoaded && this.categorySectionLoaded && this.widgetsLoaded) {
       // Small delay to ensure smooth transition
       setTimeout(() => {
         this.isPageLoading = false;
+        // Re-enable body scroll on mobile after loading completes
+        if (typeof document !== 'undefined') {
+          document.body.style.overflow = '';
+          document.body.style.position = '';
+        }
       }, 200); // Reduced from 300ms to 200ms for faster display
     }
   }
