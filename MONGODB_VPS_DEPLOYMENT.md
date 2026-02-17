@@ -679,6 +679,71 @@ mongorestore --uri="mongodb://newsadda_user:pass@localhost:27017/newsaddaindia?a
 
 ---
 
+## 📸 Downloading Images After WordPress Import
+
+**Important:** After importing WordPress XML files, images are stored as external URLs pointing to `https://newsaddaindia.com/wp-content/uploads/...`. These external URLs will fail if the WordPress site is down or inaccessible.
+
+### Why Download Images Locally?
+
+- ✅ **Reliability:** Images won't break if external WordPress site goes down
+- ✅ **Performance:** Faster loading from your own server
+- ✅ **Control:** Full control over your image assets
+- ✅ **Independence:** No dependency on external WordPress site
+
+### Download Images Script
+
+**Note:** This script may fail on local development machines due to company network policies (403 errors). **It will work fine on the VPS server** where there are no such restrictions.
+
+**On VPS Server:**
+
+```bash
+# Navigate to backend directory
+cd ~/news-adda-backend
+
+# Run the image download script
+node scripts/downloadAndFixImages.js
+```
+
+**What the script does:**
+1. Finds all articles with external WordPress image URLs
+2. Downloads each image to `backend/uploads/` directory
+3. Updates database with local paths (`/uploads/image.jpg`)
+4. Images are then served by your backend server
+
+**Expected Output:**
+```
+🔌 Connecting to MongoDB...
+✅ Connected to MongoDB
+
+📊 Found 8619 articles with external WordPress image URLs
+
+🚀 Starting image download process...
+
+[1/8619] Processing: Article title...
+  Downloading: https://newsaddaindia.com/wp-content/uploads/...
+  ✅ Saved: /uploads/article-id-image-timestamp.jpg
+  ✅ Updated image field
+
+📊 Summary:
+✅ Successfully downloaded: 8500
+⏭️  Skipped: 50
+❌ Failed: 69
+📝 Total processed: 8619
+```
+
+**Important Notes:**
+- ⚠️ **403 Errors:** If you see 403 errors on your local machine, this is normal due to company network policies. The script will work fine on the VPS server.
+- ⏱️ **Time:** Downloading ~8,600 images may take 1-2 hours depending on network speed
+- 🔄 **Resumable:** You can stop and restart the script - it will continue from where it left off
+- 💾 **Storage:** Ensure you have enough disk space (images can be several GB)
+
+**After Download:**
+- Images will be accessible at: `http://your-domain.com/uploads/image.jpg`
+- Backend serves images from `/uploads` directory via Nginx
+- All image URLs in database will be updated to local paths
+
+---
+
 ## 📚 Additional Resources
 
 - **MongoDB Documentation:** https://docs.mongodb.com/

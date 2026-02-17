@@ -346,7 +346,10 @@ interface GroupedNews {
                             <img
                               [src]="getImageUrl(news.image)"
                               [alt]="news.title"
-                              class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
+                              crossorigin="anonymous"
+                              referrerpolicy="no-referrer"
+                              class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110"
+                              (error)="console.error('Image failed to load:', getImageUrl(news.image))" />
                           } @else {
                             <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
                               <svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">

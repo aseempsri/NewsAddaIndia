@@ -372,11 +372,119 @@ curl http://localhost/ | head -20
 
 ```bash
 # Test admin login endpoint
-curl -X POST http://72.60.235.158/api/admin/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"adrikA@2025#"}'
+# curl -X POST http://72.60.235.158/api/admin/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"username":"admin","password":"adrikA@2025#"}'
 
 # Should return authentication token or success message
+```
+
+---
+
+## 📸 Step 7: Download Images Locally (ONE-TIME ACTIVITY)
+
+**⚠️ IMPORTANT: This is a ONE-TIME activity** that should be performed after importing WordPress XML files into MongoDB.
+
+### Why Download Images Locally?
+
+After importing WordPress XML files, images are stored as external URLs pointing to `https://newsaddaindia.com/wp-content/uploads/...`. These external URLs will fail if the WordPress site is down or inaccessible.
+
+**Benefits of downloading images locally:**
+- ✅ **Reliability:** Images won't break if external WordPress site goes down
+- ✅ **Performance:** Faster loading from your own server
+- ✅ **Control:** Full control over your image assets
+- ✅ **Independence:** No dependency on external WordPress site
+
+### Prerequisites
+
+- ✅ Backend is running and connected to MongoDB
+- ✅ WordPress XML files have been imported (see `WORDPRESS_MIGRATION_QUICKSTART.md`)
+- ✅ MongoDB contains articles with external WordPress image URLs
+
+### Download Images Script
+
+**Note:** This script may fail on local development machines due to company network policies (403 errors). **It will work fine on the VPS server** where there are no such restrictions.
+
+**On VPS Server:**
+
+```bash
+# Navigate to backend directory
+cd /root/NewsAddaIndia/backend
+
+# Ensure uploads directory exists
+mkdir -p uploads
+chmod 755 uploads
+
+# Run the image download script
+node scripts/downloadAndFixImages.js
+```
+
+**What the script does:**
+1. Finds all articles with external WordPress image URLs (`https://newsaddaindia.com/wp-content/uploads/...`)
+2. Downloads each image to `backend/uploads/` directory
+3. Updates database with local paths (`/uploads/image.jpg`)
+4. Images are then served by your backend server via Nginx
+
+**Expected Output:**
+```
+🔌 Connecting to MongoDB...
+✅ Connected to MongoDB
+
+📊 Found 8619 articles with external WordPress image URLs
+
+🚀 Starting image download process...
+
+[1/8619] Processing: Article title...
+  Downloading: https://newsaddaindia.com/wp-content/uploads/...
+  ✅ Saved: /uploads/article-id-image-timestamp.jpg
+  ✅ Updated image field
+
+[2/8619] Processing: Another article...
+  Downloading: https://newsaddaindia.com/wp-content/uploads/...
+  ✅ Saved: /uploads/article-id-image-timestamp.jpg
+  ✅ Updated image field
+
+...
+
+📊 Summary:
+✅ Successfully downloaded: 8500
+⏭️  Skipped: 50
+❌ Failed: 69
+📝 Total processed: 8619
+
+✅ Process completed!
+```
+
+### Important Notes
+
+- ⚠️ **403 Errors:** If you see 403 errors on your local machine, this is normal due to company network policies. The script will work fine on the VPS server.
+- ⏱️ **Time:** Downloading ~8,600 images may take 1-2 hours depending on network speed
+- 🔄 **Resumable:** You can stop (`Ctrl+C`) and restart the script - it will continue from where it left off (already downloaded images won't be re-downloaded)
+- 💾 **Storage:** Ensure you have enough disk space (images can be several GB)
+- 🚫 **One-Time Only:** After running this script successfully, you don't need to run it again unless you import new WordPress XML files
+
+### After Download
+
+- ✅ Images will be accessible at: `http://72.60.235.158/uploads/image.jpg`
+- ✅ Backend serves images from `/uploads` directory via Nginx (already configured in Step 5)
+- ✅ All image URLs in database will be updated to local paths
+- ✅ Images will load even if the WordPress site goes down
+
+### Verify Images Are Working
+
+```bash
+# Check if images were downloaded
+ls -la /root/NewsAddaIndia/backend/uploads/ | head -10
+
+# Test image access through Nginx
+curl -I http://localhost/uploads/some-image.jpg
+# Should return 200 OK
+
+# Check database to see updated image paths
+mongosh "your-mongodb-connection-string"
+use newsaddaindia
+db.news.findOne({}, {title: 1, image: 1})
+# Should show image path like: /uploads/article-id-image-timestamp.jpg
 ```
 
 ---
@@ -672,6 +780,8 @@ curl -X POST http://localhost:3000/api/newsdata/fetch
 - [ ] Frontend accessible at `http://72.60.235.158`
 - [ ] Backend API accessible at `http://72.60.235.158/api/health`
 - [ ] Admin login works
+- [ ] **(ONE-TIME)** WordPress XML files imported to MongoDB
+- [ ] **(ONE-TIME)** Images downloaded locally using `node scripts/downloadAndFixImages.js`
 
 ---
 

@@ -200,6 +200,13 @@ mkdir -p ~/news-adda-backend/uploads
 chmod 755 ~/news-adda-backend/uploads
 ```
 
+**Note:** After importing WordPress XML files, run the image download script to store images locally:
+```bash
+cd ~/news-adda-backend
+node scripts/downloadAndFixImages.js
+```
+See `MONGODB_VPS_DEPLOYMENT.md` for details about downloading images.
+
 ### Install Backend Dependencies
 ```bash
 cd ~/news-adda-backend
