@@ -2,10 +2,147 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const xml2js = require('xml2js');
+const axios = require('axios');
+const https = require('https');
 require('dotenv').config();
 
 // Import News model
 const News = require('../models/News');
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure axios to handle SSL issues
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false // Allow self-signed certificates
+});
+
+// Cache to track downloaded image URLs and their local paths (prevents duplicate downloads)
+const imageUrlCache = new Map();
+
+/**
+ * Generate a hash-based filename from image URL to ensure same URL = same filename
+ */
+function generateImageFilename(imageUrl, articleTitle) {
+  const crypto = require('crypto');
+  // Create hash from URL (without query params) for consistent naming
+  const urlWithoutQuery = imageUrl.split('?')[0];
+  const urlHash = crypto.createHash('md5').update(urlWithoutQuery).digest('hex').substring(0, 8);
+  
+  // Extract extension from URL
+  const urlParts = urlWithoutQuery.split('/');
+  let filename = urlParts[urlParts.length - 1];
+  const ext = path.extname(filename) || '.jpg';
+  
+  // Use hash + original filename (first 20 chars) for uniqueness
+  const baseName = path.basename(filename, ext).substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
+  return `${baseName}-${urlHash}${ext}`;
+}
+
+/**
+ * Check if image already exists locally by URL hash
+ */
+function findExistingImage(imageUrl) {
+  if (!imageUrl || (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+    return null; // Not a URL, skip check
+  }
+  
+  const filename = generateImageFilename(imageUrl);
+  const localPath = path.join(uploadsDir, filename);
+  
+  if (fs.existsSync(localPath)) {
+    return `/uploads/${filename}`;
+  }
+  
+  return null;
+}
+
+/**
+ * Download image from URL and save locally
+ * Returns local path (e.g., /uploads/filename.jpg) or null on failure
+ * Prevents duplicate downloads by checking cache and file system
+ */
+async function downloadImage(imageUrl, articleTitle) {
+  try {
+    // Skip if already a local path
+    if (!imageUrl || (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+      return imageUrl; // Already local or empty
+    }
+
+    // Normalize URL (remove query params and fragments for comparison)
+    const normalizedUrl = imageUrl.split('?')[0].split('#')[0];
+
+    // Check cache first (same URL already downloaded in this session)
+    if (imageUrlCache.has(normalizedUrl)) {
+      const cachedPath = imageUrlCache.get(normalizedUrl);
+      console.log(`  ♻️  Using cached image: ${cachedPath}`);
+      return cachedPath;
+    }
+
+    // Check if file already exists on disk (from previous import)
+    const existingPath = findExistingImage(imageUrl);
+    if (existingPath) {
+      console.log(`  ♻️  Image already exists: ${existingPath}`);
+      imageUrlCache.set(normalizedUrl, existingPath);
+      return existingPath;
+    }
+
+    // Check database for articles with same image URL (avoid re-downloading)
+    const existingArticle = await News.findOne({ image: new RegExp(normalizedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    if (existingArticle && existingArticle.image && existingArticle.image.startsWith('/uploads/')) {
+      console.log(`  ♻️  Image already in database: ${existingArticle.image}`);
+      imageUrlCache.set(normalizedUrl, existingArticle.image);
+      return existingArticle.image;
+    }
+
+    // Generate consistent filename based on URL hash
+    const uniqueFilename = generateImageFilename(imageUrl, articleTitle);
+    const localPath = path.join(uploadsDir, uniqueFilename);
+
+    // Double-check file doesn't exist (race condition protection)
+    if (fs.existsSync(localPath)) {
+      const relativePath = `/uploads/${uniqueFilename}`;
+      console.log(`  ♻️  Image file exists: ${relativePath}`);
+      imageUrlCache.set(normalizedUrl, relativePath);
+      return relativePath;
+    }
+
+    console.log(`  📥 Downloading image: ${imageUrl.substring(0, 60)}...`);
+
+    // Download image
+    const response = await axios.get(imageUrl, {
+      responseType: 'stream',
+      timeout: 30000, // 30 second timeout
+      httpsAgent: httpsAgent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    // Save to file
+    const writer = fs.createWriteStream(localPath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        const relativePath = `/uploads/${uniqueFilename}`;
+        console.log(`  ✅ Saved image: ${relativePath}`);
+        imageUrlCache.set(normalizedUrl, relativePath);
+        resolve(relativePath);
+      });
+      writer.on('error', (error) => {
+        console.error(`  ❌ Error saving image: ${error.message}`);
+        reject(error);
+      });
+    });
+  } catch (error) {
+    console.error(`  ❌ Failed to download ${imageUrl}: ${error.message}`);
+    return null; // Return null on failure
+  }
+}
 
 // Category mapping from WordPress to MongoDB
 const categoryMapping = {
@@ -122,6 +259,7 @@ function mapCategory(wordPressCategories) {
 }
 
 // Helper function to extract image URL from postmeta
+// Returns the URL (will be downloaded later)
 function extractImageUrl(item, attachments) {
   if (!item['wp:postmeta'] || !Array.isArray(item['wp:postmeta'])) {
     // Try to extract image from content
@@ -397,8 +535,17 @@ async function importWordPressXML(xmlFilePath) {
         // Extract tags
         const tags = extractTags(categories);
         
-        // Extract image
-        const image = extractImageUrl(item, attachments);
+        // Extract image URL
+        const imageUrl = extractImageUrl(item, attachments);
+        
+        // Download image and get local path
+        let image = '';
+        if (imageUrl && imageUrl.trim() !== '') {
+          const localImagePath = await downloadImage(imageUrl, title);
+          image = localImagePath || imageUrl; // Use local path if download succeeded, otherwise keep URL as fallback
+          // Small delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
         
         // Get excerpt (ensure content is string)
         const contentString = typeof content === 'string' ? content : String(content);
@@ -420,11 +567,19 @@ async function importWordPressXML(xmlFilePath) {
           }
         }
         
-        // Check if news already exists (by title)
-        const existingNews = await News.findOne({ title: title.trim() });
+        // Check if news already exists (by title AND date to avoid false duplicates)
+        const trimmedTitle = title.trim();
+        const existingNews = await News.findOne({ 
+          title: trimmedTitle,
+          date: {
+            $gte: new Date(date.getTime() - 24 * 60 * 60 * 1000), // Same day
+            $lte: new Date(date.getTime() + 24 * 60 * 60 * 1000)
+          }
+        });
+        
         if (existingNews) {
           skipped++;
-          console.log(`⏭️  Skipped (already exists): ${title.substring(0, 50)}...`);
+          console.log(`⏭️  Skipped (already exists): ${trimmedTitle.substring(0, 50)}...`);
           continue;
         }
         

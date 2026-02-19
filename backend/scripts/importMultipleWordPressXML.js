@@ -2,10 +2,148 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const xml2js = require('xml2js');
+const axios = require('axios');
+const https = require('https');
 require('dotenv').config();
 
 // Import News model
 const News = require('../models/News');
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure axios to handle SSL issues
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false // Allow self-signed certificates
+});
+
+// Cache to track downloaded image URLs and their local paths (prevents duplicate downloads)
+// Shared across all XML files in this import session
+const imageUrlCache = new Map();
+
+/**
+ * Generate a hash-based filename from image URL to ensure same URL = same filename
+ */
+function generateImageFilename(imageUrl, articleTitle) {
+  const crypto = require('crypto');
+  // Create hash from URL (without query params) for consistent naming
+  const urlWithoutQuery = imageUrl.split('?')[0];
+  const urlHash = crypto.createHash('md5').update(urlWithoutQuery).digest('hex').substring(0, 8);
+  
+  // Extract extension from URL
+  const urlParts = urlWithoutQuery.split('/');
+  let filename = urlParts[urlParts.length - 1];
+  const ext = path.extname(filename) || '.jpg';
+  
+  // Use hash + original filename (first 20 chars) for uniqueness
+  const baseName = path.basename(filename, ext).substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
+  return `${baseName}-${urlHash}${ext}`;
+}
+
+/**
+ * Check if image already exists locally by URL hash
+ */
+function findExistingImage(imageUrl) {
+  if (!imageUrl || (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+    return null; // Not a URL, skip check
+  }
+  
+  const filename = generateImageFilename(imageUrl);
+  const localPath = path.join(uploadsDir, filename);
+  
+  if (fs.existsSync(localPath)) {
+    return `/uploads/${filename}`;
+  }
+  
+  return null;
+}
+
+/**
+ * Download image from URL and save locally
+ * Returns local path (e.g., /uploads/filename.jpg) or null on failure
+ * Prevents duplicate downloads by checking cache and file system
+ */
+async function downloadImage(imageUrl, articleTitle) {
+  try {
+    // Skip if already a local path
+    if (!imageUrl || (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+      return imageUrl; // Already local or empty
+    }
+
+    // Normalize URL (remove query params and fragments for comparison)
+    const normalizedUrl = imageUrl.split('?')[0].split('#')[0];
+
+    // Check cache first (same URL already downloaded in this session)
+    if (imageUrlCache.has(normalizedUrl)) {
+      const cachedPath = imageUrlCache.get(normalizedUrl);
+      console.log(`  ♻️  Using cached image: ${cachedPath}`);
+      return cachedPath;
+    }
+
+    // Check if file already exists on disk (from previous import)
+    const existingPath = findExistingImage(imageUrl);
+    if (existingPath) {
+      console.log(`  ♻️  Image already exists: ${existingPath}`);
+      imageUrlCache.set(normalizedUrl, existingPath);
+      return existingPath;
+    }
+
+    // Check database for articles with same image URL (avoid re-downloading)
+    const existingArticle = await News.findOne({ image: new RegExp(normalizedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    if (existingArticle && existingArticle.image && existingArticle.image.startsWith('/uploads/')) {
+      console.log(`  ♻️  Image already in database: ${existingArticle.image}`);
+      imageUrlCache.set(normalizedUrl, existingArticle.image);
+      return existingArticle.image;
+    }
+
+    // Generate consistent filename based on URL hash
+    const uniqueFilename = generateImageFilename(imageUrl, articleTitle);
+    const localPath = path.join(uploadsDir, uniqueFilename);
+
+    // Double-check file doesn't exist (race condition protection)
+    if (fs.existsSync(localPath)) {
+      const relativePath = `/uploads/${uniqueFilename}`;
+      console.log(`  ♻️  Image file exists: ${relativePath}`);
+      imageUrlCache.set(normalizedUrl, relativePath);
+      return relativePath;
+    }
+
+    console.log(`  📥 Downloading image: ${imageUrl.substring(0, 60)}...`);
+
+    // Download image
+    const response = await axios.get(imageUrl, {
+      responseType: 'stream',
+      timeout: 30000, // 30 second timeout
+      httpsAgent: httpsAgent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    // Save to file
+    const writer = fs.createWriteStream(localPath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        const relativePath = `/uploads/${uniqueFilename}`;
+        console.log(`  ✅ Saved image: ${relativePath}`);
+        imageUrlCache.set(normalizedUrl, relativePath);
+        resolve(relativePath);
+      });
+      writer.on('error', (error) => {
+        console.error(`  ❌ Error saving image: ${error.message}`);
+        reject(error);
+      });
+    });
+  } catch (error) {
+    console.error(`  ❌ Failed to download ${imageUrl}: ${error.message}`);
+    return null; // Return null on failure
+  }
+}
 
 // Category mapping from WordPress to MongoDB
 // IMPORTANT: Keys are case-insensitive and trimmed
@@ -155,6 +293,7 @@ function mapCategory(wordPressCategories) {
 }
 
 // Helper function to extract image URL from postmeta
+// Returns the URL (will be downloaded later)
 function extractImageUrl(item, attachments) {
   if (!item['wp:postmeta'] || !Array.isArray(item['wp:postmeta'])) {
     // Try to extract image from content
@@ -414,8 +553,17 @@ async function importWordPressXML(xmlFilePath, stats) {
         // Extract tags
         const tags = extractTags(categories);
 
-        // Extract image
-        const image = extractImageUrl(item, attachments);
+        // Extract image URL
+        const imageUrl = extractImageUrl(item, attachments);
+
+        // Download image and get local path
+        let image = '';
+        if (imageUrl && imageUrl.trim() !== '') {
+          const localImagePath = await downloadImage(imageUrl, title);
+          image = localImagePath || imageUrl; // Use local path if download succeeded, otherwise keep URL as fallback
+          // Small delay to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
 
         // Get excerpt (ensure content is string)
         const contentString = typeof content === 'string' ? content : String(content);
@@ -437,8 +585,15 @@ async function importWordPressXML(xmlFilePath, stats) {
           }
         }
 
-        // Check if news already exists (by title)
-        const existingNews = await News.findOne({ title: title.trim() });
+        // Check if news already exists (by title AND date to avoid false duplicates)
+        const trimmedTitle = title.trim();
+        const existingNews = await News.findOne({ 
+          title: trimmedTitle,
+          date: {
+            $gte: new Date(date.getTime() - 24 * 60 * 60 * 1000), // Same day
+            $lte: new Date(date.getTime() + 24 * 60 * 60 * 1000)
+          }
+        });
 
         if (existingNews) {
           // Update existing article with corrected category and other fields
@@ -498,6 +653,10 @@ async function importWordPressXML(xmlFilePath, stats) {
     console.log(`   Skipped (no title/content): ${stats.skipped - (stats.prevSkipped || 0)}`);
     console.log(`   Errors: ${stats.errors - (stats.prevErrors || 0)}`);
 
+    // Mark this XML file as processed
+    saveProcessedFile(xmlFilePath);
+    console.log(`   ✅ Marked as processed (will skip on next run unless file changes)`);
+
     stats.prevImported = stats.imported;
     stats.prevSkipped = stats.skipped;
     stats.prevErrors = stats.errors;
@@ -505,6 +664,73 @@ async function importWordPressXML(xmlFilePath, stats) {
   } catch (error) {
     console.error(`❌ Failed to process ${xmlFilePath}:`, error.message);
     stats.errors++;
+  }
+}
+
+// Track processed XML files to avoid reprocessing
+const processedFilesTracker = path.join(__dirname, '../.processed-xml-files.json');
+
+/**
+ * Load list of processed XML files
+ */
+function loadProcessedFiles() {
+  try {
+    if (fs.existsSync(processedFilesTracker)) {
+      const data = fs.readFileSync(processedFilesTracker, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.warn('⚠️  Could not load processed files tracker:', error.message);
+  }
+  return {};
+}
+
+/**
+ * Save processed XML file info
+ */
+function saveProcessedFile(xmlFilePath) {
+  try {
+    const processed = loadProcessedFiles();
+    const stats = fs.statSync(xmlFilePath);
+    const fileKey = path.basename(xmlFilePath);
+    processed[fileKey] = {
+      path: xmlFilePath,
+      size: stats.size,
+      mtime: stats.mtime.getTime(),
+      processedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(processedFilesTracker, JSON.stringify(processed, null, 2));
+  } catch (error) {
+    console.warn(`⚠️  Could not save processed file tracker: ${error.message}`);
+  }
+}
+
+/**
+ * Check if XML file was already processed (by filename and modification time)
+ */
+function isFileProcessed(xmlFilePath) {
+  try {
+    const processed = loadProcessedFiles();
+    const fileKey = path.basename(xmlFilePath);
+    
+    if (!processed[fileKey]) {
+      return false; // File not in tracker
+    }
+    
+    // Check if file was modified since last processing
+    const stats = fs.statSync(xmlFilePath);
+    const trackedInfo = processed[fileKey];
+    
+    // If file size or modification time changed, reprocess
+    if (stats.size !== trackedInfo.size || stats.mtime.getTime() !== trackedInfo.mtime) {
+      console.log(`  📝 File modified since last import, will reprocess: ${fileKey}`);
+      return false;
+    }
+    
+    return true; // File already processed and unchanged
+  } catch (error) {
+    // If we can't check, assume not processed (safer to reprocess)
+    return false;
   }
 }
 
@@ -554,18 +780,36 @@ function findXMLFiles() {
 
         // Add dec-jan file first (it covers Dec-Jan period, so should be processed first)
         if (decJanFile) {
-          xmlFiles.push(path.join(dir, decJanFile));
-          console.log(`✅ Found dec-jan file: ${decJanFile}`);
+          const decJanPath = path.join(dir, decJanFile);
+          if (!isFileProcessed(decJanPath)) {
+            xmlFiles.push(decJanPath);
+            console.log(`✅ Found dec-jan file: ${decJanFile}`);
+          } else {
+            console.log(`⏭️  Skipping already processed: ${decJanFile}`);
+          }
         }
 
-        // Add monthly files
+        // Add monthly files (only if not already processed)
         monthlyFiles.forEach(file => {
-          xmlFiles.push(path.join(dir, file));
+          const filePath = path.join(dir, file);
+          if (!isFileProcessed(filePath)) {
+            xmlFiles.push(filePath);
+          } else {
+            console.log(`⏭️  Skipping already processed: ${file}`);
+          }
         });
 
+        const skippedCount = (decJanFile && isFileProcessed(path.join(dir, decJanFile)) ? 1 : 0) + 
+                             monthlyFiles.filter(f => isFileProcessed(path.join(dir, f))).length;
+        
         console.log(`✅ Found ${monthlyFiles.length} monthly XML files in: ${dir}`);
-        if (decJanFile) {
+        if (skippedCount > 0) {
+          console.log(`⏭️  Skipped ${skippedCount} already processed files`);
+        }
+        if (xmlFiles.length > 0) {
           console.log(`✅ Total files to process: ${xmlFiles.length}`);
+        } else {
+          console.log(`ℹ️  All XML files have already been processed`);
         }
         break; // Use first directory that has files
       }

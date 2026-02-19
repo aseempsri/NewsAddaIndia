@@ -40,6 +40,7 @@ git config pull.rebase false
 
 
 ###git checkout -- backend/package-lock.json
+###git checkout -- Frontend/package-lock.json
 ###git checkout -- Frontend/.angular/cache/18.2.21/news-adda-india/.tsbuildinfo
 
 # Pull latest code
@@ -381,31 +382,51 @@ curl http://localhost/ | head -20
 
 ---
 
-## 📸 Step 7: Download Images Locally (ONE-TIME ACTIVITY)
+## 📸 Step 7: WordPress XML Import with Automatic Image Download
 
-**⚠️ IMPORTANT: This is a ONE-TIME activity** that should be performed after importing WordPress XML files into MongoDB.
+**✅ NEW:** Images are now **automatically downloaded** during WordPress XML import! No separate step needed.
 
-### Why Download Images Locally?
+### Automatic Image Download During Import
 
-After importing WordPress XML files, images are stored as external URLs pointing to `https://newsaddaindia.com/wp-content/uploads/...`. These external URLs will fail if the WordPress site is down or inaccessible.
+When importing WordPress XML files, images are now automatically:
+- ✅ Downloaded from WordPress URLs during import
+- ✅ Saved locally to `backend/uploads/` directory
+- ✅ Stored as local paths (e.g., `/uploads/article-title-timestamp.jpg`) in MongoDB
+- ✅ No external URL dependencies - your website is self-contained
 
-**Benefits of downloading images locally:**
+**Benefits:**
 - ✅ **Reliability:** Images won't break if external WordPress site goes down
 - ✅ **Performance:** Faster loading from your own server
 - ✅ **Control:** Full control over your image assets
 - ✅ **Independence:** No dependency on external WordPress site
+- ✅ **Automatic:** No separate download step needed
 
 ### Prerequisites
 
 - ✅ Backend is running and connected to MongoDB
-- ✅ WordPress XML files have been imported (see `WORDPRESS_MIGRATION_QUICKSTART.md`)
-- ✅ MongoDB contains articles with external WordPress image URLs
+- ✅ WordPress XML files are available in the project directory
+- ✅ Sufficient disk space for images (can be several GB)
+- ✅ Network access to download images from WordPress URLs
 
-### Download Images Script
+### Import WordPress XML Files
 
-**Note:** This script may fail on local development machines due to company network policies (403 errors). **It will work fine on the VPS server** where there are no such restrictions.
+**Option 1: Import Single XML File**
 
-**On VPS Server:**
+```bash
+# Navigate to backend directory
+cd /root/NewsAddaIndia/backend
+
+# Ensure uploads directory exists (created automatically, but verify)
+mkdir -p uploads
+chmod 755 uploads
+
+# Run single XML import (images download automatically)
+npm run import:wordpress
+# Or directly:
+# node scripts/importWordPressToMongoDB.js
+```
+
+**Option 2: Import Multiple XML Files**
 
 ```bash
 # Navigate to backend directory
@@ -415,76 +436,99 @@ cd /root/NewsAddaIndia/backend
 mkdir -p uploads
 chmod 755 uploads
 
-# Run the image download script
-node scripts/downloadAndFixImages.js
+# Run multiple XML import (images download automatically)
+npm run import:multiple
+# Or directly:
+# node scripts/importMultipleWordPressXML.js
 ```
 
-**What the script does:**
-1. Finds all articles with external WordPress image URLs (`https://newsaddaindia.com/wp-content/uploads/...`)
-2. Downloads each image to `backend/uploads/` directory
-3. Updates database with local paths (`/uploads/image.jpg`)
-4. Images are then served by your backend server via Nginx
+**What happens during import:**
+1. XML file is parsed and articles are extracted
+2. For each article, image URLs are found from WordPress attachments
+3. **Images are automatically downloaded** to `backend/uploads/` directory
+4. Local image paths (e.g., `/uploads/article-title-timestamp.jpg`) are stored in MongoDB
+5. Articles are saved with local image paths instead of external URLs
 
 **Expected Output:**
 ```
-🔌 Connecting to MongoDB...
-✅ Connected to MongoDB
+📖 Reading XML file...
+🔄 Parsing XML...
+📊 Extracting data...
+Found 500 items in XML
+Found 450 posts
+Found 50 attachments
+Found 420 published posts
 
-📊 Found 8619 articles with external WordPress image URLs
+🚀 Starting import...
 
-🚀 Starting image download process...
+✅ Imported [1]: Article title...
+  📥 Downloading image: https://newsaddaindia.com/wp-content/uploads/...
+  ✅ Saved image: /uploads/article-title-timestamp.jpg
 
-[1/8619] Processing: Article title...
-  Downloading: https://newsaddaindia.com/wp-content/uploads/...
-  ✅ Saved: /uploads/article-id-image-timestamp.jpg
-  ✅ Updated image field
-
-[2/8619] Processing: Another article...
-  Downloading: https://newsaddaindia.com/wp-content/uploads/...
-  ✅ Saved: /uploads/article-id-image-timestamp.jpg
-  ✅ Updated image field
+✅ Imported [2]: Another article...
+  📥 Downloading image: https://newsaddaindia.com/wp-content/uploads/...
+  ✅ Saved image: /uploads/article-title-timestamp.jpg
 
 ...
 
-📊 Summary:
-✅ Successfully downloaded: 8500
-⏭️  Skipped: 50
-❌ Failed: 69
-📝 Total processed: 8619
-
-✅ Process completed!
+📊 Import Summary:
+✅ Successfully imported: 420
+⏭️  Skipped: 30
+❌ Errors: 0
+📝 Total processed: 420
 ```
 
 ### Important Notes
 
-- ⚠️ **403 Errors:** If you see 403 errors on your local machine, this is normal due to company network policies. The script will work fine on the VPS server.
-- ⏱️ **Time:** Downloading ~8,600 images may take 1-2 hours depending on network speed
-- 🔄 **Resumable:** You can stop (`Ctrl+C`) and restart the script - it will continue from where it left off (already downloaded images won't be re-downloaded)
+- ⏱️ **Time:** Import with image download may take longer (30 seconds - 2 minutes per article depending on image size)
+- 🔄 **Rate Limiting:** Script includes 200ms delay between downloads to avoid overwhelming servers
 - 💾 **Storage:** Ensure you have enough disk space (images can be several GB)
-- 🚫 **One-Time Only:** After running this script successfully, you don't need to run it again unless you import new WordPress XML files
+- ⚠️ **Network Errors:** If image download fails, the script falls back to storing the original URL (with error logging)
+- 📁 **Uploads Directory:** Created automatically if it doesn't exist
 
-### After Download
+### Fix Images for Already-Imported Articles (Legacy)
 
-- ✅ Images will be accessible at: `http://72.60.235.158/uploads/image.jpg`
+If you have articles that were imported **before** this automatic download feature was added, they may still have external WordPress URLs. Use this script to download those images:
+
+```bash
+# Navigate to backend directory
+cd /root/NewsAddaIndia/backend
+
+# Run the legacy image download script (for articles already in database)
+node scripts/downloadAndFixImages.js
+```
+
+**What this script does:**
+1. Finds all articles with external WordPress image URLs (`https://newsaddaindia.com/wp-content/uploads/...`)
+2. Downloads each image to `backend/uploads/` directory
+3. Updates database with local paths (`/uploads/image.jpg`)
+
+**Note:** This script may fail on local development machines due to company network policies (403 errors). **It will work fine on the VPS server** where there are no such restrictions.
+
+### After Import
+
+- ✅ Images are automatically stored locally during import
+- ✅ Images are accessible at: `http://72.60.235.158/uploads/image.jpg`
 - ✅ Backend serves images from `/uploads` directory via Nginx (already configured in Step 5)
-- ✅ All image URLs in database will be updated to local paths
+- ✅ All image URLs in database are local paths
 - ✅ Images will load even if the WordPress site goes down
 
 ### Verify Images Are Working
 
 ```bash
-# Check if images were downloaded
+# Check if images were downloaded during import
 ls -la /root/NewsAddaIndia/backend/uploads/ | head -10
 
 # Test image access through Nginx
-curl -I http://localhost/uploads/some-image.jpg
+curl -I http://localhost/uploads/article-title-timestamp.jpg
 # Should return 200 OK
 
-# Check database to see updated image paths
+# Check database to see local image paths
 mongosh "your-mongodb-connection-string"
 use newsaddaindia
 db.news.findOne({}, {title: 1, image: 1})
-# Should show image path like: /uploads/article-id-image-timestamp.jpg
+# Should show image path like: /uploads/article-title-timestamp.jpg
+# NOT external URL like: https://newsaddaindia.com/wp-content/uploads/...
 ```
 
 ---
