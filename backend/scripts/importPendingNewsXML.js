@@ -58,6 +58,22 @@ function findExistingImage(imageUrl) {
 }
 
 /**
+ * Try to convert newsaddaindia.com URL to sparkdatabox.tk URL for older images
+ */
+function trySparkdataboxUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') return null;
+  
+  // If URL contains newsaddaindia.com and wp-content/uploads, try sparkdatabox.tk
+  if (imageUrl.includes('newsaddaindia.com/wp-content/uploads/')) {
+    const sparkUrl = imageUrl.replace('https://newsaddaindia.com', 'http://sparkdatabox.tk')
+                              .replace('https://newsaddaindia.com', 'http://sparkdatabox.tk');
+    return sparkUrl;
+  }
+  
+  return null;
+}
+
+/**
  * Download image from URL and save locally
  */
 async function downloadImage(imageUrl, articleTitle) {
@@ -91,27 +107,76 @@ async function downloadImage(imageUrl, articleTitle) {
       return existingArticle.image;
     }
 
-    // Download image
-    console.log(`  📥 Downloading image: ${imageUrl.substring(0, 60)}...`);
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      httpsAgent: httpsAgent,
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    // Try downloading from original URL first
+    let downloadUrl = imageUrl;
+    let triedSparkUrl = false;
+    
+    try {
+      console.log(`  📥 Downloading image: ${imageUrl.substring(0, 60)}...`);
+      const response = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        httpsAgent: httpsAgent,
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
 
-    const filename = generateImageFilename(imageUrl, articleTitle);
-    const localPath = path.join(uploadsDir, filename);
+      const filename = generateImageFilename(imageUrl, articleTitle);
+      const localPath = path.join(uploadsDir, filename);
+      
+      fs.writeFileSync(localPath, response.data);
+      const localUrl = `/uploads/${filename}`;
+      
+      imageUrlCache.set(normalizedUrl, localUrl);
+      console.log(`  ✅ Downloaded: ${localUrl}`);
+      
+      return localUrl;
+    } catch (error) {
+      // If 404 and URL is newsaddaindia.com, try sparkdatabox.tk as fallback
+      if (error.response && error.response.status === 404 && imageUrl.includes('newsaddaindia.com')) {
+        const sparkUrl = trySparkdataboxUrl(imageUrl);
+        if (sparkUrl) {
+          triedSparkUrl = true;
+          downloadUrl = sparkUrl;
+          console.log(`  🔄 Trying original domain: ${sparkUrl.substring(0, 60)}...`);
+          
+          try {
+            const sparkResponse = await axios.get(sparkUrl, {
+              responseType: 'arraybuffer',
+              httpsAgent: httpsAgent,
+              timeout: 30000,
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            });
+
+            const filename = generateImageFilename(imageUrl, articleTitle); // Use original URL for filename
+            const localPath = path.join(uploadsDir, filename);
+            
+            fs.writeFileSync(localPath, sparkResponse.data);
+            const localUrl = `/uploads/${filename}`;
+            
+            imageUrlCache.set(normalizedUrl, localUrl);
+            imageUrlCache.set(sparkUrl.split('?')[0].split('#')[0], localUrl); // Cache both URLs
+            console.log(`  ✅ Downloaded from original domain: ${localUrl}`);
+            
+            return localUrl;
+          } catch (sparkError) {
+            console.warn(`  ⚠️  Failed to download from sparkdatabox.tk: ${sparkError.message}`);
+          }
+        }
+      }
+      
+      // If we tried sparkdatabox and it failed, or if it wasn't a 404, throw original error
+      if (!triedSparkUrl) {
+        throw error;
+      }
+    }
     
-    fs.writeFileSync(localPath, response.data);
-    const localUrl = `/uploads/${filename}`;
-    
-    imageUrlCache.set(normalizedUrl, localUrl);
-    console.log(`  ✅ Downloaded: ${localUrl}`);
-    
-    return localUrl;
+    // If all downloads failed, return original URL as fallback
+    console.warn(`  ⚠️  Failed to download image: ${imageUrl.substring(0, 60)}...`);
+    return imageUrl;
   } catch (error) {
     console.warn(`  ⚠️  Failed to download image: ${error.message}`);
     return imageUrl; // Return original URL as fallback
