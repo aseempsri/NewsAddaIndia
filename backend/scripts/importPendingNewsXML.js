@@ -139,13 +139,12 @@ async function downloadImage(imageUrl, articleTitle) {
         if (sparkUrl) {
           triedSparkUrl = true;
           downloadUrl = sparkUrl;
-          console.log(`  🔄 Trying original domain: ${sparkUrl.substring(0, 60)}...`);
           
           try {
             const sparkResponse = await axios.get(sparkUrl, {
               responseType: 'arraybuffer',
               httpsAgent: httpsAgent,
-              timeout: 30000,
+              timeout: 10000, // Shorter timeout for fallback
               headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
               }
@@ -163,22 +162,28 @@ async function downloadImage(imageUrl, articleTitle) {
             
             return localUrl;
           } catch (sparkError) {
-            console.warn(`  ⚠️  Failed to download from sparkdatabox.tk: ${sparkError.message}`);
+            // Silently fail if domain doesn't exist (ENOTFOUND) or other network errors
+            // Only log if it's a different type of error (like 403, 500, etc.)
+            if (sparkError.code !== 'ENOTFOUND' && sparkError.code !== 'ECONNREFUSED' && sparkError.code !== 'ETIMEDOUT') {
+              // Domain exists but returned an error - might be worth logging
+              // But for now, we'll just silently continue
+            }
+            // Continue to return original URL as fallback
           }
         }
       }
       
-      // If we tried sparkdatabox and it failed, or if it wasn't a 404, throw original error
-      if (!triedSparkUrl) {
-        throw error;
-      }
+      // If we tried sparkdatabox and it failed, or if it wasn't a 404, return original URL
+      // Don't throw error - just return original URL so import can continue
     }
     
     // If all downloads failed, return original URL as fallback
-    console.warn(`  ⚠️  Failed to download image: ${imageUrl.substring(0, 60)}...`);
     return imageUrl;
   } catch (error) {
-    console.warn(`  ⚠️  Failed to download image: ${error.message}`);
+    // Only log non-404 errors (404s are expected for missing images)
+    if (!error.response || error.response.status !== 404) {
+      console.warn(`  ⚠️  Failed to download image: ${error.message}`);
+    }
     return imageUrl; // Return original URL as fallback
   }
 }
