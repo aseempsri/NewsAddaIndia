@@ -509,7 +509,24 @@ async function importWordPressXML(xmlFilePath, stats) {
 
         const contentString = typeof content === 'string' ? content : String(content);
         const excerptString = typeof excerpt === 'string' ? excerpt : String(excerpt);
-        const newsExcerpt = excerptString ? stripHTML(excerptString) : getExcerpt(contentString);
+        
+        // Extract excerpt: try from excerpt field, then from content, then use title as fallback
+        let newsExcerpt = '';
+        if (excerptString && excerptString.trim()) {
+          newsExcerpt = stripHTML(excerptString).trim();
+        }
+        if (!newsExcerpt && contentString && contentString.trim()) {
+          newsExcerpt = getExcerpt(contentString).trim();
+        }
+        if (!newsExcerpt) {
+          // Final fallback: use title (first 200 chars)
+          const titleString = typeof title === 'string' ? title : String(title);
+          newsExcerpt = titleString.trim().substring(0, 200);
+        }
+        // Ensure excerpt is never empty (required field)
+        if (!newsExcerpt || newsExcerpt.trim() === '') {
+          newsExcerpt = 'News article'; // Absolute fallback
+        }
 
         const cleanedContent = cleanContent(typeof content === 'string' ? content : String(content));
         const isBreaking = isBreakingNews(categories);
@@ -533,7 +550,7 @@ async function importWordPressXML(xmlFilePath, stats) {
           existingPendingNews.category = category;
           existingPendingNews.tags = tags;
           existingPendingNews.isBreaking = isBreaking;
-          existingPendingNews.excerpt = newsExcerpt || getExcerpt(contentString);
+          existingPendingNews.excerpt = newsExcerpt; // Always has a value now
           existingPendingNews.content = cleanedContent;
           existingPendingNews.image = image || existingPendingNews.image;
           existingPendingNews.author = author;
@@ -552,7 +569,7 @@ async function importWordPressXML(xmlFilePath, stats) {
         const pendingNewsData = {
           title: (typeof title === 'string' ? title : String(title)).trim(),
           titleEn: (typeof title === 'string' ? title : String(title)).trim(),
-          excerpt: newsExcerpt || getExcerpt(contentString),
+          excerpt: newsExcerpt, // Always has a value now
           excerptEn: '',
           content: cleanedContent,
           contentEn: '',
@@ -581,8 +598,9 @@ async function importWordPressXML(xmlFilePath, stats) {
 
       } catch (error) {
         stats.errors++;
+        const errorTitle = extractText(item.title) || 'Unknown';
         console.error(`❌ Error importing post:`, error.message);
-        console.error(`   Title: ${item.title?.[0] || 'Unknown'}`);
+        console.error(`   Title: ${errorTitle.substring(0, 100)}`);
       }
     }
 
