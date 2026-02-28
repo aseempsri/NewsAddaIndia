@@ -255,7 +255,7 @@ function mapCategory(wordPressCategories) {
 }
 
 // Helper function to extract image URL from postmeta
-function extractImageUrl(item, attachments) {
+function extractImageUrl(item, attachments, baseSiteUrl) {
   if (!item['wp:postmeta'] || !Array.isArray(item['wp:postmeta'])) {
     const contentRaw = item['content:encoded'];
     const content = extractText(contentRaw);
@@ -289,6 +289,7 @@ function extractImageUrl(item, attachments) {
       );
 
       if (attachment) {
+        // First try: use wp:attachment_url (already has full URL)
         if (attachment['wp:attachment_url']) {
           const url = extractText(attachment['wp:attachment_url']);
           if (url && url.trim() !== '') {
@@ -296,6 +297,7 @@ function extractImageUrl(item, attachments) {
           }
         }
 
+        // Second try: construct from _wp_attached_file using original base URL
         if (attachment['wp:postmeta'] && Array.isArray(attachment['wp:postmeta'])) {
           const attachmentUrlMeta = attachment['wp:postmeta'].find(
             meta => {
@@ -308,11 +310,14 @@ function extractImageUrl(item, attachments) {
           if (attachmentUrlMeta && attachmentUrlMeta['wp:meta_value']) {
             const filePath = extractText(attachmentUrlMeta['wp:meta_value']);
             if (filePath && filePath.trim() !== '') {
-              return `https://newsaddaindia.com/wp-content/uploads/${filePath}`;
+              // Use original base site URL from XML, not hardcoded newsaddaindia.com
+              const baseUrl = baseSiteUrl || 'https://newsaddaindia.com';
+              return `${baseUrl}/wp-content/uploads/${filePath}`;
             }
           }
         }
 
+        // Third try: use guid (usually has full URL)
         if (attachment.guid) {
           const guid = Array.isArray(attachment.guid) ? attachment.guid[0] : attachment.guid;
           const guidStr = extractText(guid);
@@ -324,6 +329,7 @@ function extractImageUrl(item, attachments) {
     }
   }
 
+  // Fallback: extract from content
   const contentRaw = item['content:encoded'];
   const content = extractText(contentRaw);
   if (content && typeof content === 'string') {
@@ -446,6 +452,10 @@ async function importWordPressXML(xmlFilePath, stats) {
 
     console.log('📊 Extracting data...');
 
+    // Extract base site URL from XML (preserves original domain)
+    const baseSiteUrl = extractText(channel['wp:base_site_url']) || extractText(channel.link) || 'https://newsaddaindia.com';
+    console.log(`📍 Base site URL: ${baseSiteUrl}`);
+
     const items = channel.item || [];
     console.log(`Found ${items.length} items in XML`);
 
@@ -498,7 +508,7 @@ async function importWordPressXML(xmlFilePath, stats) {
 
         const category = mapCategory(categories);
         const tags = extractTags(categories);
-        const imageUrl = extractImageUrl(item, attachments);
+        const imageUrl = extractImageUrl(item, attachments, baseSiteUrl);
 
         let image = '';
         if (imageUrl && imageUrl.trim() !== '') {
