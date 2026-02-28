@@ -373,7 +373,8 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
   @Input() imagesLoaded: boolean = false; // Input to know when images are loaded
 
   // Video URL - Fallback to local video file
-  videoUrl = 'assets/videos/Video-279.mp4';
+  // videoUrl = 'assets/videos/Video-279.mp4';
+  videoUrl = 'assets/videos/video2.mp4';
 
   // Audio state - starts muted for autoplay, then attempts to unmute
   isMuted = true;
