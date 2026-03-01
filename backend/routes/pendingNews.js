@@ -481,6 +481,73 @@ router.post('/:id/publish', authenticateAdmin, async (req, res) => {
   }
 });
 
+// GET archived news with month/year filters (Admin only)
+router.get('/archived', authenticateAdmin, async (req, res) => {
+  try {
+    const { year, month, limit = 50, skip = 0 } = req.query;
+    const query = {};
+    
+    // Filter by year and month
+    if (year || month) {
+      query.createdAt = {};
+      
+      if (year) {
+        const yearNum = parseInt(year);
+        const startDate = new Date(yearNum, 0, 1); // January 1st
+        const endDate = new Date(yearNum + 1, 0, 1); // January 1st of next year
+        
+        if (month) {
+          const monthNum = parseInt(month) - 1; // JavaScript months are 0-indexed
+          query.createdAt.$gte = new Date(yearNum, monthNum, 1);
+          query.createdAt.$lt = new Date(yearNum, monthNum + 1, 1);
+        } else {
+          query.createdAt.$gte = startDate;
+          query.createdAt.$lt = endDate;
+        }
+      } else if (month) {
+        // If only month is provided, filter current year
+        const currentYear = new Date().getFullYear();
+        const monthNum = parseInt(month) - 1;
+        query.createdAt.$gte = new Date(currentYear, monthNum, 1);
+        query.createdAt.$lt = new Date(currentYear, monthNum + 1, 1);
+      }
+    }
+    
+    // Fetch archived news from PendingNews collection, sorted by date descending (latest first)
+    const archivedNews = await PendingNews.find(query)
+      .sort({ createdAt: -1 }) // Descending order - latest first
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+    
+    // Get total count for pagination
+    const total = await PendingNews.countDocuments(query);
+    
+    res.json({
+      success: true,
+      data: archivedNews,
+      total: total
+    });
+  } catch (error) {
+    console.error('Error fetching archived news:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch archived news' });
+  }
+});
+
+// GET available years from archived news (Admin only)
+router.get('/archived/years', authenticateAdmin, async (req, res) => {
+  try {
+    const years = await PendingNews.distinct('createdAt');
+    const uniqueYears = [...new Set(years.map(date => new Date(date).getFullYear()))];
+    res.json({
+      success: true,
+      data: uniqueYears.sort((a, b) => b - a) // Descending order
+    });
+  } catch (error) {
+    console.error('Error fetching available years:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch available years' });
+  }
+});
+
 // DELETE all pending news (Admin only) - for clearing before refetch
 router.delete('/all', authenticateAdmin, async (req, res) => {
   try {

@@ -10,6 +10,7 @@ import { AdminReviewLivePostsComponent } from './pages/admin/admin-review-live-p
 import { AdminEditPostComponent } from './pages/admin/admin-edit-post/admin-edit-post.component';
 import { AdminEditLivePostComponent } from './pages/admin/admin-edit-live-post/admin-edit-live-post.component';
 import { AdminAdsComponent } from './pages/admin/admin-ads/admin-ads.component';
+import { AdminArchivedNewsComponent } from './pages/admin/admin-archived-news/admin-archived-news.component';
 
 export const routes: Routes = [
   { path: '', component: IndexComponent },
@@ -27,6 +28,7 @@ export const routes: Routes = [
   { path: 'admin/create', component: AdminCreatePostComponent },
   { path: 'admin/review', component: AdminReviewPostsComponent },
   { path: 'admin/review-live', component: AdminReviewLivePostsComponent },
+  { path: 'admin/archived', component: AdminArchivedNewsComponent },
   { path: 'admin/edit/:id', component: AdminEditPostComponent },
   { path: 'admin/edit-live/:id', component: AdminEditLivePostComponent },
   { path: 'admin/ads', component: AdminAdsComponent },

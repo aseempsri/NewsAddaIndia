@@ -186,6 +186,27 @@ import { Subscription } from 'rxjs';
                 </div>
               </a>
 
+              <!-- Archived News Option -->
+              <a
+                routerLink="/admin/archived"
+                class="glass-card p-8 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <div class="flex flex-col items-center text-center space-y-4">
+                  <div class="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                    <svg class="w-10 h-10 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                  </div>
+                  <h2 class="text-2xl font-bold">Archived News</h2>
+                  <p class="text-muted-foreground">View all imported news articles with month and year filters</p>
+                  <div class="flex items-center text-purple-500 group-hover:translate-x-2 transition-transform">
+                    <span class="font-medium">Go to Archived News</span>
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </a>
+
             </div>
           </div>
         }
