@@ -121,7 +121,7 @@ import { Subscription } from 'rxjs';
     </section>
 
     <!-- Desktop View - Creative Frame Design -->
-    <section class="hidden lg:block relative w-full py-6 md:py-8 lg:py-12 bg-gradient-to-br from-background via-secondary/10 to-background overflow-hidden">
+    <section class="hidden lg:block relative w-full py-4 md:py-6 lg:py-8 bg-gradient-to-br from-background via-secondary/10 to-background overflow-hidden min-h-[85vh] flex items-center">
       <!-- Animated Background Elements -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <!-- Floating gradient orbs -->
@@ -142,7 +142,7 @@ import { Subscription } from 'rxjs';
       <div class="container mx-auto px-4 md:px-6 lg:px-8 overflow-hidden">
         <!-- Creative Frame Container -->
         <div 
-          class="relative mx-auto max-w-6xl cursor-pointer group px-2"
+          class="relative mx-auto max-w-7xl cursor-pointer group px-2"
           (click)="redirectToYouTube()">
           
           <!-- Outer decorative border -->
@@ -155,7 +155,7 @@ import { Subscription } from 'rxjs';
             <div class="absolute inset-0.5 border border-primary/20 rounded-lg pointer-events-none"></div>
             
             <!-- Video container - maintains aspect ratio and shows full frame -->
-            <div class="relative w-full aspect-video bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
+            <div class="relative w-full h-[75vh] bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
               <video
                 #videoPlayerDesktop
                 class="w-full h-full object-cover rounded-lg shadow-2xl pointer-events-none transition-all duration-500"
