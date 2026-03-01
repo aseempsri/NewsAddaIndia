@@ -508,6 +508,8 @@ interface SideNews {
 })
 export class HeroSectionComponent implements OnInit, OnDestroy {
   @Output() imagesLoaded = new EventEmitter<boolean>();
+  /** Emitted when hero has registered its displayed article IDs so Latest Stories can load without duplicates */
+  @Output() displayedReady = new EventEmitter<void>();
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -671,6 +673,7 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         if (filteredNews.length === 0) {
           console.warn('[HeroSection] No breaking news available after filtering duplicates');
           this.isLoading = false;
+          this.displayedReady.emit();
           return;
         }
 
@@ -734,9 +737,12 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         // Second and third articles: Side news (right side, 2 smaller articles)
         const sideArticles = filteredNews.slice(1, 3); // Take next 2 articles
         
-        // Register side news articles as displayed
+        // Register side news articles as displayed to prevent duplicates
         const sideNewsIds = sideArticles.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
         this.displayedNewsService.registerDisplayedMultiple(sideNewsIds);
+        
+        // Signal that Hero has registered its IDs so Latest Stories can load (and exclude these)
+        this.displayedReady.emit();
         
         this.sideNews = sideArticles.map((n, index) => {
           const sideNewsItem = {

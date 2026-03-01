@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -390,13 +390,17 @@ import { filter } from 'rxjs/operators';
     }
   `]
 })
-export class NewsGridComponent implements OnInit, OnDestroy {
+export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
   // CRITICAL: Latest Stories must always show exactly 6 items - this rule should never change
   private static readonly LATEST_STORIES_COUNT = 6;
   
+  /** When true, Hero has registered its displayed IDs; Latest Stories can load without duplicating Hero articles */
+  @Input() heroDisplayedReady = false;
   @Output() imagesLoaded = new EventEmitter<boolean>();
   t: any = {};
   private languageSubscription?: Subscription;
+  private loadTriggered = false;
+  private heroReadyFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
   newsItems: NewsArticle[] = [];
   isLoading = true;
   isHomePage = false;
@@ -429,9 +433,23 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     console.log('[NewsGrid] ✅✅✅ newsItems.length:', this.newsItems.length);
     console.log('[NewsGrid] ✅✅✅ isLoading:', this.isLoading);
     this.updateTranslations();
-    console.log('[NewsGrid] ✅✅✅ About to call loadNews()');
-    this.loadNews();
-    console.log('[NewsGrid] ✅✅✅ loadNews() called');
+    
+    // Load only after Hero has registered its displayed IDs to avoid duplicate articles in Hero + Latest Stories
+    if (this.heroDisplayedReady) {
+      console.log('[NewsGrid] Hero already ready, loading news now');
+      this.loadTriggered = true;
+      this.loadNews();
+    } else {
+      console.log('[NewsGrid] Waiting for Hero displayedReady before loading Latest Stories');
+      this.heroReadyFallbackTimeout = setTimeout(() => {
+        if (!this.loadTriggered) {
+          console.warn('[NewsGrid] Hero displayedReady fallback (2.5s) - loading Latest Stories');
+          this.loadTriggered = true;
+          this.loadNews();
+        }
+        this.heroReadyFallbackTimeout = null;
+      }, 2500);
+    }
 
     // Safety timeout: If items don't load within 10 seconds, show whatever we have
     setTimeout(() => {
@@ -508,7 +526,23 @@ export class NewsGridComponent implements OnInit, OnDestroy {
     this.isHomePage = url === '/' || url === '' || url === '/home';
   }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['heroDisplayedReady'] && this.heroDisplayedReady && !this.loadTriggered) {
+      if (this.heroReadyFallbackTimeout) {
+        clearTimeout(this.heroReadyFallbackTimeout);
+        this.heroReadyFallbackTimeout = null;
+      }
+      console.log('[NewsGrid] Hero displayedReady received - loading Latest Stories');
+      this.loadTriggered = true;
+      this.loadNews();
+    }
+  }
+
   ngOnDestroy() {
+    if (this.heroReadyFallbackTimeout) {
+      clearTimeout(this.heroReadyFallbackTimeout);
+      this.heroReadyFallbackTimeout = null;
+    }
     this.languageSubscription?.unsubscribe();
   }
 

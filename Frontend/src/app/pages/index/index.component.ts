@@ -170,14 +170,14 @@ import { filter } from 'rxjs/operators';
       </div>
       
       <main>
-        <app-hero-section (imagesLoaded)="onHeroImagesLoaded()" />
+        <app-hero-section (imagesLoaded)="onHeroImagesLoaded()" (displayedReady)="onHeroDisplayedReady()" />
         
         <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:py-8 w-full max-w-full">
           <div class="grid lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-12 w-full">
             <div class="lg:col-span-2 w-full min-w-0">
               <!-- CRITICAL: Latest Stories (6 items) must always come FIRST before Category Sections -->
               <!-- This ensures Latest Stories items are registered first and won't appear in Category Sections -->
-              <app-news-grid (imagesLoaded)="onNewsGridImagesLoaded()" />
+              <app-news-grid [heroDisplayedReady]="heroDisplayedReady" (imagesLoaded)="onNewsGridImagesLoaded()" />
               <!-- Category Sections come AFTER Latest Stories to prevent duplicates -->
               <app-category-section (dataLoaded)="onCategorySectionLoaded()" />
             </div>
@@ -455,6 +455,7 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   private static hasAppLoaded = false; // Static flag to track first app load across component instances
   isPageLoading = true;
   heroImagesLoaded = false;
+  heroDisplayedReady = false;
   newsGridImagesLoaded = false;
   categorySectionLoaded = false;
   widgetsLoaded = false;
@@ -503,6 +504,7 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
       // App has already loaded before, this is a navigation - skip loading screen
       this.isPageLoading = false;
       this.heroImagesLoaded = true;
+      this.heroDisplayedReady = true;
       this.newsGridImagesLoaded = true;
       this.categorySectionLoaded = true;
       this.widgetsLoaded = true;
@@ -523,6 +525,7 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Clear displayed news when entering home page to start fresh
     this.displayedNewsService.clear();
+    this.heroDisplayedReady = false;
     
     // Subscribe to route changes to clear displayed news when leaving home page
     this.router.events.pipe(
@@ -801,6 +804,10 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   onHeroImagesLoaded() {
     this.heroImagesLoaded = true;
     this.checkIfAllLoaded();
+  }
+
+  onHeroDisplayedReady() {
+    this.heroDisplayedReady = true;
   }
 
   onNewsGridImagesLoaded() {

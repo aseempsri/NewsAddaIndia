@@ -351,16 +351,25 @@ router.get('/', async (req, res) => {
       .lean() // Use lean() for better performance with large datasets
       .exec();
 
-    console.log('[Backend News Route] Found', news.length, 'news articles matching query');
+    // Deduplicate by _id (safety: ensure same article never appears twice in response)
+    const seenIds = new Set();
+    const dedupedNews = news.filter(item => {
+      const id = item._id ? item._id.toString() : null;
+      if (!id || seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
+
+    console.log('[Backend News Route] Found', dedupedNews.length, 'news articles matching query');
 
     res.json({
       success: true,
-      count: news.length,
+      count: dedupedNews.length,
       total: totalCount,
       limit: finalLimit,
       skip: skipCount,
-      hasMore: (skipCount + news.length) < totalCount,
-      data: news
+      hasMore: (skipCount + dedupedNews.length) < totalCount,
+      data: dedupedNews
     });
   } catch (error) {
     console.error('Error fetching news:', error);
