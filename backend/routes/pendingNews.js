@@ -210,6 +210,8 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
     const { year, month, limit = 50, skip = 0 } = req.query;
     const query = {};
     
+    console.log('[Archived News] Request params:', { year, month, limit, skip });
+    
     // Filter by year and month
     if (year && year !== 'undefined' && year !== 'null') {
       const yearNum = parseInt(year);
@@ -257,6 +259,13 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
       };
     }
     
+    console.log('[Archived News] MongoDB query:', JSON.stringify(query, null, 2));
+    
+    // First check total count
+    const totalCount = await PendingNews.countDocuments({});
+    const totalWithCreatedAt = await PendingNews.countDocuments(query);
+    console.log(`[Archived News] Total documents: ${totalCount}, Matching query: ${totalWithCreatedAt}`);
+    
     // Fetch archived news from PendingNews collection, sorted by date descending (latest first)
     const limitNum = parseInt(limit) || 50;
     const skipNum = parseInt(skip) || 0;
@@ -270,14 +279,16 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
     // Get total count for pagination
     const total = await PendingNews.countDocuments(query);
     
+    console.log(`[Archived News] Returning ${archivedNews.length} articles, total: ${total}`);
+    
     res.json({
       success: true,
       data: archivedNews || [],
       total: total || 0
     });
   } catch (error) {
-    console.error('Error fetching archived news:', error);
-    console.error('Error stack:', error.stack);
+    console.error('[Archived News] Error fetching archived news:', error);
+    console.error('[Archived News] Error stack:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch archived news',
