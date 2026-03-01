@@ -405,7 +405,7 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
       time: this.formatDate(news.createdAt),
       content: news.content
     };
-    this.modalService.openModal('newsDetail', newsArticle);
+    this.modalService.openModal(newsArticle, news.isBreaking);
   }
 
   formatDate(dateString: string): string {
