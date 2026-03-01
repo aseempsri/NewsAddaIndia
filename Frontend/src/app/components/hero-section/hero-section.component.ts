@@ -661,50 +661,49 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   loadNews() {
     const imagePromises: Promise<void>[] = [];
 
-    // Load breaking news for hero section - ONLY shows news with isBreaking: true
-    // If no breaking news found, shows default/empty news
-    this.newsService.fetchBreakingNews().subscribe({
-      next: (news) => {
-        // Only display if it's actually breaking news (isBreaking: true)
-        // If no breaking news found, news will be default/empty
-        if (!news.isBreaking && news.id) {
-          console.warn('[HeroSection] Non-breaking news received, skipping display:', {
-            id: news.id,
-            title: news.title,
-            isBreaking: news.isBreaking
-          });
-          // Don't display non-breaking news in breaking news section
+    // Load top 3 breaking news articles for hero section
+    // All three articles will be breaking news, regardless of category
+    this.newsService.fetchBreakingNewsList(3).subscribe({
+      next: (breakingNewsList) => {
+        // Filter out already displayed articles to avoid duplicates
+        const filteredNews = this.displayedNewsService.filterDisplayed(breakingNewsList);
+        
+        if (filteredNews.length === 0) {
+          console.warn('[HeroSection] No breaking news available after filtering duplicates');
+          this.isLoading = false;
           return;
         }
 
+        // First article: Featured news (large article on left)
+        const featuredArticle = filteredNews[0];
+        
         // Ensure titleEn is set (for translation)
-        if (!news.titleEn) {
-          news.titleEn = news.title;
+        if (!featuredArticle.titleEn) {
+          featuredArticle.titleEn = featuredArticle.title;
         }
 
         // News is already translated by the service, so use it directly
-        this.featuredNews = news;
+        this.featuredNews = featuredArticle;
         
-        // Register this article as displayed to prevent duplicates
-        if (news.id) {
-          this.displayedNewsService.registerDisplayed(news.id);
+        // Register featured article as displayed to prevent duplicates
+        if (featuredArticle.id) {
+          this.displayedNewsService.registerDisplayed(featuredArticle.id);
         }
         
         // Log trending news in featured section
-        if (news.isTrending) {
+        if (featuredArticle.isTrending) {
           console.log('🔥 HERO SECTION - Featured News is Trending:', {
-            id: news.id,
-            title: news.title,
-            trendingTitle: news.trendingTitle || 'N/A',
-            category: news.category,
-            displayTitle: this.getDisplayTitle(news),
-            isTrending: news.isTrending
+            id: featuredArticle.id,
+            title: featuredArticle.title,
+            trendingTitle: featuredArticle.trendingTitle || 'N/A',
+            category: featuredArticle.category,
+            displayTitle: this.getDisplayTitle(featuredArticle),
+            isTrending: featuredArticle.isTrending
           });
         }
 
-        // Verify image loads, or fetch if missing/invalid
-        if (news.image && news.image.trim() !== '' && !news.imageLoading) {
-          // Image URL exists, verify it loads
+        // Verify featured image loads, or use placeholder if missing/invalid
+        if (featuredArticle.image && featuredArticle.image.trim() !== '' && !featuredArticle.imageLoading) {
           const featuredImagePromise = new Promise<void>((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -712,20 +711,18 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
               resolve();
             };
             img.onerror = () => {
-              // Image failed to load - use placeholder (no external API calls)
               console.warn(`Featured image failed to load, using placeholder...`);
-              this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+              this.featuredNews.image = this.newsService.getPlaceholderImage(featuredArticle.title);
               this.featuredNews.imageLoading = false;
               resolve();
             };
-            img.src = news.image;
+            img.src = featuredArticle.image;
           });
           imagePromises.push(featuredImagePromise);
-        } else if (news.imageLoading || !news.image || news.image.trim() === '') {
-          // No image in database - use placeholder (no external API calls)
+        } else if (featuredArticle.imageLoading || !featuredArticle.image || featuredArticle.image.trim() === '') {
           this.featuredNews.imageLoading = true;
           const featuredImagePromise = new Promise<void>((resolve) => {
-            this.featuredNews.image = this.newsService.getPlaceholderImage(news.title);
+            this.featuredNews.image = this.newsService.getPlaceholderImage(featuredArticle.title);
             this.featuredNews.imageLoading = false;
             resolve();
           });
@@ -733,24 +730,15 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         } else {
           imagePromises.push(Promise.resolve());
         }
-      },
-      error: (error) => {
-        console.error('Error loading featured news:', error);
-        imagePromises.push(Promise.resolve());
-      }
-    });
 
-    // Load side news
-    this.newsService.fetchSideNews(['Sports', 'Business']).subscribe({
-      next: (news) => {
-        // Filter out already displayed articles
-        const filteredNews = this.displayedNewsService.filterDisplayed(news);
+        // Second and third articles: Side news (right side, 2 smaller articles)
+        const sideArticles = filteredNews.slice(1, 3); // Take next 2 articles
         
         // Register side news articles as displayed
-        const sideNewsIds = filteredNews.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+        const sideNewsIds = sideArticles.map(n => n.id).filter(id => id !== undefined) as (string | number)[];
         this.displayedNewsService.registerDisplayedMultiple(sideNewsIds);
         
-        this.sideNews = filteredNews.map((n, index) => {
+        this.sideNews = sideArticles.map((n, index) => {
           const sideNewsItem = {
             category: n.category,
             title: n.title,
@@ -807,6 +795,19 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
           return sideNewsItem;
         });
 
+        // Ensure we have at least 2 side news items (pad with empty if needed)
+        while (this.sideNews.length < 2) {
+          this.sideNews.push({
+            category: 'National',
+            title: 'Loading...',
+            image: 'assets/videos/indianz.avif',
+            author: 'News Adda India',
+            date: new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+            time: 'Just now',
+            imageLoading: false
+          });
+        }
+
         // OPTIMIZATION: Reduced timeout from 15s to 8s
         const timeoutPromise = new Promise<void>((resolve) => {
           setTimeout(() => {
@@ -822,7 +823,7 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         });
       },
       error: (error) => {
-        console.error('Error loading side news:', error);
+        console.error('Error loading breaking news:', error);
         this.isLoading = false;
       }
     });
