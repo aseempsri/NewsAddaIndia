@@ -443,12 +443,12 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
       console.log('[NewsGrid] Waiting for Hero displayedReady before loading Latest Stories');
       this.heroReadyFallbackTimeout = setTimeout(() => {
         if (!this.loadTriggered) {
-          console.warn('[NewsGrid] Hero displayedReady fallback (2.5s) - loading Latest Stories');
+          console.warn('[NewsGrid] Hero displayedReady fallback (5.5s) - loading Latest Stories');
           this.loadTriggered = true;
           this.loadNews();
         }
         this.heroReadyFallbackTimeout = null;
-      }, 2500);
+      }, 5500);
     }
 
     // Safety timeout: If items don't load within 10 seconds, show whatever we have
@@ -708,8 +708,12 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                 console.log('[NewsGrid] Combined news (breaking + home):', allNews.length, 'items');
                 console.log('[NewsGrid] Combined news IDs:', allNews.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                 
+                // SAFEGUARD: Re-filter in case Hero registered after we fetched (race)
+                const afterHeroFilter = this.displayedNewsService.filterDisplayed(allNews);
+                const useList = afterHeroFilter.length > 0 ? afterHeroFilter : allNews;
+                
                 // SAFEGUARD: If filtering removed everything, use unfiltered news (but still remove duplicates)
-                if (allNews.length === 0 && (filteredBreakingNews.length === 0 || filteredHomeNews.length === 0)) {
+                if (useList.length === 0 && (filteredBreakingNews.length === 0 || filteredHomeNews.length === 0)) {
                   console.warn('[NewsGrid] ⚠️ All items filtered out! Using unfiltered news as fallback...');
                   const unfilteredBreaking = this.removeDuplicates(breakingNews);
                   const unfilteredHome = this.removeDuplicates(news);
@@ -740,19 +744,18 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                 }
                 
                 // If we don't have enough articles after filtering, fetch more from categories
-                if (allNews.length < NewsGridComponent.LATEST_STORIES_COUNT) {
-                  await this.fetchAdditionalNews(allNews, NewsGridComponent.LATEST_STORIES_COUNT);
+                if (useList.length < NewsGridComponent.LATEST_STORIES_COUNT) {
+                  await this.fetchAdditionalNews(useList, NewsGridComponent.LATEST_STORIES_COUNT);
                 } else {
                   // Register displayed articles - CRITICAL: Always register exactly LATEST_STORIES_COUNT items
-                  const displayedIds = allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
+                  const displayedIds = useList.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
                   console.log('[NewsGrid] 🔵 Registering Latest Stories IDs:', displayedIds);
-                  console.log('[NewsGrid] 🔵 Latest Stories titles:', allNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => ({ id: n.id, title: n.title?.substring(0, 40) })));
+                  console.log('[NewsGrid] 🔵 Latest Stories titles:', useList.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => ({ id: n.id, title: n.title?.substring(0, 40) })));
                   this.displayedNewsService.registerDisplayedMultiple(displayedIds);
                   console.log('[NewsGrid] 🔵 Displayed IDs after registration:', Array.from(this.displayedNewsService.getDisplayedIds()));
                   
                   // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
-                  // Final deduplication before assigning
-                  const deduplicatedNews = this.finalDeduplicate(allNews);
+                  const deduplicatedNews = this.finalDeduplicate(useList);
                   this.newsItems = deduplicatedNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
                   
                   // Ensure all items have imageLoading set
@@ -768,7 +771,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                   });
                   
                   // Debug: Verify we have exactly 6 items
-                  console.log('[NewsGrid] ✅ Latest Stories items loaded:', this.newsItems.length, 'out of', allNews.length, 'available');
+                  console.log('[NewsGrid] ✅ Latest Stories items loaded:', this.newsItems.length, 'out of', useList.length, 'available');
                   console.log('[NewsGrid] ✅ newsItems array:', this.newsItems.map(n => ({ id: n.id, title: n.title?.substring(0, 30) })));
                   if (this.newsItems.length !== NewsGridComponent.LATEST_STORIES_COUNT) {
                     console.warn('[NewsGrid] WARNING: Expected', NewsGridComponent.LATEST_STORIES_COUNT, 'items but got', this.newsItems.length);
