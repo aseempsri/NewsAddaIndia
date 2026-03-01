@@ -10,6 +10,7 @@
         "import:multiple": "node scripts/importMultipleWordPressXML.js",
         "import:pending": "node scripts/importPendingNewsXML.js",
         "import:janmar": "node scripts/importJanMarXML.js",
+        "seed:test-archived": "node scripts/seedTestArchivedNews.js",
         "clear:news": "node scripts/clearAllNews.js",
         "count:articles": "node scripts/countUniqueArticles.js"
     },
