@@ -121,7 +121,7 @@ import { Subscription } from 'rxjs';
     </section>
 
     <!-- Desktop View - Creative Frame Design -->
-    <section class="hidden lg:block relative w-full py-4 md:py-6 lg:py-8 bg-gradient-to-br from-background via-secondary/10 to-background overflow-hidden min-h-[85vh] flex items-center">
+    <section class="hidden lg:block relative w-full py-4 md:py-6 lg:py-8 bg-gradient-to-br from-background via-secondary/10 to-background overflow-hidden min-h-[76.5vh] flex items-center">
       <!-- Animated Background Elements -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <!-- Floating gradient orbs -->
@@ -155,7 +155,7 @@ import { Subscription } from 'rxjs';
             <div class="absolute inset-0.5 border border-primary/20 rounded-lg pointer-events-none"></div>
             
             <!-- Video container - maintains aspect ratio and shows full frame -->
-            <div class="relative w-full h-[75vh] bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
+            <div class="relative w-full h-[67.5vh] bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
               <video
                 #videoPlayerDesktop
                 class="w-full h-full object-cover rounded-lg shadow-2xl pointer-events-none transition-all duration-500"
