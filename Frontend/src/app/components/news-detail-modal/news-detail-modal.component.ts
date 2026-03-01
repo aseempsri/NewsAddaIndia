@@ -1090,9 +1090,23 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   navigateToFullArticle() {
     if (this.news && this.news.id) {
-      const newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
+      // Ensure ID is a clean string, trim whitespace, and remove any invalid characters
+      let newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
+      newsId = newsId.trim().replace(/[\s\u00A0]/g, ''); // Remove all whitespace including non-breaking spaces
       
-      console.log('[NewsDetailModal] Navigating to news detail page:', newsId);
+      // Validate MongoDB ObjectId format (24 hex characters)
+      if (!/^[0-9a-fA-F]{24}$/.test(newsId)) {
+        console.error('[NewsDetailModal] Invalid news ID format:', newsId, 'Original:', this.news.id);
+        alert('Invalid article ID. Please try again.');
+        return;
+      }
+      
+      console.log('[NewsDetailModal] Navigating to news detail page:', newsId, 'Original ID:', this.news.id);
+      
+      // IMMEDIATELY scroll to top before navigation to ensure clean state
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       
       // Get the scroll position from modal service (saved when modal was opened)
       const scrollPosition = this.modalService.getScrollPosition();
@@ -1115,31 +1129,37 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
         this.router.navigate(['/news', newsId]).then(
           (success) => {
             console.log('[NewsDetailModal] Navigation successful:', success);
-            // Force scroll to top multiple times after navigation to ensure detail page always starts at top
+            
+            // AGGRESSIVE scroll to top - multiple attempts to ensure it works
             // This overrides any scroll restoration that might happen
-            setTimeout(() => {
+            const forceScrollToTop = () => {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
               document.documentElement.scrollTop = 0;
               document.body.scrollTop = 0;
-            }, 0);
+              // Also try scrolling the window itself
+              if (window.scrollY !== 0) {
+                window.scrollTo(0, 0);
+              }
+            };
             
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-            }, 50);
+            // Immediate scroll
+            forceScrollToTop();
             
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-            }, 100);
+            // Multiple delayed scrolls to catch any late rendering
+            setTimeout(forceScrollToTop, 0);
+            setTimeout(forceScrollToTop, 50);
+            setTimeout(forceScrollToTop, 100);
+            setTimeout(forceScrollToTop, 200);
+            setTimeout(forceScrollToTop, 300);
+            setTimeout(forceScrollToTop, 500);
             
-            setTimeout(() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-            }, 200);
+            // Also use requestAnimationFrame for after render
+            requestAnimationFrame(() => {
+              forceScrollToTop();
+              requestAnimationFrame(() => {
+                forceScrollToTop();
+              });
+            });
           },
           (error) => {
             console.error('[NewsDetailModal] Navigation error:', error);

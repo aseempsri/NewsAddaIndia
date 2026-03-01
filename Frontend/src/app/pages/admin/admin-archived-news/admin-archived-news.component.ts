@@ -8,6 +8,8 @@ import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.ser
 import { ModalService } from '../../../services/modal.service';
 import { NewsDetailModalComponent } from '../../../components/news-detail-modal/news-detail-modal.component';
 import { NewsArticle } from '../../../services/news.service';
+import { LanguageService } from '../../../services/language.service';
+import { TranslationService } from '../../../services/translation.service';
 import { Subscription } from 'rxjs';
 
 interface ArchivedNews {
@@ -73,6 +75,51 @@ interface ArchivedNews {
                   Logout
                 </button>
               </div>
+            </div>
+
+            <!-- Search Filter -->
+            <div class="glass-card p-6 rounded-xl mb-6">
+              <h2 class="text-xl font-bold mb-4">Search Articles</h2>
+              <div class="flex gap-2">
+                <div class="flex-1 relative">
+                  <input
+                    type="text"
+                    [(ngModel)]="searchQuery"
+                    (keyup.enter)="performSearch()"
+                    placeholder="Type keywords in English to search..."
+                    class="w-full px-4 py-2 pr-24 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                  @if (isTranslating) {
+                    <div class="absolute right-2 top-1/2 -translate-y-1/2">
+                      <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  }
+                </div>
+                <button
+                  (click)="translateAndSearch()"
+                  [disabled]="!searchQuery || isTranslating"
+                  class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                  </svg>
+                  Translate & Search
+                </button>
+                @if (searchQuery) {
+                  <button
+                    (click)="clearSearch()"
+                    class="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">
+                    Clear
+                  </button>
+                }
+              </div>
+              @if (searchQuery && translatedQuery) {
+                <div class="mt-3 p-3 bg-blue-500/10 rounded-lg">
+                  <p class="text-sm">
+                    <span class="font-semibold">Searching for:</span> 
+                    <span class="text-blue-600 dark:text-blue-400">{{ translatedQuery }}</span>
+                    <span class="text-muted-foreground ml-2">(translated from: {{ searchQuery }})</span>
+                  </p>
+                </div>
+              }
             </div>
 
             <!-- Month and Year Filters -->
@@ -216,6 +263,9 @@ interface ArchivedNews {
           </div>
         }
       </div>
+      
+      <!-- News Detail Modal -->
+      <app-news-detail-modal></app-news-detail-modal>
     </div>
   `,
   styles: []
@@ -253,11 +303,17 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
   totalPages = 1;
   Math = Math;
 
+  searchQuery = '';
+  translatedQuery = '';
+  isTranslating = false;
+
   constructor(
     private http: HttpClient,
     private router: Router,
     private adminThemeService: AdminThemeService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private languageService: LanguageService,
+    private translationService: TranslationService
   ) {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -339,6 +395,9 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
     if (this.selectedMonth) {
       queryParams += `&month=${this.selectedMonth}`;
     }
+    if (this.translatedQuery) {
+      queryParams += `&search=${encodeURIComponent(this.translatedQuery)}`;
+    }
 
     this.http.get<{ success: boolean; data: ArchivedNews[]; total?: number }>(
       `${this.getApiUrl()}/api/pending-news/archived?${queryParams}`,
@@ -359,6 +418,57 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  async translateAndSearch() {
+    if (!this.searchQuery || this.searchQuery.trim() === '') {
+      return;
+    }
+
+    this.isTranslating = true;
+    try {
+      // Translate English to Hindi
+      this.translationService.translateToHindi(this.searchQuery).subscribe({
+        next: (translated) => {
+          this.translatedQuery = translated;
+          this.isTranslating = false;
+          this.currentPage = 1; // Reset to first page
+          this.loadArchivedNews();
+        },
+        error: (err) => {
+          console.error('Translation error:', err);
+          // If translation fails, use original query
+          this.translatedQuery = this.searchQuery;
+          this.isTranslating = false;
+          this.currentPage = 1;
+          this.loadArchivedNews();
+        }
+      });
+    } catch (error) {
+      console.error('Translation error:', error);
+      this.translatedQuery = this.searchQuery;
+      this.isTranslating = false;
+      this.currentPage = 1;
+      this.loadArchivedNews();
+    }
+  }
+
+  performSearch() {
+    if (this.translatedQuery) {
+      // Already translated, just search
+      this.currentPage = 1;
+      this.loadArchivedNews();
+    } else if (this.searchQuery) {
+      // Translate first, then search
+      this.translateAndSearch();
+    }
+  }
+
+  clearSearch() {
+    this.searchQuery = '';
+    this.translatedQuery = '';
+    this.currentPage = 1;
+    this.loadArchivedNews();
   }
 
   applyFilters() {
@@ -395,17 +505,46 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
   }
 
   viewNews(news: ArchivedNews) {
+    // Ensure ID is a clean string
+    const newsId = typeof news._id === 'string' ? news._id.trim() : String(news._id).trim();
+    
+    if (!newsId || newsId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(newsId)) {
+      console.error('[Archived News] Invalid news ID:', news._id);
+      alert('Invalid article ID. Cannot open article.');
+      return;
+    }
+    
+    // Construct full image URL if it's a relative path
+    let imageUrl = news.image || '';
+    if (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('http')) {
+      if (!imageUrl.startsWith('/')) {
+        imageUrl = '/' + imageUrl;
+      }
+      imageUrl = `${this.getApiUrl()}${imageUrl}`;
+    }
+
     const newsArticle: NewsArticle = {
-      id: news._id,
+      id: newsId,
       category: news.category,
       title: news.title,
       titleEn: news.titleEn || news.title,
-      excerpt: news.excerpt,
-      image: news.image,
+      excerpt: news.excerpt || '',
+      excerptEn: news.titleEn || news.title,
+      content: news.content || '',
+      contentEn: news.titleEn || news.title,
+      image: imageUrl,
+      images: news.image ? [imageUrl] : [],
       time: this.formatDate(news.createdAt),
-      content: news.content
+      date: this.formatDate(news.createdAt),
+      author: news.author || 'News Adda India',
+      isBreaking: news.isBreaking || false,
+      isFeatured: news.isFeatured || false,
+      isTrending: false,
+      tags: news.tags || []
     };
-    this.modalService.openModal(newsArticle, news.isBreaking);
+    
+    console.log('[Archived News] Opening modal with article:', newsArticle);
+    this.modalService.openModal(newsArticle, news.isBreaking || false);
   }
 
   formatDate(dateString: string): string {

@@ -207,10 +207,10 @@ router.get('/', authenticateAdmin, async (req, res) => {
 // GET archived news (Admin only) - MUST come before /:id route
 router.get('/archived', authenticateAdmin, async (req, res) => {
   try {
-    const { year, month, limit = 50, skip = 0 } = req.query;
+    const { year, month, limit = 50, skip = 0, search } = req.query;
     const query = {};
     
-    console.log('[Archived News] Request params:', { year, month, limit, skip });
+    console.log('[Archived News] Request params:', { year, month, limit, skip, search });
     
     // Filter by year and month
     if (year && year !== 'undefined' && year !== 'null') {
@@ -257,6 +257,18 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
         $exists: true,
         $ne: null
       };
+    }
+    
+    // Add search filter if provided (searches in title, excerpt, and content)
+    if (search && search !== 'undefined' && search !== 'null' && search.trim() !== '') {
+      const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); // Escape special regex chars and case-insensitive
+      query.$or = [
+        { title: { $regex: searchRegex } },
+        { excerpt: { $regex: searchRegex } },
+        { content: { $regex: searchRegex } },
+        { titleEn: { $regex: searchRegex } }
+      ];
+      console.log('[Archived News] Search query:', search, 'Regex:', searchRegex);
     }
     
     console.log('[Archived News] MongoDB query:', JSON.stringify(query, null, 2));

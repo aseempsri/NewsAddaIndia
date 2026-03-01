@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const News = require('../models/News');
+const PendingNews = require('../models/PendingNews');
 const { authenticateAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -373,15 +374,18 @@ router.get('/', async (req, res) => {
 // GET /api/news/:id - Get single news article
 router.get('/:id', async (req, res) => {
   try {
-    console.log('[Backend GET /api/news/:id] Fetching news:', req.params.id);
+    // Sanitize and decode the ID parameter
+    let newsId = decodeURIComponent(req.params.id).trim().replace(/[\s\u00A0]/g, '');
+    
+    console.log('[Backend GET /api/news/:id] Fetching news:', newsId, 'Original:', req.params.id);
 
     // Check if ID is a valid MongoDB ObjectId format (24 hex characters)
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(req.params.id) && 
-                            req.params.id.length === 24 && 
-                            /^[0-9a-fA-F]{24}$/.test(req.params.id);
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(newsId) && 
+                            newsId.length === 24 && 
+                            /^[0-9a-fA-F]{24}$/.test(newsId);
 
     if (!isValidObjectId) {
-      console.log('[Backend GET /api/news/:id] Invalid ObjectId format:', req.params.id);
+      console.log('[Backend GET /api/news/:id] Invalid ObjectId format:', newsId, 'Original:', req.params.id);
       return res.status(400).json({
         success: false,
         error: 'Invalid article ID format. Expected MongoDB ObjectId.'
@@ -390,10 +394,20 @@ router.get('/:id', async (req, res) => {
 
     // Try direct MongoDB query to bypass any Mongoose transformations
     const db = mongoose.connection.db;
-    const collection = db.collection('news');
+    const newsCollection = db.collection('news');
+    const pendingNewsCollection = db.collection('pendingnews');
     let directQuery = null;
     try {
-      directQuery = await collection.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+      // First try News collection
+      directQuery = await newsCollection.findOne({ _id: new mongoose.Types.ObjectId(newsId) });
+      
+      // If not found, try PendingNews collection
+      if (!directQuery) {
+        directQuery = await pendingNewsCollection.findOne({ _id: new mongoose.Types.ObjectId(newsId) });
+        if (directQuery) {
+          console.log('[Backend GET /api/news/:id] Found in PendingNews collection via direct query');
+        }
+      }
     } catch (err) {
       console.error('[Backend GET /api/news/:id] Error in direct MongoDB query:', err.message);
     }
@@ -407,10 +421,20 @@ router.get('/:id', async (req, res) => {
     });
 
     // Explicitly fetch ALL fields including content - don't use select() to exclude anything
-    const news = await News.findById(req.params.id).lean();
+    let news = await News.findById(newsId).lean();
+
+    // If not found in News collection, check PendingNews collection (archived articles)
+    if (!news) {
+      console.log('[Backend GET /api/news/:id] Not found in News collection, checking PendingNews:', newsId);
+      news = await PendingNews.findById(newsId).lean();
+      
+      if (news) {
+        console.log('[Backend GET /api/news/:id] Found in PendingNews collection (archived article)');
+      }
+    }
 
     if (!news) {
-      console.log('[Backend GET /api/news/:id] News not found:', req.params.id);
+      console.log('[Backend GET /api/news/:id] News not found in either collection:', newsId, 'Original:', req.params.id);
       return res.status(404).json({
         success: false,
         error: 'News article not found'

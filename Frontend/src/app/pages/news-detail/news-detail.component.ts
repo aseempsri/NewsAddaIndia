@@ -333,8 +333,23 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
 
     this.updateTranslations();
     this.route.params.subscribe(params => {
-      const newsId = params['id'];
+      let newsId = params['id'];
       if (newsId) {
+        // Sanitize ID: decode URL encoding, trim whitespace, remove invalid characters
+        newsId = decodeURIComponent(newsId).trim().replace(/[\s\u00A0]/g, '');
+        
+        // Validate MongoDB ObjectId format
+        if (!/^[0-9a-fA-F]{24}$/.test(newsId)) {
+          console.error('[NewsDetail] Invalid news ID format:', newsId, 'Original params:', params);
+          this.isLoading = false;
+          this.news = null;
+          return;
+        }
+        
+        // FORCE SCROLL TO TOP when route params change (new article loaded)
+        this.forceScrollToTop();
+        
+        console.log('[NewsDetail] Loading news with ID:', newsId);
         this.loadNews(newsId);
       } else {
         this.isLoading = false;
@@ -373,6 +388,40 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
     this.readingProgress = Math.min(100, Math.max(0, scrollPercent));
+  }
+
+  /**
+   * Force scroll to top - used when loading new articles
+   */
+  private forceScrollToTop() {
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      // Also try scrolling the window itself
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    
+    // Immediate scroll
+    scrollToTop();
+    
+    // Multiple delayed scrolls
+    setTimeout(scrollToTop, 0);
+    setTimeout(scrollToTop, 50);
+    setTimeout(scrollToTop, 100);
+    setTimeout(scrollToTop, 200);
+    setTimeout(scrollToTop, 300);
+    setTimeout(scrollToTop, 500);
+    
+    // After render
+    requestAnimationFrame(() => {
+      scrollToTop();
+      requestAnimationFrame(() => {
+        scrollToTop();
+      });
+    });
   }
 
   async updateTranslations() {
@@ -635,6 +684,12 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
             this.isLoading = false;
             // Trigger change detection to update UI
             this.cdr.detectChanges();
+            
+            // FORCE SCROLL TO TOP after news loads successfully
+            setTimeout(() => {
+              this.forceScrollToTop();
+            }, 0);
+            
             // Translate content after loading
             setTimeout(() => this.translateContent(), 100);
           } else {
