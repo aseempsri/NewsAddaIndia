@@ -493,31 +493,41 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
       
       if (year) {
         const yearNum = parseInt(year);
-        const startDate = new Date(yearNum, 0, 1); // January 1st
-        const endDate = new Date(yearNum + 1, 0, 1); // January 1st of next year
+        if (isNaN(yearNum)) {
+          return res.status(400).json({ success: false, error: 'Invalid year parameter' });
+        }
         
         if (month) {
           const monthNum = parseInt(month) - 1; // JavaScript months are 0-indexed
-          query.createdAt.$gte = new Date(yearNum, monthNum, 1);
-          query.createdAt.$lt = new Date(yearNum, monthNum + 1, 1);
+          if (isNaN(monthNum) || monthNum < 0 || monthNum > 11) {
+            return res.status(400).json({ success: false, error: 'Invalid month parameter' });
+          }
+          // Use UTC dates to avoid timezone issues
+          query.createdAt.$gte = new Date(Date.UTC(yearNum, monthNum, 1, 0, 0, 0));
+          query.createdAt.$lt = new Date(Date.UTC(yearNum, monthNum + 1, 1, 0, 0, 0));
         } else {
-          query.createdAt.$gte = startDate;
-          query.createdAt.$lt = endDate;
+          // Use UTC dates to avoid timezone issues
+          query.createdAt.$gte = new Date(Date.UTC(yearNum, 0, 1, 0, 0, 0));
+          query.createdAt.$lt = new Date(Date.UTC(yearNum + 1, 0, 1, 0, 0, 0));
         }
       } else if (month) {
         // If only month is provided, filter current year
         const currentYear = new Date().getFullYear();
         const monthNum = parseInt(month) - 1;
-        query.createdAt.$gte = new Date(currentYear, monthNum, 1);
-        query.createdAt.$lt = new Date(currentYear, monthNum + 1, 1);
+        if (isNaN(monthNum) || monthNum < 0 || monthNum > 11) {
+          return res.status(400).json({ success: false, error: 'Invalid month parameter' });
+        }
+        query.createdAt.$gte = new Date(Date.UTC(currentYear, monthNum, 1, 0, 0, 0));
+        query.createdAt.$lt = new Date(Date.UTC(currentYear, monthNum + 1, 1, 0, 0, 0));
       }
     }
     
     // Fetch archived news from PendingNews collection, sorted by date descending (latest first)
     const archivedNews = await PendingNews.find(query)
       .sort({ createdAt: -1 }) // Descending order - latest first
-      .limit(parseInt(limit))
-      .skip(parseInt(skip));
+      .limit(parseInt(limit) || 50)
+      .skip(parseInt(skip) || 0)
+      .lean(); // Use lean() for better performance
     
     // Get total count for pagination
     const total = await PendingNews.countDocuments(query);
@@ -529,22 +539,40 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching archived news:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch archived news' });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch archived news',
+      message: error.message 
+    });
   }
 });
 
 // GET available years from archived news (Admin only)
 router.get('/archived/years', authenticateAdmin, async (req, res) => {
   try {
-    const years = await PendingNews.distinct('createdAt');
-    const uniqueYears = [...new Set(years.map(date => new Date(date).getFullYear()))];
+    // Get all documents and extract years from createdAt field
+    const allNews = await PendingNews.find({}, { createdAt: 1 }).lean();
+    const uniqueYears = [...new Set(
+      allNews
+        .map(item => {
+          if (!item.createdAt) return null;
+          const date = new Date(item.createdAt);
+          return isNaN(date.getTime()) ? null : date.getFullYear();
+        })
+        .filter(year => year !== null)
+    )];
+    
     res.json({
       success: true,
       data: uniqueYears.sort((a, b) => b - a) // Descending order
     });
   } catch (error) {
     console.error('Error fetching available years:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch available years' });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch available years',
+      message: error.message 
+    });
   }
 });
 

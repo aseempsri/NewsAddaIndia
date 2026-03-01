@@ -6,8 +6,8 @@ const axios = require('axios');
 const https = require('https');
 require('dotenv').config();
 
-// Import PendingNews model
-const PendingNews = require('../models/PendingNews');
+// Import News model
+const News = require('../models/News');
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -102,7 +102,7 @@ async function downloadImage(imageUrl, articleTitle) {
     }
 
     // Check database for articles with same image URL
-    const existingArticle = await PendingNews.findOne({ image: new RegExp(normalizedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    const existingArticle = await News.findOne({ image: new RegExp(normalizedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
     if (existingArticle && existingArticle.image && existingArticle.image.startsWith('/uploads/')) {
       console.log(`  ♻️  Image already in database: ${existingArticle.image}`);
       imageUrlCache.set(normalizedUrl, existingArticle.image);
@@ -188,7 +188,7 @@ async function downloadImage(imageUrl, articleTitle) {
 
 // Category mapping from WordPress to MongoDB
 // IMPORTANT: Keys are case-insensitive and trimmed
-// All mapped values must match PendingNews model enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious']
+// All mapped values must match News model enum: ['National', 'International', 'Sports', 'Business', 'Entertainment', 'Health', 'Politics', 'Religious', 'Technology']
 const categoryMapping = {
   // Main categories
   'national': 'National',
@@ -493,7 +493,8 @@ function getPagesFromCategory(category) {
     'Entertainment': ['home', 'entertainment'],
     'Health': ['home', 'health'],
     'Politics': ['home', 'politics'],
-    'Religious': ['home', 'religious']
+    'Religious': ['home', 'religious'],
+    'Technology': ['home', 'technology']
   };
   
   return pageMap[category] || ['home'];
@@ -624,24 +625,25 @@ async function importWordPressXML(xmlFilePath) {
           }
         }
 
-        // Check if pending news already exists (by title)
+        // Check if news already exists (by title)
         const trimmedTitle = title.trim();
-        const existingPendingNews = await PendingNews.findOne({ 
+        const existingNews = await News.findOne({ 
           title: trimmedTitle
         });
 
-        if (existingPendingNews) {
+        if (existingNews) {
           // Update existing article
-          existingPendingNews.category = category;
-          existingPendingNews.tags = tags;
-          existingPendingNews.isBreaking = isBreaking;
-          existingPendingNews.excerpt = newsExcerpt; // Always has a value now
-          existingPendingNews.content = cleanedContent;
-          existingPendingNews.image = image || existingPendingNews.image;
-          existingPendingNews.author = author;
-          existingPendingNews.updatedAt = new Date();
+          existingNews.category = category;
+          existingNews.tags = tags;
+          existingNews.isBreaking = isBreaking;
+          existingNews.excerpt = newsExcerpt; // Always has a value now
+          existingNews.content = cleanedContent;
+          existingNews.image = image || existingNews.image;
+          existingNews.author = author;
+          existingNews.date = date;
+          existingNews.updatedAt = new Date();
 
-          await existingPendingNews.save();
+          await existingNews.save();
           stats.imported++;
           if (stats.imported % 10 === 0) {
             console.log(`✅ Processed ${stats.imported} articles so far (imported/updated)...`);
@@ -649,9 +651,9 @@ async function importWordPressXML(xmlFilePath) {
           continue;
         }
 
-        // Create new pending news document
+        // Create new news document
         const pages = getPagesFromCategory(category);
-        const pendingNewsData = {
+        const newsData = {
           title: (typeof title === 'string' ? title : String(title)).trim(),
           titleEn: (typeof title === 'string' ? title : String(title)).trim(),
           excerpt: newsExcerpt, // Always has a value now
@@ -664,17 +666,17 @@ async function importWordPressXML(xmlFilePath) {
           tags: tags,
           pages: pages,
           author: author,
+          date: date,
+          published: true,
           isBreaking: isBreaking,
           isFeatured: false,
           isTrending: false,
-          generatedBy: 'manual',
-          generatedAt: date,
           createdAt: date,
           updatedAt: date
         };
 
-        const pendingNews = new PendingNews(pendingNewsData);
-        await pendingNews.save();
+        const news = new News(newsData);
+        await news.save();
 
         stats.imported++;
         if (stats.imported % 10 === 0) {
