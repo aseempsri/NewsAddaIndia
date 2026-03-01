@@ -16,7 +16,7 @@ import { Subscription } from 'rxjs';
         (click)="redirectToYouTube()">
         <video
           #videoPlayer
-          class="w-full h-full object-contain pointer-events-none transition-all duration-500"
+          class="w-full h-full object-cover pointer-events-none transition-all duration-500"
           [class.opacity-0]="isLoading"
           autoplay
           muted
@@ -155,10 +155,10 @@ import { Subscription } from 'rxjs';
             <div class="absolute inset-0.5 border border-primary/20 rounded-lg pointer-events-none"></div>
             
             <!-- Video container - maintains aspect ratio and shows full frame -->
-            <div class="relative w-full aspect-video bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center p-4 md:p-6 lg:p-8">
+            <div class="relative w-full aspect-video bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
               <video
                 #videoPlayerDesktop
-                class="w-full h-full object-contain rounded-lg shadow-2xl pointer-events-none transition-all duration-500"
+                class="w-full h-full object-cover rounded-lg shadow-2xl pointer-events-none transition-all duration-500"
                 [class.opacity-0]="isLoading"
                 [class.scale-95]="isLoading"
                 [class.scale-100]="!isLoading"
