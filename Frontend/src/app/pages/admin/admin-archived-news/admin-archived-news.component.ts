@@ -39,19 +39,19 @@ interface ArchivedNews {
       <div class="container mx-auto px-4 max-w-7xl">
         @if (isAuthenticated) {
           <div class="space-y-6">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <a routerLink="/admin" class="text-primary hover:text-primary/80">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div class="flex flex-wrap items-center gap-3 md:gap-4">
+                <a routerLink="/admin" class="text-primary hover:text-primary/80 flex-shrink-0">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </a>
-                <h1 class="text-3xl font-bold">Archived News</h1>
-                <span class="px-3 py-1 text-sm bg-purple-500/10 text-purple-500 rounded-full">
+                <h1 class="text-2xl md:text-3xl font-bold truncate min-w-0">Archived News</h1>
+                <span class="px-3 py-1 text-sm bg-purple-500/10 text-purple-500 rounded-full whitespace-nowrap">
                   {{ totalPosts }} archived posts
                 </span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3 flex-shrink-0">
                 <button
                   (click)="toggleAdminTheme()"
                   [attr.aria-label]="currentAdminTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'"
@@ -78,45 +78,46 @@ interface ArchivedNews {
             </div>
 
             <!-- Search Filter -->
-            <div class="glass-card p-6 rounded-xl mb-6">
-              <h2 class="text-xl font-bold mb-4">Search Articles</h2>
-              <div class="flex gap-2">
-                <div class="flex-1 relative">
+            <div class="glass-card p-4 sm:p-6 rounded-xl mb-6">
+              <h2 class="text-lg sm:text-xl font-bold mb-4">Search Articles</h2>
+              <div class="flex flex-col gap-3 md:flex-row md:gap-2">
+                <div class="w-full md:flex-1 relative min-w-0">
                   <input
                     type="text"
                     [(ngModel)]="searchQuery"
                     (keyup.enter)="performSearch()"
                     placeholder="Type keywords in English to search..."
-                    class="w-full px-4 py-2 pr-24 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                    class="w-full px-4 py-2.5 md:pr-24 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary min-w-0">
                   @if (isTranslating) {
-                    <div class="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 md:right-2">
                       <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   }
                 </div>
-                <button
-                  (click)="translateAndSearch()"
-                  [disabled]="!searchQuery || isTranslating"
-                  class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                  </svg>
-                  Translate & Search
-                </button>
-                @if (searchQuery) {
+                <div class="flex gap-2 w-full md:w-auto">
                   <button
-                    (click)="clearSearch()"
-                    class="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80">
-                    Clear
+                    (click)="translateAndSearch()"
+                    [disabled]="!searchQuery || isTranslating"
+                    class="flex-1 md:flex-none px-4 sm:px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base min-w-0">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    <span class="truncate">Search</span>
                   </button>
-                }
+                  @if (searchQuery) {
+                    <button
+                      (click)="clearSearch()"
+                      class="px-4 py-2.5 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 flex-shrink-0">
+                      Clear
+                    </button>
+                  }
+                </div>
               </div>
-              @if (searchQuery && translatedQuery) {
+              @if (searchTerms.length > 0) {
                 <div class="mt-3 p-3 bg-blue-500/10 rounded-lg">
-                  <p class="text-sm">
-                    <span class="font-semibold">Searching for:</span> 
-                    <span class="text-blue-600 dark:text-blue-400">{{ translatedQuery }}</span>
-                    <span class="text-muted-foreground ml-2">(translated from: {{ searchQuery }})</span>
+                  <p class="text-sm break-words">
+                    <span class="font-semibold">Searching for:</span>
+                    <span class="text-blue-600 dark:text-blue-400 break-words">{{ searchTerms.join(', ') }}</span>
                   </p>
                 </div>
               }
@@ -304,7 +305,8 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
   Math = Math;
 
   searchQuery = '';
-  translatedQuery = '';
+  /** Terms actually used for search: [original keyword, translated word]. Shown in UI. */
+  searchTerms: string[] = [];
   isTranslating = false;
 
   constructor(
@@ -395,8 +397,8 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
     if (this.selectedMonth) {
       queryParams += `&month=${this.selectedMonth}`;
     }
-    if (this.translatedQuery) {
-      queryParams += `&search=${encodeURIComponent(this.translatedQuery)}`;
+    if (this.searchTerms.length > 0) {
+      queryParams += `&search=${encodeURIComponent(this.searchTerms.join(','))}`;
     }
 
     this.http.get<{ success: boolean; data: ArchivedNews[]; total?: number }>(
@@ -425,20 +427,28 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const originalTerm = this.searchQuery.trim();
+    this.searchTerms = [originalTerm];
+
     this.isTranslating = true;
     try {
-      // Translate English to Hindi
-      this.translationService.translateToHindi(this.searchQuery).subscribe({
+      // Translate only the word to Hindi (API may return a phrase; we use first word)
+      this.translationService.translateToHindi(originalTerm).subscribe({
         next: (translated) => {
-          this.translatedQuery = translated;
+          const translatedTrimmed = (translated || '').trim();
+          if (translatedTrimmed) {
+            // Use only the first word of translation to avoid long phrases
+            const firstWord = translatedTrimmed.split(/\s+/)[0] || translatedTrimmed;
+            if (firstWord && firstWord !== originalTerm && !this.searchTerms.includes(firstWord)) {
+              this.searchTerms.push(firstWord);
+            }
+          }
           this.isTranslating = false;
-          this.currentPage = 1; // Reset to first page
+          this.currentPage = 1;
           this.loadArchivedNews();
         },
         error: (err) => {
           console.error('Translation error:', err);
-          // If translation fails, use original query
-          this.translatedQuery = this.searchQuery;
           this.isTranslating = false;
           this.currentPage = 1;
           this.loadArchivedNews();
@@ -446,7 +456,6 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
       });
     } catch (error) {
       console.error('Translation error:', error);
-      this.translatedQuery = this.searchQuery;
       this.isTranslating = false;
       this.currentPage = 1;
       this.loadArchivedNews();
@@ -454,19 +463,15 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
   }
 
   performSearch() {
-    if (this.translatedQuery) {
-      // Already translated, just search
-      this.currentPage = 1;
-      this.loadArchivedNews();
-    } else if (this.searchQuery) {
-      // Translate first, then search
-      this.translateAndSearch();
+    if (!this.searchQuery || this.searchQuery.trim() === '') {
+      return;
     }
+    this.translateAndSearch();
   }
 
   clearSearch() {
     this.searchQuery = '';
-    this.translatedQuery = '';
+    this.searchTerms = [];
     this.currentPage = 1;
     this.loadArchivedNews();
   }

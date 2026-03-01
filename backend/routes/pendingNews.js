@@ -259,16 +259,23 @@ router.get('/archived', authenticateAdmin, async (req, res) => {
       };
     }
     
-    // Add search filter if provided (searches in title, excerpt, and content)
-    if (search && search !== 'undefined' && search !== 'null' && search.trim() !== '') {
-      const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); // Escape special regex chars and case-insensitive
-      query.$or = [
-        { title: { $regex: searchRegex } },
-        { excerpt: { $regex: searchRegex } },
-        { content: { $regex: searchRegex } },
-        { titleEn: { $regex: searchRegex } }
-      ];
-      console.log('[Archived News] Search query:', search, 'Regex:', searchRegex);
+    // Add search filter if provided. Supports multiple terms (comma-separated): search for any term in title, excerpt, content, titleEn
+    if (search && search !== 'undefined' && search !== 'null' && String(search).trim() !== '') {
+      const rawTerms = String(search).split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const orConditions = [];
+      for (const term of rawTerms) {
+        const searchRegex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        orConditions.push(
+          { title: { $regex: searchRegex } },
+          { excerpt: { $regex: searchRegex } },
+          { content: { $regex: searchRegex } },
+          { titleEn: { $regex: searchRegex } }
+        );
+      }
+      if (orConditions.length > 0) {
+        query.$or = orConditions;
+      }
+      console.log('[Archived News] Search terms:', rawTerms);
     }
     
     console.log('[Archived News] MongoDB query:', JSON.stringify(query, null, 2));
