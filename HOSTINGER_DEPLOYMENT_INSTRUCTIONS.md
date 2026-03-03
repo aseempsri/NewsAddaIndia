@@ -221,6 +221,21 @@ sudo nano /etc/nginx/sites-available/news-adda
 **Paste this EXACT configuration:**
 
 ```nginx
+# ACME challenge only – must be FIRST so domain requests hit this (avoids 500 from main app)
+# Other paths redirect to HTTPS so the site loads there
+server {
+    listen 80;
+    server_name newsaddaindia.com www.newsaddaindia.com;
+    root /var/www/html;
+    location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        try_files $uri =404;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
 server {
     listen 80 default_server;
     server_name 72.60.235.158;
@@ -360,7 +375,58 @@ ls -la /etc/nginx/sites-enabled/
 
 **Prerequisites:** Domain `newsaddaindia.com` must point to your VPS (DNS A records for `@` and `www` to `72.60.235.158`) and be active in Hostinger.
 
-**One-time setup:**
+**When you get 500 from Let's Encrypt but 200 from localhost:** Something in front of your server (e.g. Hostinger proxy/WAF) is returning 500 for HTTP from the internet. Use **DNS challenge** so validation does not touch your server:
+
+```bash
+sudo certbot certonly --manual --preferred-challenges dns -d newsaddaindia.com -d www.newsaddaindia.com
+```
+
+- Certbot will show a TXT value for `_acme-challenge.newsaddaindia.com`. In Hostinger DNS Manager → Edit DNS for the domain → Add **TXT** record: Name `_acme-challenge`, Value = the string Certbot shows. For `www`, add TXT name `_acme-challenge.www` with the second value Certbot shows (or a CNAME `_acme-challenge.www` → `_acme-challenge.newsaddaindia.com` if Certbot gives one value).
+- Wait 1–2 minutes for DNS to propagate, then press Enter in the Certbot terminal. After success, configure Nginx for HTTPS (e.g. `sudo certbot --nginx` or add the 443 server block and cert paths manually).
+
+**Automatic renewal for DNS-issued certs (Hostinger API plugin, venv method)**  
+Because the system Certbot (from apt) may not load the Hostinger plugin (PEP 668 / conflicting system packages), use a **virtual environment** with Certbot + certbot-dns-hostinger. Replace `YOUR_API_TOKEN` with your Hostinger API token (Domains → API, DNS permissions).
+
+1. **Get a Hostinger API token:** [hpanel.hostinger.com](https://hpanel.hostinger.com) → **Domains** → **API** → create token with **DNS management** permissions.
+2. **On the VPS – install venv and create credentials:**
+   ```bash
+   sudo apt update
+   sudo apt install -y python3.12-venv python3-pip
+   sudo mkdir -p /root/.secrets/certbot
+   echo "dns_hostinger_api_token = YOUR_API_TOKEN" | sudo tee /root/.secrets/certbot/hostinger.ini
+   sudo chmod 600 /root/.secrets/certbot/hostinger.ini
+   ```
+3. **Create Certbot venv and install plugins:**
+   ```bash
+   sudo python3 -m venv /opt/certbot-venv
+   sudo /opt/certbot-venv/bin/pip install --upgrade pip
+   sudo /opt/certbot-venv/bin/pip install certbot certbot-dns-hostinger certbot-nginx
+   ```
+4. **Obtain/renew cert with DNS challenge (venv Certbot):**
+   ```bash
+   sudo /opt/certbot-venv/bin/certbot certonly --dns-hostinger \
+     --dns-hostinger-credentials /root/.secrets/certbot/hostinger.ini \
+     -d newsaddaindia.com -d www.newsaddaindia.com --force-renewal
+   ```
+5. **Install cert into Nginx:**
+   ```bash
+   sudo /opt/certbot-venv/bin/certbot --nginx -d newsaddaindia.com -d www.newsaddaindia.com
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+6. **Use venv Certbot for renewal (cron):** use **300** seconds propagation so Let's Encrypt sees the new TXT:
+   ```bash
+   sudo systemctl stop certbot.timer 2>/dev/null
+   sudo systemctl disable certbot.timer 2>/dev/null
+   sudo crontab -e
+   ```
+   Add line:
+   ```cron
+   0 0,12 * * * /opt/certbot-venv/bin/certbot renew --quiet --deploy-hook "systemctl reload nginx" --dns-hostinger-propagation-seconds 300
+   ```
+7. **Verify:**
+   ```bash
+   sudo /opt/certbot-venv/bin/certbot renew --dry-run --dns-hostinger-propagation-seconds 300
+   ```
 
 ```bash
 # Install Certbot and the Nginx plugin (Ubuntu/Debian)

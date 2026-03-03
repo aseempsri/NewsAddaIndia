@@ -8,8 +8,12 @@ const app = express();
 
 // Middleware
 
+// Allow multiple origins (comma-separated) or single; empty/unset = allow all
+const corsOrigin = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map(s => s.trim()).filter(Boolean)
+  : '*';
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Allow all origins in development, set specific URL in production
+  origin: Array.isArray(corsOrigin) && corsOrigin.length === 1 ? corsOrigin[0] : corsOrigin,
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
