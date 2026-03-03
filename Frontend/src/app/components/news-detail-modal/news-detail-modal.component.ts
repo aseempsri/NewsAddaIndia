@@ -398,7 +398,10 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   showScrollIndicator: boolean = true;
   t: any = {};
   images: string[] = []; // Array to hold multiple images
-  private apiUrl = environment.apiUrl || 'http://localhost:3000';
+  // Same-origin when apiUrl is empty in production (see news.service.ts)
+  private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+    ? environment.apiUrl
+    : (environment.production ? '' : 'http://localhost:3000');
   private languageSubscription?: Subscription;
   private modalSubscription?: Subscription;
   private imageScrollContainer?: HTMLElement;

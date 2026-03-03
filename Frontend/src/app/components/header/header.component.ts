@@ -317,7 +317,10 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   t: any = {};
   currentDate = '';
   currentTemperature: number | null = null;
-  private apiUrl = environment.apiUrl || 'http://localhost:3000';
+  // Same-origin when apiUrl is empty in production
+  private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+    ? environment.apiUrl
+    : (environment.production ? '' : 'http://localhost:3000');
   private languageSubscription?: Subscription;
   private themeSubscription?: Subscription;
   private weatherRefreshInterval: any;

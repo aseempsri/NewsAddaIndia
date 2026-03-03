@@ -19,7 +19,10 @@ export interface Ad {
 export class AdService {
   private adsSubject = new BehaviorSubject<Ad[]>([]);
   public ads$ = this.adsSubject.asObservable();
-  private apiUrl = environment.apiUrl || 'http://localhost:3000';
+  // Same-origin when apiUrl is empty in production
+  private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+    ? environment.apiUrl
+    : (environment.production ? '' : 'http://localhost:3000');
 
   constructor(private http: HttpClient) {
     this.loadAds();

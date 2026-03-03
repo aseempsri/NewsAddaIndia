@@ -9,7 +9,9 @@ import { environment } from '../../environments/environment';
 })
 export class UserTrackingService {
   private readonly TRACKING_KEY = 'user_tracked_today';
-  private readonly API_URL = environment.apiUrl || 'http://localhost:3000';
+  private readonly API_URL = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+    ? environment.apiUrl
+    : (environment.production ? '' : 'http://localhost:3000');
 
   constructor(private http: HttpClient) {}
 
