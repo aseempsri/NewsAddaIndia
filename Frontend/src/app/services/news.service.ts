@@ -38,7 +38,10 @@ export class NewsService {
   private newsApiUrl = 'https://newsdata.io/api/1/news';
   private pexelsUrl = 'https://api.pexels.com/v1/search';
   private pexelsApiKey = ''; // Optional: Get from pexels.com/api
-  private backendApiUrl = environment.apiUrl || 'http://localhost:3000';
+  // Use apiUrl when non-empty; empty string = same origin (/api/...). Fallback to localhost only for dev when apiUrl is missing.
+  private backendApiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+    ? environment.apiUrl
+    : (environment.production ? '' : 'http://localhost:3000');
   private readonly CACHE_PREFIX = 'news_cache_';
   private readonly CACHE_TIMESTAMP_PREFIX = 'news_cache_timestamp_';
   private readonly IMAGE_CACHE_PREFIX = 'image_cache_';
