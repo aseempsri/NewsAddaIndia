@@ -320,7 +320,70 @@ ls -la /etc/nginx/sites-enabled/
 # Should see: news-adda -> .../news-adda
 ```
 
-### 5.3 Test and Reload Nginx
+### 5.4 Enable SSL (HTTPS) with Let's Encrypt
+
+**If Certbot fails with 500 on `.well-known/acme-challenge`**, use the webroot method below. Otherwise you can try the simple `certbot --nginx` first.
+
+**Fix for "Invalid response... 500" (webroot method)**
+
+1. **Add ACME challenge location** – Edit Nginx config:
+   ```bash
+   sudo nano /etc/nginx/sites-available/news-adda
+   ```
+   In the HTTP `server` block (with `listen 80`), add **right after** `client_max_body_size 100M;`:
+   ```nginx
+       location ^~ /.well-known/acme-challenge/ {
+           root /var/www/html;
+           default_type "text/plain";
+       }
+   ```
+   Ensure `server_name` includes: `newsaddaindia.com www.newsaddaindia.com 72.60.235.158`
+
+2. **Create directory and reload Nginx:**
+   ```bash
+   sudo mkdir -p /var/www/html/.well-known/acme-challenge
+   sudo chown -R www-data:www-data /var/www/html/.well-known
+   sudo chmod -R 755 /var/www/html/.well-known
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+3. **Get certificate (webroot):**
+   ```bash
+   sudo certbot certonly --webroot -w /var/www/html -d newsaddaindia.com -d www.newsaddaindia.com
+   ```
+
+4. **Add HTTPS** – Run Certbot to install the cert into Nginx (it will only configure, not re-validate):
+   ```bash
+   sudo certbot --nginx -d newsaddaindia.com -d www.newsaddaindia.com
+   ```
+   Or add the SSL `server { listen 443 ssl; ... }` block and cert paths manually, then redirect HTTP to HTTPS in the port-80 server.
+
+**Prerequisites:** Domain `newsaddaindia.com` must point to your VPS (DNS A records for `@` and `www` to `72.60.235.158`) and be active in Hostinger.
+
+**One-time setup:**
+
+```bash
+# Install Certbot and the Nginx plugin (Ubuntu/Debian)
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+
+# Obtain certificate and let Certbot edit Nginx config (use your domain)
+sudo certbot --nginx -d newsaddaindia.com -d www.newsaddaindia.com
+```
+
+- When prompted, enter your email for renewal notices.
+- Choose to redirect HTTP to HTTPS when asked (recommended).
+- Certbot will add SSL and a redirect; it will also set up automatic renewal.
+
+**Verify auto-renewal:**
+
+```bash
+sudo certbot renew --dry-run
+```
+
+**Manual renewal (if needed):** `sudo certbot renew`
+
+### 5.5 Test and Reload Nginx
 
 ```bash
 # Test Nginx configuration
