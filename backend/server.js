@@ -22,7 +22,16 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve uploaded images
 // Note: routes/news.js uses path.join(__dirname, '../uploads') where __dirname is backend/routes
 // So files are saved to backend/uploads/. Server.js is in backend/, so use 'uploads' (same directory)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1y', // Cache images for 1 year
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    // Allow images to be embedded anywhere (important for social media crawlers)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+}));
 
 // Routes
 app.use('/api/news', require('./routes/news'));
@@ -172,7 +181,12 @@ app.get('/news/:slug', async (req, res) => {
 </html>`;
 
     console.log('[Meta Route] Sending HTML response with image URL:', normalizedImageUrl);
+    
+    // Set headers for better crawler compatibility
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow'); // Don't index this redirect page
+    
     res.send(html);
   } catch (error) {
     console.error('[Meta Route] Error:', error);
