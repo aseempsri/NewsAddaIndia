@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header.component';
 import { ThemeService, Theme } from '../../services/theme.service';
@@ -10,6 +10,7 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { VideoBannerComponent } from '../../components/video-banner/video-banner.component';
 import { NewsTickerComponent } from '../../components/news-ticker/news-ticker.component';
+import { ShareMarketTickerComponent } from '../../components/share-market-ticker/share-market-ticker.component';
 import { HeroSectionComponent } from '../../components/hero-section/hero-section.component';
 import { NewsGridComponent } from '../../components/news-grid/news-grid.component';
 import { CategorySectionComponent } from '../../components/category-section/category-section.component';
@@ -29,6 +30,7 @@ import { filter } from 'rxjs/operators';
     HeaderComponent,
     VideoBannerComponent,
     NewsTickerComponent,
+    ShareMarketTickerComponent,
     HeroSectionComponent,
     NewsGridComponent,
     CategorySectionComponent,
@@ -36,35 +38,7 @@ import { filter } from 'rxjs/operators';
     FooterComponent
   ],
   template: `
-    <!-- Full Page Loading Overlay - Show while images are loading -->
-    @if (isPageLoading) {
-      <div class="loading-video-container fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
-        <!-- Animated gradient background that complements video -->
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 animate-gradient-shift"></div>
-        <div class="absolute inset-0 bg-gradient-to-tr from-blue-900/50 via-purple-800/30 to-pink-900/50 animate-pulse"></div>
-        
-        <!-- Video Player - Responsive with better mobile handling -->
-        <div class="loading-video-wrapper">
-          <video
-            #loadingVideo
-            autoplay
-            muted
-            playsinline
-            preload="auto"
-            class="loading-video relative z-10"
-            (canplay)="onLoadingVideoCanPlay()"
-            (error)="onLoadingVideoError()"
-            (loadeddata)="onLoadingVideoLoaded()"
-            (ended)="onLoadingVideoEnded()"
-          >
-            <source src="assets/videos/output.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      </div>
-    }
-
-    <div class="min-h-screen bg-background overflow-x-hidden w-full max-w-full" [class.opacity-0]="isPageLoading" [class.opacity-100]="!isPageLoading" [class.transition-opacity]="!isPageLoading" [class.duration-500]="!isPageLoading">
+    <div class="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
       <app-header />
       <!-- Spacer for fixed header on desktop - accounts for navigation bar (~64px, reduced by 20%) + top bar (~32px, reduced by 20%) = ~96px -->
       <div class="lg:h-[96px]"></div>
@@ -109,7 +83,7 @@ import { filter } from 'rxjs/operators';
         }
         
         <!-- Video Banner (Original Size Preserved - No wrapper constraints) -->
-        <app-video-banner [imagesLoaded]="!isPageLoading" />
+        <app-video-banner [imagesLoaded]="true" />
         
         <!-- Ad 2 - Right Side -->
         @if (isAdEnabled('ad2')) {
@@ -151,10 +125,12 @@ import { filter } from 'rxjs/operators';
       
       <!-- Video Banner (Mobile Only) -->
       <div class="lg:hidden">
-        <app-video-banner [imagesLoaded]="!isPageLoading" />
+        <app-video-banner [imagesLoaded]="true" />
       </div>
       
       <app-news-ticker />
+      
+      <app-share-market-ticker />
       
       <!-- Mobile Top Bar - Below News Ticker -->
       <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full">
@@ -229,16 +205,6 @@ import { filter } from 'rxjs/operators';
     </div>
   `,
   styles: [`
-    /* Animated gradient background */
-    @keyframes gradient-shift {
-      0%, 100% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-    }
-    
     @keyframes shimmer {
       0% {
         opacity: 0.3;
@@ -251,11 +217,6 @@ import { filter } from 'rxjs/operators';
         opacity: 0.3;
         transform: translateX(100%);
       }
-    }
-    
-    .animate-gradient-shift {
-      background-size: 200% 200%;
-      animation: gradient-shift 8s ease infinite;
     }
     
     .animate-shimmer {
@@ -271,125 +232,7 @@ import { filter } from 'rxjs/operators';
       }
     }
     
-    /* Loading video container - glassmorphism with gradient background */
-    .loading-video-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    /* Video wrapper for border and glow effects - Desktop */
-    .loading-video-wrapper {
-      width: 96%;
-      max-width: 96%;
-      height: 90vh;
-      max-height: 90vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      padding: 6px;
-      border-radius: 32px;
-      background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(59, 130, 246, 0.8), rgba(236, 72, 153, 0.8));
-      background-size: 300% 300%;
-      animation: border-glow 3s ease infinite;
-      box-shadow: 
-        0 0 30px rgba(147, 51, 234, 0.7),
-        0 0 60px rgba(59, 130, 246, 0.6),
-        0 0 90px rgba(236, 72, 153, 0.5),
-        0 0 120px rgba(147, 51, 234, 0.4);
-    }
-    
-    /* Loading video - desktop full screen with glow, fully visible */
-    .loading-video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* Changed from cover to contain to show full video */
-      object-position: center;
-      margin: 0;
-      padding: 0;
-      border-radius: 26px; /* Rounded edges */
-      border: 3px solid rgba(255, 255, 255, 0.3); /* Inner border */
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
-      position: relative;
-      z-index: 1;
-    }
-    
     @media (max-width: 768px) {
-      /* Mobile-specific - glassmorphism video frame */
-      .loading-video-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        height: 100dvh;
-        max-width: 100vw;
-        max-height: 100vh;
-        max-height: 100dvh;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .loading-video-wrapper {
-        width: 92%;
-        max-width: 92%;
-        height: auto;
-        max-height: 85vh;
-        max-height: 85dvh;
-        position: relative;
-        padding: 4px;
-        border-radius: 28px;
-        background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(59, 130, 246, 0.8), rgba(236, 72, 153, 0.8));
-        background-size: 300% 300%;
-        animation: border-glow 3s ease infinite;
-        box-shadow: 
-          0 0 20px rgba(147, 51, 234, 0.6),
-          0 0 40px rgba(59, 130, 246, 0.5),
-          0 0 60px rgba(236, 72, 153, 0.4),
-          0 0 80px rgba(147, 51, 234, 0.3);
-      }
-      
-      .loading-video {
-        width: 100%;
-        height: auto;
-        max-height: 100%;
-        object-fit: contain; /* Ensure full video is visible */
-        object-position: center;
-        margin: 0;
-        padding: 0;
-        display: block;
-        border-radius: 24px; /* Rounded edges */
-        border: 2px solid rgba(255, 255, 255, 0.3); /* Inner border */
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        position: relative;
-        z-index: 1;
-      }
-      
-      /* Prevent body scroll on mobile when loading */
-      body {
-        overflow: hidden !important;
-        position: fixed !important;
-        width: 100% !important;
-        height: 100% !important;
-      }
       .container {
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
@@ -451,15 +294,14 @@ import { filter } from 'rxjs/operators';
     }
   `]
 })
-export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
+export class IndexComponent implements OnInit, OnDestroy {
   private static hasAppLoaded = false; // Static flag to track first app load across component instances
-  isPageLoading = true;
+  isPageLoading = false;
   heroImagesLoaded = false;
   heroDisplayedReady = false;
   newsGridImagesLoaded = false;
   categorySectionLoaded = false;
   widgetsLoaded = false;
-  videoEnded = false; // Track if loading video has finished playing
   showScrollIndicator = false;
   currentTheme: Theme = 'light';
   private themeSubscription?: Subscription;
@@ -489,8 +331,6 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   ad2AltText = 'Ad 2';
   private adSubscription?: Subscription;
 
-  @ViewChild('loadingVideo', { static: false }) loadingVideoRef?: ElementRef<HTMLVideoElement>;
-
   constructor(
     private themeService: ThemeService,
     private languageService: LanguageService,
@@ -502,28 +342,10 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit() {
-    // Only show loading video on first initial app load, not on subsequent navigations
-    if (IndexComponent.hasAppLoaded) {
-      // App has already loaded before, this is a navigation - skip loading screen
-      this.isPageLoading = false;
-      this.heroImagesLoaded = true;
-      this.heroDisplayedReady = true;
-      this.newsGridImagesLoaded = true;
-      this.categorySectionLoaded = true;
-      this.widgetsLoaded = true;
-    } else {
-      // This is the first app load, show loading screen
+    // Show main content immediately (intro video removed)
+    this.isPageLoading = false;
+    if (!IndexComponent.hasAppLoaded) {
       IndexComponent.hasAppLoaded = true;
-      this.isPageLoading = true;
-      this.videoEnded = false; // Reset video ended flag
-      
-      // Prevent body scroll when loading starts
-      if (typeof document !== 'undefined') {
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-        document.body.style.height = '100%';
-      }
     }
     
     // Clear displayed news when entering home page to start fresh
@@ -579,16 +401,6 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
       // First load - ensure we're at top
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
-    
-    // OPTIMIZATION: Timeout as fallback (increased to 30s to allow video to finish)
-    setTimeout(() => {
-      if (this.isPageLoading) {
-        console.warn('Page loading timeout - showing page anyway');
-        this.videoEnded = true; // Force video ended flag
-        this.isPageLoading = false;
-        this.restoreBodyScroll();
-      }
-    }, 30000); // 30s timeout to allow video to finish playing
     
     // Check scroll position on init and show indicator after page loads
     setTimeout(() => {
@@ -806,7 +618,6 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onHeroImagesLoaded() {
     this.heroImagesLoaded = true;
-    this.checkIfAllLoaded();
   }
 
   onHeroDisplayedReady() {
@@ -815,17 +626,14 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onNewsGridImagesLoaded() {
     this.newsGridImagesLoaded = true;
-    this.checkIfAllLoaded();
   }
 
   onCategorySectionLoaded() {
     this.categorySectionLoaded = true;
-    this.checkIfAllLoaded();
   }
 
   onWidgetsLoaded() {
     this.widgetsLoaded = true;
-    this.checkIfAllLoaded();
   }
 
   onAdVideoCanPlay(adId: string, event: Event) {
@@ -862,75 +670,6 @@ export class IndexComponent implements OnInit, OnDestroy, AfterViewInit {
       message: video?.error?.message,
       src: video?.src
     });
-  }
-
-  ngAfterViewInit(): void {
-    // Ensure video plays when view is initialized
-    if (this.loadingVideoRef?.nativeElement) {
-      const video = this.loadingVideoRef.nativeElement;
-      video.muted = true;
-      video.play().catch((error) => {
-        console.warn('[IndexComponent] Loading video autoplay prevented:', error);
-      });
-    }
-  }
-
-  onLoadingVideoCanPlay() {
-    // Video is ready to play
-    if (this.loadingVideoRef?.nativeElement) {
-      const video = this.loadingVideoRef.nativeElement;
-      video.muted = true;
-      video.play().catch((error) => {
-        console.warn('[IndexComponent] Loading video autoplay prevented:', error);
-      });
-    }
-  }
-
-  onLoadingVideoLoaded() {
-    // Video has loaded, ensure it plays
-    if (this.loadingVideoRef?.nativeElement) {
-      const video = this.loadingVideoRef.nativeElement;
-      video.muted = true;
-      video.play().catch((error) => {
-        console.warn('[IndexComponent] Loading video play failed:', error);
-      });
-    }
-  }
-
-  onLoadingVideoError() {
-    // If video fails to load, fallback to spinner (optional)
-    console.warn('[IndexComponent] Loading video failed to load, continuing with page load');
-    // If video fails, mark as ended so page can still load
-    this.videoEnded = true;
-    this.checkIfAllLoaded();
-  }
-
-  onLoadingVideoEnded() {
-    // Video has finished playing
-    console.log('[IndexComponent] Loading video ended');
-    this.videoEnded = true;
-    this.checkIfAllLoaded();
-  }
-
-  checkIfAllLoaded() {
-    // Wait for both: video to end AND all content to be loaded
-    if (this.videoEnded && this.heroImagesLoaded && this.newsGridImagesLoaded && this.categorySectionLoaded && this.widgetsLoaded) {
-      // Small delay to ensure smooth transition
-      setTimeout(() => {
-        this.isPageLoading = false;
-        this.restoreBodyScroll();
-      }, 200);
-    }
-  }
-
-  restoreBodyScroll() {
-    // Re-enable body scroll after loading completes
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    }
   }
 }
 

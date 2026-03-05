@@ -32,6 +32,8 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/translation', require('./routes/translation'));
 app.use('/api/cricket', require('./routes/cricket'));
 app.use('/api/ads', require('./routes/ads'));
+app.use('/api/tts', require('./routes/tts'));
+app.use('/api/market', require('./routes/market'));
 
 // Initialize scheduled translation job (runs daily at 1 AM)
 const translationService = require('./services/translation.service');

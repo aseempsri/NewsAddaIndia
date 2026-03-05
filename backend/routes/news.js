@@ -340,8 +340,7 @@ router.get('/', async (req, res) => {
     }
 
     // Select only necessary fields for list views to reduce response size
-    // Exclude large fields like full content unless specifically needed
-    const fieldsToSelect = '_id title titleEn excerpt excerptEn summary summaryEn category tags pages author image images isBreaking isFeatured isTrending trendingTitle date createdAt updatedAt published';
+    const fieldsToSelect = '_id title titleEn excerpt excerptEn summary summaryEn category tags pages author image images isBreaking isFeatured isTrending trendingTitle date createdAt updatedAt published slug';
 
     const news = await News.find(query)
       .select(fieldsToSelect)
@@ -351,14 +350,38 @@ router.get('/', async (req, res) => {
       .lean() // Use lean() for better performance with large datasets
       .exec();
 
-    // Deduplicate by _id (safety: ensure same article never appears twice in response)
+    // Deduplicate by _id and ensure slug for share URLs (persist if missing so slug is unique)
     const seenIds = new Set();
-    const dedupedNews = news.filter(item => {
+    const slugifyTitle = (t, id) => {
+      const titleForSlug = (t || '').trim();
+      if (!titleForSlug) return id ? 'news-' + id.toString().slice(-8) : 'news';
+      let base = titleForSlug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/gi, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+      if (!base) base = id ? 'news-' + id.toString().slice(-8) : 'news';
+      return base;
+    };
+    const dedupedNews = [];
+    for (const item of news) {
       const id = item._id ? item._id.toString() : null;
-      if (!id || seenIds.has(id)) return false;
+      if (!id || seenIds.has(id)) continue;
       seenIds.add(id);
-      return true;
-    });
+      if (!item.slug || item.slug === 'article' || /^article-\d+$/.test(item.slug) || /[^\x00-\x7F]/.test(item.slug)) {
+        let baseSlug = slugifyTitle(item.titleEn || item.title || '', item._id);
+        let slug = baseSlug;
+        let n = 2;
+        for (;;) {
+          const inNews = await News.findOne({ slug }).select('_id').lean();
+          const inPending = await PendingNews.findOne({ slug }).select('_id').lean();
+          const other = (inNews && String(inNews._id) !== id) || (inPending && String(inPending._id) !== id);
+          if (!other) break;
+          slug = `${baseSlug}-${n}`;
+          n++;
+        }
+        item.slug = slug;
+        await News.findByIdAndUpdate(id, { slug }).catch(() => {});
+        await PendingNews.findByIdAndUpdate(id, { slug }).catch(() => {});
+      }
+      dedupedNews.push(item);
+    }
 
     console.log('[Backend News Route] Found', dedupedNews.length, 'news articles matching query');
 
@@ -380,90 +403,112 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/news/:id - Get single news article
+// GET /api/news/:id - Get single news article (by ObjectId or by slug)
 router.get('/:id', async (req, res) => {
   try {
-    // Sanitize and decode the ID parameter
-    let newsId = decodeURIComponent(req.params.id).trim().replace(/[\s\u00A0]/g, '');
-    
-    console.log('[Backend GET /api/news/:id] Fetching news:', newsId, 'Original:', req.params.id);
+    let param = decodeURIComponent(req.params.id).trim().replace(/[\s\u00A0]/g, '');
+    console.log('[Backend GET /api/news/:id] Fetching news:', param, 'Original:', req.params.id);
 
-    // Check if ID is a valid MongoDB ObjectId format (24 hex characters)
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(newsId) && 
-                            newsId.length === 24 && 
-                            /^[0-9a-fA-F]{24}$/.test(newsId);
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(param) &&
+                            param.length === 24 &&
+                            /^[0-9a-fA-F]{24}$/.test(param);
 
-    if (!isValidObjectId) {
-      console.log('[Backend GET /api/news/:id] Invalid ObjectId format:', newsId, 'Original:', req.params.id);
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid article ID format. Expected MongoDB ObjectId.'
-      });
-    }
-
-    // Try direct MongoDB query to bypass any Mongoose transformations
+    let news = null;
     const db = mongoose.connection.db;
     const newsCollection = db.collection('news');
     const pendingNewsCollection = db.collection('pendingnews');
     let directQuery = null;
-    try {
-      // First try News collection
-      directQuery = await newsCollection.findOne({ _id: new mongoose.Types.ObjectId(newsId) });
-      
-      // If not found, try PendingNews collection
-      if (!directQuery) {
-        directQuery = await pendingNewsCollection.findOne({ _id: new mongoose.Types.ObjectId(newsId) });
-        if (directQuery) {
-          console.log('[Backend GET /api/news/:id] Found in PendingNews collection via direct query');
+
+    if (isValidObjectId) {
+      try {
+        directQuery = await newsCollection.findOne({ _id: new mongoose.Types.ObjectId(param) });
+        if (!directQuery) {
+          directQuery = await pendingNewsCollection.findOne({ _id: new mongoose.Types.ObjectId(param) });
+        }
+      } catch (err) {
+        console.error('[Backend GET /api/news/:id] Error in direct MongoDB query:', err.message);
+      }
+      news = await News.findById(param).lean();
+      if (!news) {
+        news = await PendingNews.findById(param).lean();
+      }
+    } else {
+      // Resolve by slug (URL without id at the end)
+      news = await News.findOne({ slug: param }).lean();
+      if (!news) {
+        news = await PendingNews.findOne({ slug: param }).lean();
+      }
+      // If link was truncated when shared, try match by slug prefix
+      if (!news && param.length >= 10) {
+        const escaped = param.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const prefixRegex = new RegExp('^' + escaped);
+        const fromNews = await News.find({ slug: prefixRegex }).sort({ slug: 1 }).limit(1).lean();
+        if (fromNews && fromNews.length > 0) news = fromNews[0];
+        if (!news) {
+          const fromPending = await PendingNews.find({ slug: prefixRegex }).sort({ slug: 1 }).limit(1).lean();
+          if (fromPending && fromPending.length > 0) news = fromPending[0];
+        }
+        if (news) {
+          console.log('[Backend GET /api/news/:id] Found by slug prefix (truncated link):', param);
         }
       }
-    } catch (err) {
-      console.error('[Backend GET /api/news/:id] Error in direct MongoDB query:', err.message);
-    }
-
-    console.log('[Backend GET /api/news/:id] Direct MongoDB query result:', {
-      found: !!directQuery,
-      directContentLength: directQuery?.content ? directQuery.content.length : 0,
-      directContentFirst200: directQuery?.content ? directQuery.content.substring(0, 200) : 'N/A',
-      directExcerptLength: directQuery?.excerpt ? directQuery.excerpt.length : 0,
-      directExcerptFirst200: directQuery?.excerpt ? directQuery.excerpt.substring(0, 200) : 'N/A'
-    });
-
-    // Explicitly fetch ALL fields including content - don't use select() to exclude anything
-    let news = await News.findById(newsId).lean();
-
-    // If not found in News collection, check PendingNews collection (archived articles)
-    if (!news) {
-      console.log('[Backend GET /api/news/:id] Not found in News collection, checking PendingNews:', newsId);
-      news = await PendingNews.findById(newsId).lean();
-      
       if (news) {
-        console.log('[Backend GET /api/news/:id] Found in PendingNews collection (archived article)');
+        directQuery = news;
+        if (!directQuery) directQuery = news;
+        if (!isValidObjectId) console.log('[Backend GET /api/news/:id] Found by slug:', param);
       }
     }
 
     if (!news) {
-      console.log('[Backend GET /api/news/:id] News not found in either collection:', newsId, 'Original:', req.params.id);
       return res.status(404).json({
         success: false,
         error: 'News article not found'
       });
     }
 
-    // news is already a plain object from .lean(), no need to convert
     const newsData = news;
 
-    // Compare direct query vs Mongoose query
-    if (directQuery) {
+    // Ensure slug exists for response (backfill for old docs; replace article/article-N or non-Latin with Latin slug)
+    const hasBadSlug = !newsData.slug || newsData.slug === 'article' || /^article-\d+$/.test(newsData.slug) || /[^\x00-\x7F]/.test(newsData.slug);
+    if (hasBadSlug) {
+      const titleForSlug = (newsData.titleEn || newsData.title || '').trim();
+      let baseSlug = '';
+      if (titleForSlug) {
+        baseSlug = titleForSlug
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9\-]/gi, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 50);
+      }
+      if (!baseSlug) {
+        baseSlug = 'news-' + (newsData._id || '').toString().slice(-8);
+      }
+      let slug = baseSlug;
+      let n = 2;
+      const checkSlug = async (s) => {
+        const inNews = await News.findOne({ slug: s }).select('_id').lean();
+        const inPending = await PendingNews.findOne({ slug: s }).select('_id').lean();
+        const other = (inNews && String(inNews._id) !== String(newsData._id)) ? inNews : (inPending && String(inPending._id) !== String(newsData._id)) ? inPending : null;
+        return !!other;
+      };
+      while (await checkSlug(slug)) {
+        slug = `${baseSlug}-${n}`;
+        n++;
+      }
+      newsData.slug = slug;
+      await News.findByIdAndUpdate(newsData._id, { slug }).catch(() => {});
+      await PendingNews.findByIdAndUpdate(newsData._id, { slug }).catch(() => {});
+    }
+
+    // Compare direct query vs Mongoose query (only when we used id)
+    if (directQuery && isValidObjectId) {
       console.log('[Backend GET /api/news/:id] Comparison:', {
         directContentLength: directQuery.content ? directQuery.content.length : 0,
-        mongooseContentLength: newsData.content ? newsData.content.length : 0,
-        contentMatches: directQuery.content === newsData.content
+        mongooseContentLength: newsData.content ? newsData.content.length : 0
       });
-
-      // If direct query has different content, use that instead
-      if (directQuery.content && directQuery.content.length > newsData.content.length) {
-        console.log('[Backend GET /api/news/:id] Using direct MongoDB query content (longer)');
+      if (directQuery.content && directQuery.content.length > (newsData.content || '').length) {
         newsData.content = directQuery.content;
       }
     }

@@ -100,16 +100,49 @@ const newsSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  slug: {
+    type: String,
+    trim: true,
+    sparse: true,
+    index: true
   }
 });
 
 // Update the updatedAt field before saving
-newsSchema.pre('save', function(next) {
+newsSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
   // Only set titleEn default if it's truly undefined/null, NOT if it's empty string (which means user cleared it)
-  // Check for undefined/null explicitly, not just falsy values
   if (this.titleEn === undefined || this.titleEn === null) {
     this.titleEn = this.title;
+  }
+  // Generate slug from titleEn for URL-friendly links (no id in URL)
+  if (this.isModified('title') || this.isModified('titleEn') || !this.slug) {
+    const titleForSlug = (this.titleEn || this.title || '').trim();
+    if (titleForSlug) {
+      // Prefer Latin slug (a-z0-9-) for English headlines; same URL style as first post for all cards
+      let baseSlug = titleForSlug
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9\-]/gi, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 50);
+      // Non-Latin headline: use Latin-only slug so link works like first post (no encoding issues)
+      if (!baseSlug) {
+        baseSlug = 'news-' + this._id.toString().slice(-8);
+      }
+      let slug = baseSlug;
+      let n = 2;
+      const NewsModel = this.constructor;
+      while (true) {
+        const existing = await NewsModel.findOne({ slug, _id: { $ne: this._id } }).select('_id').lean();
+        if (!existing) break;
+        slug = `${baseSlug}-${n}`;
+        n++;
+      }
+      this.slug = slug;
+    }
   }
   
   // Auto-sync pages with category

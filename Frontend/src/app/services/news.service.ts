@@ -28,6 +28,7 @@ export interface NewsArticle {
   trendingTitle?: string;
   trendingTitleEn?: string;
   tags?: string[];
+  slug?: string; // URL slug for /news/{slug} (no id in URL)
 }
 
 @Injectable({
@@ -581,7 +582,8 @@ export class NewsService {
               isFeatured: article.isFeatured || false,
               trendingTitle: article.trendingTitle || undefined,
               trendingTitleEn: article.trendingTitleEn || undefined,
-              tags: article.tags || []
+              tags: article.tags || [],
+              slug: article.slug
             } as NewsArticle;
             
             // Log trending news
@@ -722,7 +724,8 @@ export class NewsService {
             isBreaking: article.isBreaking || false,
             isFeatured: article.isFeatured || false,
             trendingTitle: article.trendingTitle || undefined,
-            trendingTitleEn: article.trendingTitleEn || undefined
+            trendingTitleEn: article.trendingTitleEn || undefined,
+            slug: article.slug
           } as NewsArticle;
           
           // Translate if Hindi is selected
@@ -797,7 +800,8 @@ export class NewsService {
               isBreaking: article.isBreaking || false,
               isFeatured: article.isFeatured || false,
               trendingTitle: article.trendingTitle || undefined,
-            trendingTitleEn: article.trendingTitleEn || undefined
+            trendingTitleEn: article.trendingTitleEn || undefined,
+              slug: article.slug
             } as NewsArticle;
           });
 
@@ -878,7 +882,8 @@ export class NewsService {
               isBreaking: article.isBreaking || false,
               isFeatured: article.isFeatured || false,
               trendingTitle: article.trendingTitle || undefined,
-            trendingTitleEn: article.trendingTitleEn || undefined
+            trendingTitleEn: article.trendingTitleEn || undefined,
+              slug: article.slug
             } as NewsArticle;
           });
 

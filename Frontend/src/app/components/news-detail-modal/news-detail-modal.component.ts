@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { ModalService } from '../../services/modal.service';
 import { ScrollRestorationService } from '../../services/scroll-restoration.service';
 import { LanguageService } from '../../services/language.service';
+import { getNewsSharePath, slugify } from '../../utils/slug.utils';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -396,6 +397,8 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   isTranslating: boolean = false;
   showFullContent: boolean = false;
   showScrollIndicator: boolean = true;
+  showShareMenu = false;
+  showCopied = false;
   t: any = {};
   images: string[] = []; // Array to hold multiple images
   // Same-origin when apiUrl is empty in production (see news.service.ts)
@@ -1093,86 +1096,58 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   navigateToFullArticle() {
     if (this.news && this.news.id) {
-      // Ensure ID is a clean string, trim whitespace, and remove any invalid characters
       let newsId = typeof this.news.id === 'string' ? this.news.id : this.news.id.toString();
-      newsId = newsId.trim().replace(/[\s\u00A0]/g, ''); // Remove all whitespace including non-breaking spaces
+      newsId = newsId.trim().replace(/[\s\u00A0]/g, '');
       
-      // Validate MongoDB ObjectId format (24 hex characters)
       if (!/^[0-9a-fA-F]{24}$/.test(newsId)) {
         console.error('[NewsDetailModal] Invalid news ID format:', newsId, 'Original:', this.news.id);
         alert('Invalid article ID. Please try again.');
         return;
       }
       
-      console.log('[NewsDetailModal] Navigating to news detail page:', newsId, 'Original ID:', this.news.id);
-      
-      // IMMEDIATELY scroll to top before navigation to ensure clean state
+      // Navigate with raw slug (never encoded) so router encodes once – same link config as first post
+      const slug = this.news.slug || slugify(this.news.titleEn || this.news.title || '');
+      let path = getNewsSharePath(slug);
+      const routeParam = path !== '/news' ? slug : newsId;
+
+      console.log('[NewsDetailModal] Navigating to news detail page:', routeParam);
+
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
-      
-      // Get the scroll position from modal service (saved when modal was opened)
-      const scrollPosition = this.modalService.getScrollPosition();
-      
-      // Save current scroll position for home route ('/') before navigation
-      // This ensures when user comes back from /news/:id, scroll position is restored
+
       this.scrollRestorationService.saveScrollPosition('/');
-      
-      // Clear any saved scroll position for the detail route to ensure it always starts at top
-      const detailRoute = `/news/${newsId}`;
-      this.scrollRestorationService.clearScrollPosition(detailRoute);
-      console.log('[NewsDetailModal] Saved scroll position for home route and cleared detail route');
-      
-      // Close modal first (this will restore body scroll)
+      this.scrollRestorationService.clearScrollPosition(path);
+
       this.close();
-      
-      // Use setTimeout to ensure modal closes and scroll is restored before navigation
+
       setTimeout(() => {
-        // Navigate to full article page using Angular router (SPA navigation, no reload)
-        this.router.navigate(['/news', newsId]).then(
+        this.router.navigate(['/news', routeParam]).then(
           (success) => {
             console.log('[NewsDetailModal] Navigation successful:', success);
-            
-            // AGGRESSIVE scroll to top - multiple attempts to ensure it works
-            // This overrides any scroll restoration that might happen
             const forceScrollToTop = () => {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
               document.documentElement.scrollTop = 0;
               document.body.scrollTop = 0;
-              // Also try scrolling the window itself
-              if (window.scrollY !== 0) {
-                window.scrollTo(0, 0);
-              }
+              if (window.scrollY !== 0) window.scrollTo(0, 0);
             };
-            
-            // Immediate scroll
             forceScrollToTop();
-            
-            // Multiple delayed scrolls to catch any late rendering
             setTimeout(forceScrollToTop, 0);
             setTimeout(forceScrollToTop, 50);
             setTimeout(forceScrollToTop, 100);
             setTimeout(forceScrollToTop, 200);
             setTimeout(forceScrollToTop, 300);
             setTimeout(forceScrollToTop, 500);
-            
-            // Also use requestAnimationFrame for after render
             requestAnimationFrame(() => {
               forceScrollToTop();
-              requestAnimationFrame(() => {
-                forceScrollToTop();
-              });
+              requestAnimationFrame(forceScrollToTop);
             });
           },
           (error) => {
             console.error('[NewsDetailModal] Navigation error:', error);
-            // Retry navigation once more before giving up
             setTimeout(() => {
-              this.router.navigate(['/news', newsId]).catch(err => {
-                console.error('[NewsDetailModal] Retry navigation also failed:', err);
-                // Only use window.location as last resort - this will cause full reload
-                // But it's better than nothing
-                window.location.href = `/news/${newsId}`;
+              this.router.navigate(['/news', routeParam]).catch(() => {
+                window.location.href = `${window.location.origin}${path !== '/news' ? path : '/news/' + newsId}`;
               });
             }, 100);
           }
@@ -1184,24 +1159,50 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   shareNews() {
+    // Use share menu URLs; fallback to native share or copy
     if (navigator.share && this.news) {
-      const newsId = this.news.id ? (typeof this.news.id === 'string' ? this.news.id : this.news.id.toString()) : '';
-      const shareUrl = newsId ? `${window.location.origin}/news/${newsId}` : window.location.href;
-
       navigator.share({
         title: this.news.titleEn || this.news.title,
         text: this.news.excerpt,
-        url: shareUrl
-      }).catch(err => console.log('Error sharing:', err));
+        url: this.getShareUrl()
+      }).catch(() => {});
     } else {
-      // Fallback: Copy to clipboard
-      const newsId = this.news?.id ? (typeof this.news.id === 'string' ? this.news.id : this.news.id.toString()) : '';
-      const shareUrl = newsId ? `${window.location.origin}/news/${newsId}` : window.location.href;
-      const text = `${this.news?.titleEn || this.news?.title}\n\n${this.news?.excerpt}\n\n${shareUrl}`;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('News link copied to clipboard!');
-      }).catch(err => console.log('Error copying:', err));
+      this.copyShareLink();
     }
+  }
+
+  getShareUrl(): string {
+    const slug = this.news?.slug || slugify(this.news?.titleEn || this.news?.title || '');
+    const path = getNewsSharePath(slug);
+    if (path === '/news' && this.news?.id) {
+      return `${window.location.origin}/news/${this.news.id}`;
+    }
+    if (path === '/news') return window.location.href;
+    return `${window.location.origin}${path}`;
+  }
+
+  getWhatsAppShareUrl(): string {
+    const url = this.getShareUrl();
+    const headlineHindi = this.news?.title || this.news?.titleEn || '';
+    return `https://wa.me/?text=${encodeURIComponent(`${headlineHindi}\n\n${url}`)}`;
+  }
+
+  getTwitterShareUrl(): string {
+    const url = this.getShareUrl();
+    const headlineHindi = this.news?.title || this.news?.titleEn || '';
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(headlineHindi)}&url=${encodeURIComponent(url)}`;
+  }
+
+  getFacebookShareUrl(): string {
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.getShareUrl())}`;
+  }
+
+  copyShareLink() {
+    navigator.clipboard.writeText(this.getShareUrl()).then(() => {
+      this.showCopied = true;
+      setTimeout(() => { this.showCopied = false; this.cdr.detectChanges(); }, 2000);
+      this.cdr.detectChanges();
+    }).catch(() => {});
   }
 
   getCategoryColor(category: string): string {

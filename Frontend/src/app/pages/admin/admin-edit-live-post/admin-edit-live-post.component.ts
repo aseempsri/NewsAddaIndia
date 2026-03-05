@@ -585,8 +585,11 @@ interface LiveNews {
   styles: [`
     ::ng-deep .ckeditor-custom .ck-editor__editable {
       min-height: 400px;
+      max-height: 50vh;
+      overflow-y: auto;
       background: white !important;
       color: black !important;
+      line-height: 1.6;
     }
     ::ng-deep .ckeditor-custom .ck-toolbar {
       background: hsl(var(--secondary));
@@ -595,6 +598,10 @@ interface LiveNews {
     ::ng-deep .ckeditor-custom .ck-content {
       background: white !important;
       color: black !important;
+    }
+    ::ng-deep .ckeditor-custom .ck-editor__editable p {
+      margin-bottom: 1em;
+      line-height: 1.6;
     }
     ::ng-deep .ckeditor-custom .ck-editor__editable p,
     ::ng-deep .ckeditor-custom .ck-editor__editable h1,
