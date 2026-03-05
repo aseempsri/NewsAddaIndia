@@ -38,6 +38,13 @@ app.use('/api/market', require('./routes/market'));
 // Route for social media crawlers - serve HTML with meta tags
 app.get('/news/:slug', async (req, res) => {
   try {
+    console.log('[Meta Route] Request received:', {
+      slug: req.params.slug,
+      userAgent: req.get('user-agent'),
+      host: req.get('host'),
+      url: req.url
+    });
+    
     const News = require('./models/News');
     const PendingNews = require('./models/PendingNews');
     const mongoose = require('mongoose');
@@ -63,9 +70,17 @@ app.get('/news/:slug', async (req, res) => {
     }
 
     if (!news) {
+      console.log('[Meta Route] News not found for slug:', param);
       // If not found, let nginx serve the Angular app
       return res.status(404).send('<!DOCTYPE html><html><head><title>Article Not Found</title><meta http-equiv="refresh" content="0;url=https://newsaddaindia.com/news/' + encodeURIComponent(param) + '" /></head><body><p>Redirecting...</p></body></html>');
     }
+
+    console.log('[Meta Route] News found:', {
+      id: news._id,
+      title: news.title,
+      image: news.image,
+      images: news.images
+    });
 
     // Get image URL
     let imageUrl = '';
@@ -74,6 +89,8 @@ app.get('/news/:slug', async (req, res) => {
     } else if (news.image) {
       imageUrl = news.image;
     }
+
+    console.log('[Meta Route] Original image URL:', imageUrl);
 
     // Normalize image URL to use frontend domain
     const frontendDomain = process.env.FRONTEND_URL || 'https://newsaddaindia.com';
@@ -97,6 +114,8 @@ app.get('/news/:slug', async (req, res) => {
       }
       normalizedImageUrl = normalizedImageUrl.replace(/^http:/, 'https:');
     }
+
+    console.log('[Meta Route] Normalized image URL:', normalizedImageUrl);
 
     const title = news.title || news.titleEn || 'News Adda India';
     const description = (news.excerpt || '').slice(0, 200).replace(/<[^>]*>/g, '');
@@ -144,10 +163,11 @@ app.get('/news/:slug', async (req, res) => {
 </body>
 </html>`;
 
+    console.log('[Meta Route] Sending HTML response with image URL:', normalizedImageUrl);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (error) {
-    console.error('[Backend GET /news/:slug] Error:', error);
+    console.error('[Meta Route] Error:', error);
     res.status(500).send('<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error loading article</h1></body></html>');
   }
 });
