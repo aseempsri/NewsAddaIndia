@@ -137,7 +137,13 @@ app.get('/news/:slug', async (req, res) => {
     const title = news.title || news.titleEn || 'News Adda India';
     const description = (news.excerpt || '').slice(0, 200).replace(/<[^>]*>/g, '');
     const slug = news.slug || param;
-    const articleUrl = `${frontendDomain}/news/${slug}`;
+    
+    // Add version parameter based on article update time to prevent WhatsApp caching
+    // Use article's updatedAt timestamp or current timestamp as version
+    const version = news.updatedAt 
+      ? Math.floor(new Date(news.updatedAt).getTime() / 1000) 
+      : Math.floor(Date.now() / 1000);
+    const articleUrl = `${frontendDomain}/news/${slug}?v=${version}`;
 
     // Generate HTML with meta tags
     const html = `<!DOCTYPE html>
@@ -168,9 +174,9 @@ app.get('/news/:slug', async (req, res) => {
   
   <link rel="canonical" href="${articleUrl}" />
   
-  <!-- Redirect to actual article -->
-  <meta http-equiv="refresh" content="0;url=${articleUrl}" />
-  <script>window.location.href="${articleUrl}";</script>
+  <!-- Redirect to actual article (without version parameter for clean URL) -->
+  <meta http-equiv="refresh" content="0;url=${frontendDomain}/news/${slug}" />
+  <script>window.location.href="${frontendDomain}/news/${slug}";</script>
 </head>
 <body>
   <h1>${title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
