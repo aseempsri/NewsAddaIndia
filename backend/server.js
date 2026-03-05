@@ -93,24 +93,32 @@ app.get('/news/:slug', async (req, res) => {
     console.log('[Meta Route] Original image URL:', imageUrl);
 
     // Normalize image URL to use frontend domain
-    const frontendDomain = process.env.FRONTEND_URL || 'https://newsaddaindia.com';
+    // Extract first URL from FRONTEND_URL if it contains multiple comma-separated URLs
+    let frontendDomain = process.env.FRONTEND_URL || 'https://newsaddaindia.com';
+    if (frontendDomain.includes(',')) {
+      // If multiple URLs, take the first one
+      frontendDomain = frontendDomain.split(',')[0].trim();
+    }
+    // Ensure it's a single domain without trailing slash
+    frontendDomain = frontendDomain.replace(/\/$/, '').trim();
+    
     let normalizedImageUrl = imageUrl;
     if (imageUrl) {
       if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
         try {
           const urlObj = new URL(imageUrl);
           const path = urlObj.pathname;
-          normalizedImageUrl = `${frontendDomain.replace(/\/$/, '')}${path}`;
+          normalizedImageUrl = `${frontendDomain}${path}`;
         } catch (e) {
           const pathMatch = imageUrl.match(/\/uploads\/[^\s"']+/);
           if (pathMatch) {
-            normalizedImageUrl = `${frontendDomain.replace(/\/$/, '')}${pathMatch[0]}`;
+            normalizedImageUrl = `${frontendDomain}${pathMatch[0]}`;
           }
         }
       } else {
         normalizedImageUrl = imageUrl.startsWith('/') 
-          ? `${frontendDomain.replace(/\/$/, '')}${imageUrl}` 
-          : `${frontendDomain.replace(/\/$/, '')}/${imageUrl}`;
+          ? `${frontendDomain}${imageUrl}` 
+          : `${frontendDomain}/${imageUrl}`;
       }
       normalizedImageUrl = normalizedImageUrl.replace(/^http:/, 'https:');
     }
@@ -120,7 +128,7 @@ app.get('/news/:slug', async (req, res) => {
     const title = news.title || news.titleEn || 'News Adda India';
     const description = (news.excerpt || '').slice(0, 200).replace(/<[^>]*>/g, '');
     const slug = news.slug || param;
-    const articleUrl = `${frontendDomain.replace(/\/$/, '')}/news/${slug}`;
+    const articleUrl = `${frontendDomain}/news/${slug}`;
 
     // Generate HTML with meta tags
     const html = `<!DOCTYPE html>
