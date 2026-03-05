@@ -981,6 +981,52 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Convert image URL to use frontend domain (for social media sharing)
+   * This ensures images are accessible via the public domain, not backend API
+   */
+  private normalizeImageUrlForSharing(imageUrl: string): string {
+    if (!imageUrl || !imageUrl.trim()) return '';
+    
+    let normalized = imageUrl.trim();
+    
+    // If it's already a full URL, extract the path and use frontend domain
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      try {
+        const urlObj = new URL(normalized);
+        const path = urlObj.pathname;
+        // Use frontend domain instead of backend API domain
+        const origin = window.location.origin.replace(/^http:/, 'https:');
+        normalized = `${origin}${path}`;
+      } catch (e) {
+        // If URL parsing fails, try to extract path manually
+        const pathMatch = normalized.match(/\/uploads\/[^\s"']+/);
+        if (pathMatch) {
+          const origin = window.location.origin.replace(/^http:/, 'https:');
+          normalized = `${origin}${pathMatch[0]}`;
+        } else {
+          // Fallback: try to find any path-like structure
+          const anyPathMatch = normalized.match(/(\/[^?\s"']+)/);
+          if (anyPathMatch && anyPathMatch[1].includes('/')) {
+            const origin = window.location.origin.replace(/^http:/, 'https:');
+            normalized = `${origin}${anyPathMatch[1]}`;
+          }
+        }
+      }
+    } else {
+      // Relative URL - prepend frontend domain
+      const origin = window.location.origin.replace(/^http:/, 'https:');
+      normalized = normalized.startsWith('/') 
+        ? `${origin}${normalized}` 
+        : `${origin}/${normalized}`;
+    }
+    
+    // Remove any query parameters or fragments that might cause issues
+    normalized = normalized.split('?')[0].split('#')[0];
+    
+    return normalized;
+  }
+
+  /**
    * Set document meta tags for social sharing (og:image, og:title, etc.)
    */
   private updateMetaForShare() {
@@ -988,22 +1034,47 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     const headlineHindi = this.news.title || this.news.titleEn || '';
     const description = (this.news.excerpt || '').slice(0, 200);
     let imageUrl = this.news.image || (this.news.images && this.news.images[0]) || '';
-    if (imageUrl && !imageUrl.startsWith('http')) {
-      imageUrl = imageUrl.startsWith('/') ? `${window.location.origin}${imageUrl}` : `${window.location.origin}/${imageUrl}`;
-    }
-    this.title.setTitle('News Adda India - Your Daily News');
+    
+    // Convert image URL to absolute URL using frontend domain (not backend API domain)
+    imageUrl = this.normalizeImageUrlForSharing(imageUrl);
+    
+    // Get the share URL
+    const shareUrl = this.getShareUrl();
+    const shareUrlHttps = shareUrl.replace(/^http:/, 'https:');
+    
+    this.title.setTitle(headlineHindi + ' - News Adda India');
     this.meta.updateTag({ name: 'description', content: description });
+    
+    // Open Graph tags
     this.meta.updateTag({ property: 'og:title', content: headlineHindi });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'article' });
-    this.meta.updateTag({ property: 'og:url', content: this.getShareUrl() });
+    this.meta.updateTag({ property: 'og:url', content: shareUrlHttps });
+    this.meta.updateTag({ property: 'og:site_name', content: 'NewsAddaIndia' });
+    
+    // Always set og:image with absolute URL - required for social media crawlers
     if (imageUrl) {
+      // normalizeImageUrlForSharing already returns an absolute HTTPS URL
+      console.log('[NewsDetail] Setting og:image to:', imageUrl);
+      
       this.meta.updateTag({ property: 'og:image', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:secure_url', content: imageUrl });
+      this.meta.updateTag({ property: 'og:image:type', content: 'image/jpeg' });
+      this.meta.updateTag({ property: 'og:image:width', content: '1200' });
+      this.meta.updateTag({ property: 'og:image:height', content: '630' });
+      
+      // Twitter Card tags
       this.meta.updateTag({ name: 'twitter:image', content: imageUrl });
+      this.meta.updateTag({ name: 'twitter:image:src', content: imageUrl });
+    } else {
+      console.warn('[NewsDetail] No image URL available for og:image');
     }
+    
+    // Twitter Card tags
     this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
     this.meta.updateTag({ name: 'twitter:title', content: headlineHindi });
     this.meta.updateTag({ name: 'twitter:description', content: description });
+    this.meta.updateTag({ name: 'twitter:site', content: '@NewsAddaIndia' });
   }
 
   handleImageError(event: any) {
