@@ -8,8 +8,8 @@ declare let gtag: Function;
   providedIn: 'root'
 })
 export class AnalyticsService {
-  // Replace with your actual Google Analytics Measurement ID
-  private measurementId: string = 'G-XXXXXXXXXX';
+  // Google Analytics Measurement ID
+  private measurementId: string = 'G-FFVXQ7ZP5G';
 
   constructor(private router: Router) {
     // Track page views on route changes
