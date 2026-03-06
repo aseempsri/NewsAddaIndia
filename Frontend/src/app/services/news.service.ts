@@ -869,6 +869,7 @@ export class NewsService {
               title: article.title,
               titleEn: article.titleEn || article.title,
               excerpt: article.excerpt,
+              excerptEn: article.excerptEn || '',
               image: imageUrl,
               imageLoading: !imageUrl || imageUrl.trim() === '',
               time: this.getTimeAgo(new Date(article.createdAt || article.date).getTime()),
