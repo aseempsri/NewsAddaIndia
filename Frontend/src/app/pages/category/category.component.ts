@@ -219,16 +219,26 @@ export class CategoryComponent implements OnInit, OnDestroy {
   async translateNewsTitles() {
     if (!this.filteredNews || this.filteredNews.length === 0) return;
 
+    const currentLang = this.languageService.getCurrentLanguage();
     const batchSize = 5;
     for (let i = 0; i < this.filteredNews.length; i += batchSize) {
       const batch = this.filteredNews.slice(i, i + batchSize);
       await Promise.all(batch.map(async (article) => {
-        try {
-          const translatedTitle = await this.languageService.translateToCurrentLanguage(article.title);
-          (article as any).translatedTitle = translatedTitle;
-        } catch (error) {
-          console.warn('Failed to translate title:', error);
+        const origTitle = (article as any).originalTitle ?? article.title;
+        const origTitleEn = (article as any).originalTitleEn ?? article.titleEn ?? article.title;
+        let titleToUse = currentLang === 'en'
+          ? (!this.languageService.checkIfHindi(origTitleEn) ? origTitleEn : origTitle)
+          : (this.languageService.checkIfHindi(origTitle) ? origTitle : (origTitleEn || origTitle));
+        const needsTranslation = (currentLang === 'en' && this.languageService.checkIfHindi(titleToUse)) ||
+          (currentLang === 'hi' && !this.languageService.checkIfHindi(titleToUse));
+        if (needsTranslation) {
+          try {
+            titleToUse = await this.languageService.translateToCurrentLanguage(titleToUse);
+          } catch (error) {
+            console.warn('Failed to translate title:', error);
+          }
         }
+        (article as any).translatedTitle = titleToUse;
       }));
     }
   }

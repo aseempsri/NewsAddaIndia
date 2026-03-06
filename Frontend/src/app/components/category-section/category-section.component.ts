@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -569,7 +569,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     private languageService: LanguageService,
     private displayedNewsService: DisplayedNewsService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -791,6 +792,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   async updateArticleTitles() {
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    const currentLang = this.languageService.getCurrentLanguage();
     const batchSize = 5;
 
     for (let catIndex = 0; catIndex < this.categories.length; catIndex++) {
@@ -804,34 +806,40 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           for (let i = 0; i < originalNews.length; i += batchSize) {
             const batch = originalNews.slice(i, i + batchSize);
             const batchResults = await Promise.all(batch.map(async (newsItem) => {
-              try {
-                const translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-                return {
-                  id: newsItem.id,
-                  title: translatedTitle,
-                  image: newsItem.image || '',
-                  time: newsItem.time,
-                  date: newsItem.date,
-                  hasVideo: true,
-                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                  isTrending: newsItem.isTrending || false,
-                  isBreaking: newsItem.isBreaking || false,
-                  isFeatured: newsItem.isFeatured || false
-                };
-              } catch (error) {
-                return {
-                  id: newsItem.id,
-                  title: newsItem.title,
-                  image: newsItem.image || '',
-                  time: newsItem.time,
-                  date: newsItem.date,
-                  hasVideo: true,
-                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                  isTrending: newsItem.isTrending || false,
-                  isBreaking: newsItem.isBreaking || false,
-                  isFeatured: newsItem.isFeatured || false
-                };
+              const origTitle = (newsItem as any).originalTitle ?? newsItem.title;
+              const origTitleEn = (newsItem as any).originalTitleEn ?? newsItem.titleEn ?? newsItem.title;
+
+              let titleToUse: string;
+              if (currentLang === 'en') {
+                titleToUse = !this.languageService.checkIfHindi(origTitleEn) ? origTitleEn : origTitle;
+              } else {
+                titleToUse = this.languageService.checkIfHindi(origTitle) ? origTitle : (origTitleEn || origTitle);
               }
+
+              const isTitleHindi = this.languageService.checkIfHindi(titleToUse);
+              const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+
+              let displayTitle = titleToUse;
+              if (needsTranslation) {
+                try {
+                  displayTitle = await this.languageService.translateToCurrentLanguage(titleToUse);
+                } catch (error) {
+                  displayTitle = titleToUse;
+                }
+              }
+
+              return {
+                id: newsItem.id,
+                title: displayTitle,
+                image: newsItem.image || '',
+                time: newsItem.time,
+                date: newsItem.date,
+                hasVideo: true,
+                imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                isTrending: newsItem.isTrending || false,
+                isBreaking: newsItem.isBreaking || false,
+                isFeatured: newsItem.isFeatured || false
+              };
             }));
             translatedArticles.push(...batchResults);
           }
@@ -844,9 +852,11 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       }
     }
 
-    this.categories = [...this.categories];
-    this.cdr.markForCheck();
-    this.cdr.detectChanges();
+    this.ngZone.run(() => {
+      this.categories = [...this.categories];
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    });
   }
 
   loadCategoryNews() {
@@ -882,6 +892,13 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             if (item.id) {
               item.id = typeof item.id === 'string' ? item.id : item.id.toString();
             }
+            // Preserve originalTitle/originalTitleEn from news service for language toggle
+            const serviceOriginal = (item as any).originalTitle;
+            const serviceOriginalEn = (item as any).originalTitleEn;
+            if (serviceOriginal !== undefined) (item as any).originalTitle = serviceOriginal;
+            else (item as any).originalTitle = item.title;
+            if (serviceOriginalEn !== undefined) (item as any).originalTitleEn = serviceOriginalEn;
+            else (item as any).originalTitleEn = item.titleEn || item.title;
             return item;
           });
           
@@ -952,41 +969,40 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           const initialArticles = articlesToShow.slice(0, initialVisibleCards);
           const remainingArticles = articlesToShow.slice(initialVisibleCards);
           
-          // Translate titles for initial visible articles (same logic as category page)
+          // Translate titles for initial visible articles (use originalTitle/originalTitleEn, translate only when needed)
           if (initialArticles.length > 0) {
             const batchSize = 5;
+            const currentLang = this.languageService.getCurrentLanguage();
             const translatedArticles: Article[] = [];
             for (let i = 0; i < initialArticles.length; i += batchSize) {
               const batch = initialArticles.slice(i, i + batchSize);
               const batchResults = await Promise.all(batch.map(async (newsItem) => {
-                try {
-                  const translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-                  return {
-                    id: newsItem.id,
-                    title: translatedTitle,
-                    image: newsItem.image || '',
-                    time: newsItem.time,
-                    date: newsItem.date,
-                    hasVideo: true,
-                    imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                    isTrending: newsItem.isTrending || false,
-                    isBreaking: newsItem.isBreaking || false,
-                    isFeatured: newsItem.isFeatured || false
-                  };
-                } catch (error) {
-                  return {
-                    id: newsItem.id,
-                    title: newsItem.title,
-                    image: newsItem.image || '',
-                    time: newsItem.time,
-                    date: newsItem.date,
-                    hasVideo: true,
-                    imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                    isTrending: newsItem.isTrending || false,
-                    isBreaking: newsItem.isBreaking || false,
-                    isFeatured: newsItem.isFeatured || false
-                  };
+                const origTitle = (newsItem as any).originalTitle ?? newsItem.title;
+                const origTitleEn = (newsItem as any).originalTitleEn ?? newsItem.titleEn ?? newsItem.title;
+                let titleToUse = currentLang === 'en'
+                  ? (!this.languageService.checkIfHindi(origTitleEn) ? origTitleEn : origTitle)
+                  : (this.languageService.checkIfHindi(origTitle) ? origTitle : (origTitleEn || origTitle));
+                const needsTranslation = (currentLang === 'en' && this.languageService.checkIfHindi(titleToUse)) ||
+                  (currentLang === 'hi' && !this.languageService.checkIfHindi(titleToUse));
+                if (needsTranslation) {
+                  try {
+                    titleToUse = await this.languageService.translateToCurrentLanguage(titleToUse);
+                  } catch (error) {
+                    console.warn('Translation failed:', error);
+                  }
                 }
+                return {
+                  id: newsItem.id,
+                  title: titleToUse,
+                  image: newsItem.image || '',
+                  time: newsItem.time,
+                  date: newsItem.date,
+                  hasVideo: true,
+                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                  isTrending: newsItem.isTrending || false,
+                  isBreaking: newsItem.isBreaking || false,
+                  isFeatured: newsItem.isFeatured || false
+                };
               }));
               translatedArticles.push(...batchResults);
             }
@@ -1003,38 +1019,37 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           if (remainingArticles.length > 0) {
             setTimeout(async () => {
               const batchSize = 5;
+              const currentLang = this.languageService.getCurrentLanguage();
               const translatedRemaining: Article[] = [];
               for (let i = 0; i < remainingArticles.length; i += batchSize) {
                 const batch = remainingArticles.slice(i, i + batchSize);
                 const batchResults = await Promise.all(batch.map(async (newsItem) => {
-                  try {
-                    const translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-                    return {
-                      id: newsItem.id,
-                      title: translatedTitle,
-                      image: newsItem.image || '',
-                      time: newsItem.time,
-                      date: newsItem.date,
-                      hasVideo: true,
-                      imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                      isTrending: newsItem.isTrending || false,
-                      isBreaking: newsItem.isBreaking || false,
-                      isFeatured: newsItem.isFeatured || false
-                    };
-                  } catch (error) {
-                    return {
-                      id: newsItem.id,
-                      title: newsItem.title,
-                      image: newsItem.image || '',
-                      time: newsItem.time,
-                      date: newsItem.date,
-                      hasVideo: true,
-                      imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                      isTrending: newsItem.isTrending || false,
-                      isBreaking: newsItem.isBreaking || false,
-                      isFeatured: newsItem.isFeatured || false
-                    };
+                  const origTitle = (newsItem as any).originalTitle ?? newsItem.title;
+                  const origTitleEn = (newsItem as any).originalTitleEn ?? newsItem.titleEn ?? newsItem.title;
+                  let titleToUse = currentLang === 'en'
+                    ? (!this.languageService.checkIfHindi(origTitleEn) ? origTitleEn : origTitle)
+                    : (this.languageService.checkIfHindi(origTitle) ? origTitle : (origTitleEn || origTitle));
+                  const needsTranslation = (currentLang === 'en' && this.languageService.checkIfHindi(titleToUse)) ||
+                    (currentLang === 'hi' && !this.languageService.checkIfHindi(titleToUse));
+                  if (needsTranslation) {
+                    try {
+                      titleToUse = await this.languageService.translateToCurrentLanguage(titleToUse);
+                    } catch (error) {
+                      console.warn('Translation failed:', error);
+                    }
                   }
+                  return {
+                    id: newsItem.id,
+                    title: titleToUse,
+                    image: newsItem.image || '',
+                    time: newsItem.time,
+                    date: newsItem.date,
+                    hasVideo: true,
+                    imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                    isTrending: newsItem.isTrending || false,
+                    isBreaking: newsItem.isBreaking || false,
+                    isFeatured: newsItem.isFeatured || false
+                  };
                 }));
                 translatedRemaining.push(...batchResults);
               }
@@ -1388,38 +1403,37 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         
         if (articlesToShow.length > 0) {
           const batchSize = 5;
+          const currentLang = this.languageService.getCurrentLanguage();
           const translatedArticles: Article[] = [];
           for (let i = 0; i < articlesToShow.length; i += batchSize) {
             const batch = articlesToShow.slice(i, i + batchSize);
             const batchResults = await Promise.all(batch.map(async (newsItem) => {
-              try {
-                const translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-                return {
-                  id: newsItem.id,
-                  title: translatedTitle,
-                  image: newsItem.image || '',
-                  time: newsItem.time,
-                  date: newsItem.date,
-                  hasVideo: true,
-                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                  isTrending: newsItem.isTrending || false,
-                  isBreaking: newsItem.isBreaking || false,
-                  isFeatured: newsItem.isFeatured || false
-                };
-              } catch (error) {
-                return {
-                  id: newsItem.id,
-                  title: newsItem.title,
-                  image: newsItem.image || '',
-                  time: newsItem.time,
-                  date: newsItem.date,
-                  hasVideo: true,
-                  imageLoading: !newsItem.image || newsItem.image.trim() === '',
-                  isTrending: newsItem.isTrending || false,
-                  isBreaking: newsItem.isBreaking || false,
-                  isFeatured: newsItem.isFeatured || false
-                };
+              const origTitle = (newsItem as any).originalTitle ?? newsItem.title;
+              const origTitleEn = (newsItem as any).originalTitleEn ?? newsItem.titleEn ?? newsItem.title;
+              let titleToUse = currentLang === 'en'
+                ? (!this.languageService.checkIfHindi(origTitleEn) ? origTitleEn : origTitle)
+                : (this.languageService.checkIfHindi(origTitle) ? origTitle : (origTitleEn || origTitle));
+              const needsTranslation = (currentLang === 'en' && this.languageService.checkIfHindi(titleToUse)) ||
+                (currentLang === 'hi' && !this.languageService.checkIfHindi(titleToUse));
+              if (needsTranslation) {
+                try {
+                  titleToUse = await this.languageService.translateToCurrentLanguage(titleToUse);
+                } catch (error) {
+                  console.warn('Translation failed:', error);
+                }
               }
+              return {
+                id: newsItem.id,
+                title: titleToUse,
+                image: newsItem.image || '',
+                time: newsItem.time,
+                date: newsItem.date,
+                hasVideo: true,
+                imageLoading: !newsItem.image || newsItem.image.trim() === '',
+                isTrending: newsItem.isTrending || false,
+                isBreaking: newsItem.isBreaking || false,
+                isFeatured: newsItem.isFeatured || false
+              };
             }));
             translatedArticles.push(...batchResults);
           }
