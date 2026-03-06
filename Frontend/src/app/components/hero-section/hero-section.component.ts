@@ -110,8 +110,9 @@ interface SideNews {
                   style="touch-action: pan-y;">
                   {{ getDisplayTitle(featuredNews) }}
                 </h2>
-                <p class="text-muted-foreground text-sm mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
-                  {{ featuredNews.excerpt }}
+                <!-- Excerpt hidden on mobile, shown on desktop based on language -->
+                <p class="hidden md:block text-muted-foreground text-sm mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
+                  {{ getDisplayExcerpt(featuredNews) }}
                 </p>
               </div>
               <!-- Author and Date - Bottom aligned -->
@@ -375,8 +376,9 @@ interface SideNews {
                     style="touch-action: pan-y;">
                     {{ getDisplayTitle(featuredNews) }}
                   </h2>
+                  <!-- Excerpt shown on desktop based on language -->
                   <p class="text-muted-foreground text-base mb-4 mt-3 pt-1 line-clamp-3 min-h-[4rem] leading-relaxed">
-                    {{ featuredNews.excerpt }}
+                    {{ getDisplayExcerpt(featuredNews) }}
                   </p>
                 </div>
                 <!-- Author and Date - Bottom aligned -->
@@ -632,6 +634,11 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   getDisplayTitle(news: NewsArticle): string {
     // Always use regular headline for cards (trendingTitle is only for ticker)
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
+  }
+
+  getDisplayExcerpt(news: NewsArticle): string {
+    // Return excerpt based on current language (excerptEn for English, excerpt for Hindi)
+    return this.languageService.getDisplayExcerpt(news.excerpt || '', news.excerptEn);
   }
 
   getDisplayTitleForSide(news: SideNews): string {
