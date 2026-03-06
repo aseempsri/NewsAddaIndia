@@ -79,7 +79,7 @@ interface Category {
                   class="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth pb-4 pl-2 pr-2 sm:pl-2 sm:pr-2 items-stretch"
                   style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important; touch-action: pan-x pan-y; overscroll-behavior-x: contain; overscroll-behavior-y: auto;"
                   (scroll)="onScroll(getCategoryKeyByIndex(catIndex), $event)">
-                  @for (article of category.articles; track article.id || $index; let i = $index) {
+                  @for (article of category.articles; track (article.id || $index) + ':' + (article.title || ''); let i = $index) {
                     <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col">
                       <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 flex-shrink-0">
                         <!-- Loading Animation - Show while image is loading -->
