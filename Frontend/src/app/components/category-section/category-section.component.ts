@@ -579,7 +579,10 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   ngOnInit() {
     this.checkIfHomePage();
     this.updateTranslations();
-    this.updateCategoryTitles();
+    // Ensure language service is initialized before updating category titles
+    setTimeout(() => {
+      this.updateCategoryTitles();
+    }, 0);
     
     // CRITICAL: Wait longer for NewsGrid to register its items first
     // Increased delay to ensure NewsGridComponent finishes registering all IDs
@@ -777,11 +780,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   updateCategoryTitles() {
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    console.log('[CategorySection] updateCategoryTitles called, current language:', this.languageService.getCurrentLanguage());
     this.categories.forEach((category, index) => {
       if (index < categoryKeys.length) {
-        category.title = this.languageService.translateCategory(categoryKeys[index]);
+        const translatedTitle = this.languageService.translateCategory(categoryKeys[index]);
+        console.log(`[CategorySection] Translating category ${categoryKeys[index]} (index ${index}): "${category.title}" -> "${translatedTitle}"`);
+        category.title = translatedTitle;
       }
     });
+    // Force change detection by creating a new array reference
+    this.categories = [...this.categories];
+    console.log('[CategorySection] Category titles updated:', this.categories.map(c => c.title));
   }
 
   async updateArticleTitles() {

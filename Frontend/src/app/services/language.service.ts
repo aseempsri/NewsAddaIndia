@@ -15,6 +15,7 @@ export interface Translations {
   sports: string;
   business: string;
   religious: string;
+  technology: string;
   subscribe: string;
   readers: string;
   delhiIndia: string;
@@ -87,6 +88,7 @@ const translations: Record<Language, Translations> = {
     sports: 'Sports',
     business: 'Business',
     religious: 'Religious',
+    technology: 'Technology',
     subscribe: 'Subscribe',
     readers: 'Readers',
     delhiIndia: 'Delhi, India',
@@ -147,6 +149,7 @@ const translations: Record<Language, Translations> = {
     sports: 'खेल',
     business: 'व्यापार',
     religious: 'धार्मिक',
+    technology: 'प्रौद्योगिकी',
     subscribe: 'सदस्यता लें',
     readers: 'पाठक',
     delhiIndia: 'दिल्ली, भारत',
@@ -330,6 +333,7 @@ export class LanguageService {
       'Sports': 'sports',
       'Business': 'business',
       'Religious': 'religious',
+      'Technology': 'technology',
     };
     const key = categoryMap[category];
     return key ? t[key] : category;
