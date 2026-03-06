@@ -16,22 +16,11 @@ export class UserTrackingService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Track a new user visit and increment reader count
-   * Only increments once per day per user
+   * Track a user visit and increment reader count
+   * Increments on every visit (no daily limit)
    */
   trackUser(): void {
-    const today = new Date().toDateString();
-    const lastTracked = localStorage.getItem(this.TRACKING_KEY);
-
-    // Only track once per day
-    if (lastTracked === today) {
-      return;
-    }
-
-    // Mark as tracked for today
-    localStorage.setItem(this.TRACKING_KEY, today);
-
-    // Increment reader count on backend
+    // Increment reader count on backend for every visit
     this.http.post(`${this.API_URL}/api/stats/increment`, {}).pipe(
       catchError(error => {
         console.error('Error tracking user:', error);

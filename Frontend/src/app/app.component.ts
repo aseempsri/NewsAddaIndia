@@ -23,7 +23,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Track user visit (increments reader count once per day)
+    // Track user visit (increments reader count on every visit)
     this.userTrackingService.trackUser();
     
     // News now updates on each refresh/page load
