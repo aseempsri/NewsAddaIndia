@@ -610,41 +610,73 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   }
 
   async translateNewsContent() {
-    console.log('[HeroSection] translateNewsContent called');
+    console.log('[HeroSection] translateNewsContent called, current language:', this.languageService.getCurrentLanguage());
     try {
-      // For featured news, getDisplayTitle() handles translation based on titleEn
-      // Only translate if titleEn doesn't exist
+      // Always translate featured news title based on current language
       if (this.featuredNews && this.featuredNews.title) {
-        if (!this.featuredNews.titleEn) {
-          console.log('[HeroSection] Translating featured news title (no titleEn):', this.featuredNews.title.substring(0, 30) + '...');
-          const translatedTitle = await this.languageService.translateToCurrentLanguage(this.featuredNews.title);
-          // Store translated title temporarily
+        const originalTitle = (this.featuredNews as any).originalTitle || this.featuredNews.title;
+        const originalTitleEn = (this.featuredNews as any).originalTitleEn || this.featuredNews.titleEn;
+        const currentLang = this.languageService.getCurrentLanguage();
+        
+        // Determine which title to use based on current language
+        let titleToTranslate = originalTitle;
+        if (currentLang === 'en' && originalTitleEn) {
+          // For English, prefer titleEn if it exists and is English
+          const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+          if (!isTitleEnHindi) {
+            titleToTranslate = originalTitleEn;
+          } else {
+            // titleEn is Hindi, use original title
+            titleToTranslate = originalTitle;
+          }
+        } else if (currentLang === 'hi') {
+          // For Hindi, use original title
+          titleToTranslate = originalTitle;
+        }
+        
+        // Check if title needs translation
+        const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+        const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+        
+        if (needsTranslation) {
+          console.log('[HeroSection] Translating featured news title:', titleToTranslate.substring(0, 30) + '...');
+          const translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
           (this.featuredNews as any).translatedTitle = translatedTitle;
           console.log('[HeroSection] Translated featured news title:', translatedTitle.substring(0, 30) + '...');
         } else {
-          // Clear translated title if titleEn exists (getDisplayTitle will handle it)
-          (this.featuredNews as any).translatedTitle = undefined;
+          // Title is already in correct language
+          (this.featuredNews as any).translatedTitle = titleToTranslate;
         }
       }
       
-      // Translate side news titles - store original titleEn if available
+      // Always translate side news titles based on current language
       if (this.sideNews && this.sideNews.length > 0) {
         console.log('[HeroSection] Translating', this.sideNews.length, 'side news titles...');
         for (const news of this.sideNews) {
           if (news.title) {
-            // Check if we have original title stored (from loadNews)
             const originalTitle = (news as any).originalTitle || news.title;
             const originalTitleEn = (news as any).originalTitleEn;
+            const currentLang = this.languageService.getCurrentLanguage();
             
-            if (originalTitleEn) {
-              // Use getDisplayTitle logic - clear translated title
-              (news as any).translatedTitle = undefined;
-            } else {
-              // Translate using Google Translate API
-              console.log('[HeroSection] Translating side news title:', originalTitle.substring(0, 30) + '...');
-              const translatedTitle = await this.languageService.translateToCurrentLanguage(originalTitle);
+            // Determine which title to use
+            let titleToTranslate = originalTitle;
+            if (currentLang === 'en' && originalTitleEn) {
+              const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+              if (!isTitleEnHindi) {
+                titleToTranslate = originalTitleEn;
+              }
+            }
+            
+            // Check if translation is needed
+            const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+            const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+            
+            if (needsTranslation) {
+              console.log('[HeroSection] Translating side news title:', titleToTranslate.substring(0, 30) + '...');
+              const translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
               (news as any).translatedTitle = translatedTitle;
-              console.log('[HeroSection] Translated side news title:', translatedTitle.substring(0, 30) + '...');
+            } else {
+              (news as any).translatedTitle = titleToTranslate;
             }
           }
         }

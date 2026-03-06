@@ -463,6 +463,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
               const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
               const deduplicated = this.finalDeduplicate(filteredNews);
               this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+              this.storeOriginalTitles(this.newsItems);
               
               if (this.newsItems.length > 0) {
                 this.newsItems.forEach(item => {
@@ -550,8 +551,22 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
     this.t = this.languageService.getTranslations();
   }
 
+  /**
+   * Store original titles for translation purposes
+   */
+  private storeOriginalTitles(newsItems: NewsArticle[]): void {
+    newsItems.forEach(item => {
+      if (!(item as any).originalTitle) {
+        (item as any).originalTitle = item.title;
+      }
+      if (!(item as any).originalTitleEn && item.titleEn) {
+        (item as any).originalTitleEn = item.titleEn;
+      }
+    });
+  }
+
   async translateNewsTitles() {
-    console.log('[NewsGrid] translateNewsTitles called, newsItems count:', this.newsItems?.length || 0);
+    console.log('[NewsGrid] translateNewsTitles called, newsItems count:', this.newsItems?.length || 0, 'current language:', this.languageService.getCurrentLanguage());
     if (!this.newsItems || this.newsItems.length === 0) {
       console.log('[NewsGrid] No news items to translate');
       return;
@@ -559,18 +574,51 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
 
     // Translate titles in parallel (limited batch to avoid overwhelming API)
     const batchSize = 5;
+    const currentLang = this.languageService.getCurrentLanguage();
+    
     for (let i = 0; i < this.newsItems.length; i += batchSize) {
       const batch = this.newsItems.slice(i, i + batchSize);
       console.log('[NewsGrid] Translating batch', i / batchSize + 1, 'of', Math.ceil(this.newsItems.length / batchSize));
       await Promise.all(batch.map(async (article, index) => {
         try {
-          console.log('[NewsGrid] Translating title', i + index + 1, ':', article.title.substring(0, 30) + '...');
-          const translatedTitle = await this.languageService.translateToCurrentLanguage(article.title);
-          console.log('[NewsGrid] Translated title', i + index + 1, ':', translatedTitle.substring(0, 30) + '...');
-          // Store translated title temporarily
-          (article as any).translatedTitle = translatedTitle;
+          // Get original titles
+          const originalTitle = (article as any).originalTitle || article.title;
+          const originalTitleEn = (article as any).originalTitleEn || article.titleEn;
+          
+          // Determine which title to use based on current language
+          let titleToTranslate = originalTitle;
+          if (currentLang === 'en' && originalTitleEn) {
+            // For English, prefer titleEn if it exists and is English
+            const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+            if (!isTitleEnHindi) {
+              titleToTranslate = originalTitleEn;
+            } else {
+              // titleEn is Hindi, use original title
+              titleToTranslate = originalTitle;
+            }
+          } else if (currentLang === 'hi') {
+            // For Hindi, use original title
+            titleToTranslate = originalTitle;
+          }
+          
+          // Check if translation is needed
+          const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+          const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+          
+          if (needsTranslation) {
+            console.log('[NewsGrid] Translating title', i + index + 1, ':', titleToTranslate.substring(0, 30) + '...');
+            const translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
+            console.log('[NewsGrid] Translated title', i + index + 1, ':', translatedTitle.substring(0, 30) + '...');
+            (article as any).translatedTitle = translatedTitle;
+          } else {
+            // Title is already in correct language
+            (article as any).translatedTitle = titleToTranslate;
+          }
         } catch (error) {
           console.error('[NewsGrid] Failed to translate title:', error);
+          // Fallback to original title
+          const originalTitle = (article as any).originalTitle || article.title;
+          (article as any).translatedTitle = originalTitle;
         }
       }));
     }
@@ -632,6 +680,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                   const displayedIds = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT).map(n => n.id).filter(id => id !== undefined) as (string | number)[];
                   this.displayedNewsService.registerDisplayedMultiple(displayedIds);
                   this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  this.storeOriginalTitles(this.newsItems);
                   
                   this.newsItems.forEach(item => {
                     if (item.imageLoading === undefined) {
@@ -757,6 +806,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                   // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
                   const deduplicatedNews = this.finalDeduplicate(useList);
                   this.newsItems = deduplicatedNews.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  this.storeOriginalTitles(this.newsItems);
                   
                   // Ensure all items have imageLoading set
                   this.newsItems.forEach(item => {
@@ -828,6 +878,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
           // CRITICAL: Always show exactly LATEST_STORIES_COUNT (6) items - this rule should never change
           const deduplicated = this.finalDeduplicate(filteredBreakingNews);
           this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+          this.storeOriginalTitles(this.newsItems);
           
           // Ensure all items have imageLoading set
           this.newsItems.forEach(item => {
@@ -876,6 +927,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                 
                 const deduplicated = this.finalDeduplicate(filteredErrorNews);
                 this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                this.storeOriginalTitles(this.newsItems);
                 
                 // Ensure all items have imageLoading set and placeholders
                 this.newsItems.forEach(item => {
@@ -957,6 +1009,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
         // CRITICAL: Always show exactly targetCount (6) items - this rule should never change
         const deduplicated = this.finalDeduplicate(itemsToRegister);
         this.newsItems = deduplicated;
+        this.storeOriginalTitles(this.newsItems);
         
         // Ensure all items have imageLoading set
         this.newsItems.forEach(item => {
@@ -986,6 +1039,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
                   // Don't filter by displayed - just show the first 6 items
                   const deduplicated = this.finalDeduplicate(uniqueFinal);
                   this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+                  this.storeOriginalTitles(this.newsItems);
                   
                   this.newsItems.forEach(item => {
                     if (item.imageLoading === undefined) {
@@ -1167,6 +1221,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
             const filteredNews = this.displayedNewsService.filterDisplayed(uniqueNews);
             const deduplicated = this.finalDeduplicate(filteredNews);
             this.newsItems = deduplicated.slice(0, NewsGridComponent.LATEST_STORIES_COUNT);
+            this.storeOriginalTitles(this.newsItems);
             
             if (this.newsItems.length > 0) {
               this.newsItems.forEach(item => {

@@ -257,6 +257,7 @@ export class LanguageService {
   /**
    * Get the appropriate title based on current language
    * Returns titleEn for English, title (Hindi) for Hindi
+   * Note: Components should translate titles when language changes if titleEn doesn't match current language
    */
   getDisplayTitle(title: string, titleEn?: string): string {
     const lang = this.currentLanguageSubject.value;
@@ -348,6 +349,13 @@ export class LanguageService {
    */
   private isHindi(text: string): boolean {
     return /[\u0900-\u097F]/.test(text);
+  }
+
+  /**
+   * Public method to check if text is Hindi
+   */
+  checkIfHindi(text: string): boolean {
+    return this.isHindi(text);
   }
 
   /**

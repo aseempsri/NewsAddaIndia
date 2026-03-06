@@ -796,6 +796,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   async updateArticleTitles() {
     // Update article titles based on language with real-time translation
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
+    const currentLang = this.languageService.getCurrentLanguage();
     
     for (const category of this.categories) {
       const catIndex = this.categories.indexOf(category);
@@ -803,18 +804,41 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
         if (originalNews && originalNews.length > 0) {
-          // Process all articles (up to 3)
+          // Process all articles
           const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
-            let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
-            // If titleEn doesn't exist or we need real-time translation, use Google Translate
-            if (!newsItem.titleEn || this.languageService.getCurrentLanguage() === 'hi') {
+            const originalTitle = newsItem.title;
+            const originalTitleEn = newsItem.titleEn;
+            
+            // Determine which title to use based on current language
+            let titleToTranslate = originalTitle;
+            if (currentLang === 'en' && originalTitleEn) {
+              // For English, prefer titleEn if it exists and is English
+              const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+              if (!isTitleEnHindi) {
+                titleToTranslate = originalTitleEn;
+              } else {
+                // titleEn is Hindi, use original title
+                titleToTranslate = originalTitle;
+              }
+            } else if (currentLang === 'hi') {
+              // For Hindi, use original title
+              titleToTranslate = originalTitle;
+            }
+            
+            // Check if translation is needed
+            const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+            const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+            
+            let translatedTitle = titleToTranslate;
+            if (needsTranslation) {
               try {
-                translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
+                translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
               } catch (error) {
                 console.warn(`Failed to translate title for ${categoryKey}:`, error);
-                translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
+                translatedTitle = titleToTranslate;
               }
             }
+            
             return {
               id: newsItem.id, // Preserve MongoDB _id
               title: translatedTitle,
@@ -828,7 +852,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               isFeatured: newsItem.isFeatured || false
             };
           }));
-          category.articles = translatedArticles; // Up to 3 articles
+          category.articles = translatedArticles;
         }
       }
     }
