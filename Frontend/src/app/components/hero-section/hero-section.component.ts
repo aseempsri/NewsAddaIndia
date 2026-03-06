@@ -569,13 +569,13 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.updateTranslations();
     
-    // Subscribe to language changes to reload news when language changes
+    // Subscribe to language changes to translate news when language changes
     console.log('[HeroSection] Subscribing to language changes...');
     this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
       console.log('[HeroSection] Language changed to:', lang);
       this.updateTranslations();
-      // Reload news when language changes to get correct language content
-      this.loadNews();
+      // Translate existing news titles when language changes instead of reloading
+      await this.translateNewsContent();
     });
     console.log('[HeroSection] Language subscription set up');
     
@@ -612,19 +612,40 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   async translateNewsContent() {
     console.log('[HeroSection] translateNewsContent called');
     try {
-      // Translate featured news title
+      // For featured news, getDisplayTitle() handles translation based on titleEn
+      // Only translate if titleEn doesn't exist
       if (this.featuredNews && this.featuredNews.title) {
-        console.log('[HeroSection] Translating featured news title:', this.featuredNews.title.substring(0, 30) + '...');
-        this.featuredNews.title = await this.languageService.translateToCurrentLanguage(this.featuredNews.title);
-        console.log('[HeroSection] Translated featured news title:', this.featuredNews.title.substring(0, 30) + '...');
+        if (!this.featuredNews.titleEn) {
+          console.log('[HeroSection] Translating featured news title (no titleEn):', this.featuredNews.title.substring(0, 30) + '...');
+          const translatedTitle = await this.languageService.translateToCurrentLanguage(this.featuredNews.title);
+          // Store translated title temporarily
+          (this.featuredNews as any).translatedTitle = translatedTitle;
+          console.log('[HeroSection] Translated featured news title:', translatedTitle.substring(0, 30) + '...');
+        } else {
+          // Clear translated title if titleEn exists (getDisplayTitle will handle it)
+          (this.featuredNews as any).translatedTitle = undefined;
+        }
       }
       
-      // Translate side news titles
+      // Translate side news titles - store original titleEn if available
       if (this.sideNews && this.sideNews.length > 0) {
         console.log('[HeroSection] Translating', this.sideNews.length, 'side news titles...');
         for (const news of this.sideNews) {
           if (news.title) {
-            news.title = await this.languageService.translateToCurrentLanguage(news.title);
+            // Check if we have original title stored (from loadNews)
+            const originalTitle = (news as any).originalTitle || news.title;
+            const originalTitleEn = (news as any).originalTitleEn;
+            
+            if (originalTitleEn) {
+              // Use getDisplayTitle logic - clear translated title
+              (news as any).translatedTitle = undefined;
+            } else {
+              // Translate using Google Translate API
+              console.log('[HeroSection] Translating side news title:', originalTitle.substring(0, 30) + '...');
+              const translatedTitle = await this.languageService.translateToCurrentLanguage(originalTitle);
+              (news as any).translatedTitle = translatedTitle;
+              console.log('[HeroSection] Translated side news title:', translatedTitle.substring(0, 30) + '...');
+            }
           }
         }
         console.log('[HeroSection] Side news titles translated');
@@ -636,6 +657,11 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
 
   getDisplayTitle(news: NewsArticle): string {
     // Always use regular headline for cards (trendingTitle is only for ticker)
+    // If translatedTitle exists, use it (for real-time translation when titleEn doesn't exist)
+    if ((news as any).translatedTitle) {
+      return (news as any).translatedTitle;
+    }
+    // Otherwise use the language service method (which uses titleEn if available)
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
   }
 
@@ -646,8 +672,17 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
 
   getDisplayTitleForSide(news: SideNews): string {
     // Always use regular headline for cards (trendingTitle is only for ticker)
-    // For side news, we only have title, so just return it
-    // In a real scenario, you'd want to store both title and titleEn
+    // If translatedTitle exists, use it (for real-time translation)
+    if ((news as any).translatedTitle) {
+      return (news as any).translatedTitle;
+    }
+    // Check if we have originalTitleEn stored
+    const originalTitleEn = (news as any).originalTitleEn;
+    if (originalTitleEn) {
+      // Use language service logic
+      return this.languageService.getDisplayTitle(news.title, originalTitleEn);
+    }
+    // Otherwise return the title as-is
     return news.title;
   }
 
@@ -690,13 +725,21 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         // First article: Featured news (large article on left)
         const featuredArticle = filteredNews[0];
         
+        // Store original titles for translation
+        const originalTitle = featuredArticle.title;
+        const originalTitleEn = featuredArticle.titleEn || featuredArticle.title;
+        
         // Ensure titleEn is set (for translation)
         if (!featuredArticle.titleEn) {
           featuredArticle.titleEn = featuredArticle.title;
         }
 
-        // News is already translated by the service, so use it directly
-        this.featuredNews = featuredArticle;
+        // Store news with original titles preserved
+        this.featuredNews = {
+          ...featuredArticle,
+          title: originalTitle,
+          titleEn: originalTitleEn
+        };
         
         // Register featured article as displayed to prevent duplicates
         if (featuredArticle.id) {
@@ -755,9 +798,13 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         this.displayedReady.emit();
         
         this.sideNews = sideArticles.map((n, index) => {
+          // Store original titles for translation
+          const originalTitle = n.title;
+          const originalTitleEn = n.titleEn || n.title;
+          
           const sideNewsItem = {
             category: n.category,
-            title: n.title,
+            title: originalTitle,
             image: '',
             tags: (n as any).tags || [],
             id: n.id,
@@ -768,7 +815,9 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
             isTrending: n.isTrending || false,
             isBreaking: n.isBreaking || false,
             isFeatured: n.isFeatured || false,
-            trendingTitle: (n as any).trendingTitle || undefined
+            trendingTitle: (n as any).trendingTitle || undefined,
+            originalTitle: originalTitle,
+            originalTitleEn: originalTitleEn
           };
           
           // Log trending news in side news
@@ -832,8 +881,10 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
           }, 8000); // 8 second timeout (reduced from 15s)
         });
 
-        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(() => {
+        Promise.race([Promise.all(imagePromises), timeoutPromise]).then(async () => {
           this.isLoading = false;
+          // Translate titles after loading news
+          await this.translateNewsContent();
           this.imagesLoaded.emit(true);
           console.log('All hero section images loaded');
         });
