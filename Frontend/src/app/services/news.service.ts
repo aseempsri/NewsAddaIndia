@@ -449,12 +449,24 @@ export class NewsService {
   private translateNewsIfNeeded(news: NewsArticle[]): Observable<NewsArticle[]> {
     const currentLang = this.languageService.getCurrentLanguage();
     
-    // If English is selected, return as is
+    // If English is selected, ensure we use English fields (titleEn, excerptEn)
     if (currentLang === 'en') {
-      return of(news);
+      // Map articles to use English versions
+      const englishNews = news.map(article => {
+        // Use titleEn if available, otherwise keep title
+        if (article.titleEn && article.titleEn !== article.title) {
+          article.title = article.titleEn;
+        }
+        // Use excerptEn if available for English
+        if (article.excerptEn && article.excerptEn.trim() !== '') {
+          article.excerpt = article.excerptEn;
+        }
+        return article;
+      });
+      return of(englishNews);
     }
 
-    // If Hindi is selected, translate titles and excerpts
+    // If Hindi is selected, translate titles and excerpts from English to Hindi
     return new Observable(observer => {
       const translatePromises = news.map(async (article) => {
         // Store original English title if not already stored
@@ -462,7 +474,7 @@ export class NewsService {
           article.titleEn = article.title;
         }
 
-        // Translate title if it's in English
+        // Translate title if it's in English (not Hindi)
         if (!/[\u0900-\u097F]/.test(article.title)) {
           try {
             article.title = await this.languageService.translateToHindi(article.title);
@@ -471,8 +483,20 @@ export class NewsService {
           }
         }
 
-        // Translate excerpt if it's in English
-        if (article.excerpt && !/[\u0900-\u097F]/.test(article.excerpt)) {
+        // For excerpt: Use Hindi excerpt if available, otherwise translate English excerpt
+        if (article.excerptEn && article.excerptEn.trim() !== '') {
+          // If excerptEn exists, check if current excerpt is Hindi or English
+          // If excerpt is English (from excerptEn), translate it
+          if (!/[\u0900-\u097F]/.test(article.excerpt)) {
+            try {
+              article.excerpt = await this.languageService.translateToHindi(article.excerpt);
+            } catch (error) {
+              console.warn('Failed to translate excerpt:', error);
+            }
+          }
+          // If excerpt is already Hindi, keep it
+        } else if (article.excerpt && !/[\u0900-\u097F]/.test(article.excerpt)) {
+          // No excerptEn, translate excerpt if it's English
           try {
             article.excerpt = await this.languageService.translateToHindi(article.excerpt);
           } catch (error) {
