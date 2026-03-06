@@ -598,10 +598,8 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
       console.log('[HeroSection] Language changed to:', lang);
       this.updateTranslations();
-      // Re-translate featured and side news titles when language changes
-      console.log('[HeroSection] Starting translation...');
-      await this.translateNewsContent();
-      console.log('[HeroSection] Translation complete');
+      // Reload news when language changes to get correct language content
+      this.loadNews();
     });
     console.log('[HeroSection] Language subscription set up');
   }
