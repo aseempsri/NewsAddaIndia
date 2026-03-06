@@ -218,15 +218,13 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   async translateNewsTitles() {
     if (!this.filteredNews || this.filteredNews.length === 0) return;
-    
-    // Translate titles in parallel (limited batch to avoid overwhelming API)
+
     const batchSize = 5;
     for (let i = 0; i < this.filteredNews.length; i += batchSize) {
       const batch = this.filteredNews.slice(i, i + batchSize);
       await Promise.all(batch.map(async (article) => {
         try {
           const translatedTitle = await this.languageService.translateToCurrentLanguage(article.title);
-          // Store translated title temporarily
           (article as any).translatedTitle = translatedTitle;
         } catch (error) {
           console.warn('Failed to translate title:', error);
@@ -236,11 +234,9 @@ export class CategoryComponent implements OnInit, OnDestroy {
   }
 
   getDisplayTitle(news: NewsArticle): string {
-    // If translated title exists, use it
     if ((news as any).translatedTitle) {
       return (news as any).translatedTitle;
     }
-    // Otherwise use the language service method
     return this.languageService.getDisplayTitle(news.title, news.titleEn);
   }
 
