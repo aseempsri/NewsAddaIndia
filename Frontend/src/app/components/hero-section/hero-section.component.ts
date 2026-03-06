@@ -569,15 +569,15 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.updateTranslations();
     
-    // Wait for language to be initialized before loading news
     // Subscribe to language changes to reload news when language changes
-    this.languageSubscription = this.languageService.currentLanguage$.subscribe(lang => {
+    console.log('[HeroSection] Subscribing to language changes...');
+    this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
+      console.log('[HeroSection] Language changed to:', lang);
       this.updateTranslations();
-      // Reload news when language changes
-      if (this.featuredNews && this.featuredNews.title !== 'Loading latest news...') {
-        this.loadNews();
-      }
+      // Reload news when language changes to get correct language content
+      this.loadNews();
     });
+    console.log('[HeroSection] Language subscription set up');
     
     // Load news after ensuring language is initialized
     // Use setTimeout to ensure language service has initialized from localStorage
@@ -594,14 +594,6 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.checkIfHomePage();
     });
-    console.log('[HeroSection] Subscribing to language changes...');
-    this.languageSubscription = this.languageService.currentLanguage$.subscribe(async (lang) => {
-      console.log('[HeroSection] Language changed to:', lang);
-      this.updateTranslations();
-      // Reload news when language changes to get correct language content
-      this.loadNews();
-    });
-    console.log('[HeroSection] Language subscription set up');
   }
 
   ngOnDestroy() {

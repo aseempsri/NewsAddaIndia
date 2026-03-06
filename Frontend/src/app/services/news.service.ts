@@ -451,60 +451,57 @@ export class NewsService {
     
     // If English is selected, ensure we use English fields (titleEn, excerptEn)
     if (currentLang === 'en') {
-      // Map articles to use English versions
+      // Map articles to use English versions - don't modify original, create new objects
       const englishNews = news.map(article => {
-        // Use titleEn if available, otherwise keep title
-        if (article.titleEn && article.titleEn !== article.title) {
-          article.title = article.titleEn;
+        const englishArticle = { ...article };
+        
+        // Use titleEn if available and different from title, otherwise keep title
+        if (englishArticle.titleEn && englishArticle.titleEn.trim() !== '' && englishArticle.titleEn !== englishArticle.title) {
+          englishArticle.title = englishArticle.titleEn;
         }
-        // Use excerptEn if available for English
-        if (article.excerptEn && article.excerptEn.trim() !== '') {
-          article.excerpt = article.excerptEn;
+        
+        // Use excerptEn if available for English, otherwise keep excerpt
+        if (englishArticle.excerptEn && englishArticle.excerptEn.trim() !== '') {
+          englishArticle.excerpt = englishArticle.excerptEn;
         }
-        return article;
+        
+        return englishArticle;
       });
       return of(englishNews);
     }
 
-    // If Hindi is selected, translate titles and excerpts from English to Hindi
+    // If Hindi is selected, use Hindi fields (title, excerpt) or translate if needed
     return new Observable(observer => {
       const translatePromises = news.map(async (article) => {
+        const hindiArticle = { ...article };
+        
         // Store original English title if not already stored
-        if (!article.titleEn) {
-          article.titleEn = article.title;
+        if (!hindiArticle.titleEn) {
+          hindiArticle.titleEn = hindiArticle.title;
         }
 
-        // Translate title if it's in English (not Hindi)
-        if (!/[\u0900-\u097F]/.test(article.title)) {
+        // For title: If it's in English (not Hindi), translate it
+        if (!/[\u0900-\u097F]/.test(hindiArticle.title)) {
           try {
-            article.title = await this.languageService.translateToHindi(article.title);
+            hindiArticle.title = await this.languageService.translateToHindi(hindiArticle.title);
           } catch (error) {
             console.warn('Failed to translate title:', error);
           }
         }
 
-        // For excerpt: Use Hindi excerpt if available, otherwise translate English excerpt
-        if (article.excerptEn && article.excerptEn.trim() !== '') {
-          // If excerptEn exists, check if current excerpt is Hindi or English
-          // If excerpt is English (from excerptEn), translate it
-          if (!/[\u0900-\u097F]/.test(article.excerpt)) {
-            try {
-              article.excerpt = await this.languageService.translateToHindi(article.excerpt);
-            } catch (error) {
-              console.warn('Failed to translate excerpt:', error);
-            }
-          }
-          // If excerpt is already Hindi, keep it
-        } else if (article.excerpt && !/[\u0900-\u097F]/.test(article.excerpt)) {
-          // No excerptEn, translate excerpt if it's English
+        // For excerpt: Use Hindi excerpt (article.excerpt) if it's already Hindi
+        // If excerpt is English, translate it to Hindi
+        if (hindiArticle.excerpt && !/[\u0900-\u097F]/.test(hindiArticle.excerpt)) {
+          // Excerpt is in English, translate it to Hindi
           try {
-            article.excerpt = await this.languageService.translateToHindi(article.excerpt);
+            hindiArticle.excerpt = await this.languageService.translateToHindi(hindiArticle.excerpt);
           } catch (error) {
             console.warn('Failed to translate excerpt:', error);
           }
         }
+        // If excerpt is already in Hindi, keep it as is
 
-        return article;
+        return hindiArticle;
       });
 
       Promise.all(translatePromises)
