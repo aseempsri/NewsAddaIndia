@@ -448,6 +448,7 @@ export class NewsService {
    */
   private translateNewsIfNeeded(news: NewsArticle[]): Observable<NewsArticle[]> {
     const currentLang = this.languageService.getCurrentLanguage();
+    console.log('[NewsService] translateNewsIfNeeded - Current language:', currentLang);
     
     // If English is selected, ensure we use English fields (titleEn, excerptEn)
     if (currentLang === 'en') {
@@ -460,9 +461,15 @@ export class NewsService {
           englishArticle.title = englishArticle.titleEn;
         }
         
-        // Use excerptEn if available for English, otherwise keep excerpt
+        // Use excerptEn if available for English
+        // If excerptEn is not available but excerpt is English, use excerpt
+        // If excerptEn is not available and excerpt is Hindi, we'll keep excerpt (fallback)
         if (englishArticle.excerptEn && englishArticle.excerptEn.trim() !== '') {
           englishArticle.excerpt = englishArticle.excerptEn;
+        } else if (englishArticle.excerpt && /[\u0900-\u097F]/.test(englishArticle.excerpt)) {
+          // Excerpt is in Hindi but excerptEn is not available - this is a data issue
+          // Keep Hindi excerpt as fallback (should be fixed in backend)
+          console.warn('[NewsService] Article missing excerptEn, using Hindi excerpt as fallback:', article.id);
         }
         
         return englishArticle;

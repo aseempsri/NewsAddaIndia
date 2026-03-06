@@ -353,6 +353,8 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     console.log('[Header] ngOnInit called');
     this.fetchReaderCount();
     this.fetchWeather();
+    
+    // Get current language and ensure it's properly initialized
     this.currentLanguage = this.languageService.getCurrentLanguage();
     console.log('[Header] Initial currentLanguage:', this.currentLanguage);
     this.currentTheme = this.themeService.getCurrentTheme();
@@ -375,7 +377,8 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
     }, 200);
-    // Initialize translations first
+    
+    // Initialize translations first - ensure language is set before loading translations
     this.updateTranslations();
     // Then update dependent data
     this.updateDate();
