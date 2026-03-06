@@ -799,6 +799,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
     const currentLang = this.languageService.getCurrentLanguage();
     console.log('[CategorySection] updateArticleTitles called, current language:', currentLang);
+    console.log('[CategorySection] originalNewsItems keys:', Object.keys(this.originalNewsItems));
     
     // Process each category
     for (let catIndex = 0; catIndex < this.categories.length; catIndex++) {
@@ -807,31 +808,38 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
         
+        console.log(`[CategorySection] Category ${categoryKey}: originalNewsItems has ${originalNews?.length || 0} articles, category.articles has ${category.articles?.length || 0} articles`);
+        
         if (originalNews && originalNews.length > 0) {
           console.log(`[CategorySection] Updating ${originalNews.length} articles for category ${categoryKey}`);
           
           // Process ALL articles from originalNewsItems
           const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
-            const originalTitle = newsItem.title;
-            const originalTitleEn = newsItem.titleEn;
+            // Get stored originals or use current values
+            const storedOriginalTitle = (newsItem as any).originalTitle;
+            const storedOriginalTitleEn = (newsItem as any).originalTitleEn;
             
-            // Determine which title to use based on current language
-            let titleToTranslate = originalTitle;
-            if (currentLang === 'en' && originalTitleEn) {
-              // For English, prefer titleEn if it exists and is English
-              const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
-              if (!isTitleEnHindi) {
-                titleToTranslate = originalTitleEn;
+            // Use stored originals if available, otherwise use current values
+            const originalTitle = storedOriginalTitle || newsItem.title;
+            const originalTitleEn = storedOriginalTitleEn || newsItem.titleEn || newsItem.title;
+            
+            // Determine which title to use and translate based on current language
+            let titleToTranslate: string;
+            
+            if (currentLang === 'en') {
+              // For English: prefer titleEn if it exists and is English
+              if (originalTitleEn && !this.languageService.checkIfHindi(originalTitleEn)) {
+                titleToTranslate = originalTitleEn; // Use English titleEn
               } else {
-                // titleEn is Hindi, use original title
+                // titleEn is Hindi or doesn't exist - use originalTitle and translate if needed
                 titleToTranslate = originalTitle;
               }
-            } else if (currentLang === 'hi') {
-              // For Hindi, use original title
+            } else {
+              // For Hindi: use originalTitle (should be Hindi)
               titleToTranslate = originalTitle;
             }
             
-            // Check if translation is needed
+            // Check if translation is needed based on current language
             const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
             const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
             
@@ -860,6 +868,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           }));
           
           // Update category articles with new array reference
+          // Update ALL articles so scrolling shows translated titles too
           this.categories[catIndex] = {
             ...category,
             articles: [...translatedArticles]
@@ -873,8 +882,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     
     // Force change detection by creating new categories array reference
     this.categories = [...this.categories];
-    this.cdr.detectChanges();
-    console.log('[CategorySection] All article titles updated, change detection triggered');
+    // Trigger change detection multiple times to ensure UI updates
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('[CategorySection] Change detection triggered');
+    }, 0);
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('[CategorySection] Second change detection triggered');
+    }, 100);
+    console.log('[CategorySection] All article titles updated');
   }
 
   loadCategoryNews() {
@@ -900,6 +918,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       const targetCount = 50;
       const fetchCount = 70;
       
+      // Fetch articles - they come already translated by the service
+      // But we need to preserve original titles for re-translation
       this.newsService.fetchNewsByPage(config.slug, fetchCount).subscribe({
         next: async (news) => {
           // CRITICAL: Ensure all articles use MongoDB _id from database
@@ -910,6 +930,34 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             if (item.id) {
               item.id = typeof item.id === 'string' ? item.id : item.id.toString();
             }
+            
+            // CRITICAL: Preserve original titles for translation
+            // The service may have modified title based on current language
+            // We need to store both original title (Hindi) and titleEn (English)
+            // If titleEn exists and title === titleEn, title was overwritten (English mode)
+            // In that case, we need to detect the original Hindi title
+            const currentLang = this.languageService.getCurrentLanguage();
+            let originalTitle = item.title;
+            let originalTitleEn = item.titleEn || item.title;
+            
+            // If current language is English and title === titleEn, title was overwritten
+            // We need to preserve what we think is the Hindi title
+            // Since we can't get it back, we'll use titleEn as English and translate title if needed
+            if (currentLang === 'en' && item.titleEn && item.title === item.titleEn) {
+              // Title was overwritten - we've lost the original Hindi title
+              // Store titleEn as English, and we'll translate it to Hindi when needed
+              originalTitleEn = item.titleEn;
+              originalTitle = item.titleEn; // Will be translated to Hindi when language changes
+            } else {
+              // Preserve both titles
+              originalTitle = item.title;
+              originalTitleEn = item.titleEn || item.title;
+            }
+            
+            // Store originals for translation
+            (item as any).originalTitle = originalTitle;
+            (item as any).originalTitleEn = originalTitleEn;
+            
             // Don't assign fallback IDs - articles without IDs are from external sources
             // and shouldn't have "Read more" buttons anyway
             return item;
@@ -959,7 +1007,15 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           const articlesToShow = filteredNews && filteredNews.length > 0 
             ? filteredNews.slice(0, Math.max(targetCount, filteredNews.length)) 
             : [];
-          this.originalNewsItems[config.key] = articlesToShow;
+          
+          // CRITICAL: Store articles with original titles preserved
+          // The service may have already translated titles, so preserve originals for re-translation
+          const articlesWithOriginals = articlesToShow.map(article => {
+            // Preserve original titles (already set in newsWithIds mapping above)
+            return article;
+          });
+          
+          this.originalNewsItems[config.key] = articlesWithOriginals;
           
           // Register displayed articles AFTER filtering to prevent duplicates
           if (articlesToShow.length > 0) {
