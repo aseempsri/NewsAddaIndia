@@ -781,65 +781,39 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   updateCategoryTitles() {
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
-    console.log('[CategorySection] updateCategoryTitles called, current language:', this.languageService.getCurrentLanguage());
     this.categories.forEach((category, index) => {
       if (index < categoryKeys.length) {
-        const translatedTitle = this.languageService.translateCategory(categoryKeys[index]);
-        console.log(`[CategorySection] Translating category ${categoryKeys[index]} (index ${index}): "${category.title}" -> "${translatedTitle}"`);
-        category.title = translatedTitle;
+        category.title = this.languageService.translateCategory(categoryKeys[index]);
       }
     });
-    // Force change detection by creating a new array reference
     this.categories = [...this.categories];
-    console.log('[CategorySection] Category titles updated:', this.categories.map(c => c.title));
   }
 
   async updateArticleTitles() {
-    // Update article titles based on language with real-time translation
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
     const currentLang = this.languageService.getCurrentLanguage();
-    console.log('[CategorySection] updateArticleTitles called, current language:', currentLang);
-    console.log('[CategorySection] originalNewsItems keys:', Object.keys(this.originalNewsItems));
     
-    // Process each category
     for (let catIndex = 0; catIndex < this.categories.length; catIndex++) {
       const category = this.categories[catIndex];
       if (catIndex < categoryKeys.length) {
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
         
-        console.log(`[CategorySection] Category ${categoryKey}: originalNewsItems has ${originalNews?.length || 0} articles, category.articles has ${category.articles?.length || 0} articles`);
-        
         if (originalNews && originalNews.length > 0) {
-          console.log(`[CategorySection] Updating ${originalNews.length} articles for category ${categoryKey}`);
           
-          // Process ALL articles from originalNewsItems
           const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
-            // Get stored originals or use current values
-            const storedOriginalTitle = (newsItem as any).originalTitle;
-            const storedOriginalTitleEn = (newsItem as any).originalTitleEn;
+            const storedOriginal = (newsItem as any).originalTitle;
+            const storedOriginalEn = (newsItem as any).originalTitleEn;
+            const originalTitle = storedOriginal ?? newsItem.title;
+            const originalTitleEn = storedOriginalEn ?? newsItem.titleEn ?? newsItem.title;
             
-            // Use stored originals if available, otherwise use current values
-            const originalTitle = storedOriginalTitle || newsItem.title;
-            const originalTitleEn = storedOriginalTitleEn || newsItem.titleEn || newsItem.title;
-            
-            // Determine which title to use and translate based on current language
             let titleToTranslate: string;
-            
             if (currentLang === 'en') {
-              // For English: prefer titleEn if it exists and is English
-              if (originalTitleEn && !this.languageService.checkIfHindi(originalTitleEn)) {
-                titleToTranslate = originalTitleEn; // Use English titleEn
-              } else {
-                // titleEn is Hindi or doesn't exist - use originalTitle and translate if needed
-                titleToTranslate = originalTitle;
-              }
+              titleToTranslate = !this.languageService.checkIfHindi(originalTitleEn) ? originalTitleEn : originalTitle;
             } else {
-              // For Hindi: use originalTitle (should be Hindi)
-              titleToTranslate = originalTitle;
+              titleToTranslate = this.languageService.checkIfHindi(originalTitle) ? originalTitle : (originalTitleEn || originalTitle);
             }
             
-            // Check if translation is needed based on current language
             const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
             const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
             
@@ -848,13 +822,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               try {
                 translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
               } catch (error) {
-                console.warn(`Failed to translate title for ${categoryKey}:`, error);
                 translatedTitle = titleToTranslate;
               }
             }
             
             return {
-              id: newsItem.id, // Preserve MongoDB _id
+              id: newsItem.id,
               title: translatedTitle,
               image: newsItem.image || '',
               time: newsItem.time,
@@ -867,32 +840,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             };
           }));
           
-          // Update category articles with new array reference
-          // Update ALL articles so scrolling shows translated titles too
           this.categories[catIndex] = {
             ...category,
             articles: [...translatedArticles]
           };
-          console.log(`[CategorySection] Updated ${translatedArticles.length} articles for ${categoryKey}, first title:`, translatedArticles[0]?.title?.substring(0, 30));
-        } else {
-          console.warn(`[CategorySection] No original news items found for category ${categoryKey}`);
         }
       }
     }
     
-    // Force change detection by creating new categories array reference
     this.categories = [...this.categories];
-    // Trigger change detection multiple times to ensure UI updates
     this.cdr.markForCheck();
-    setTimeout(() => {
-      this.cdr.detectChanges();
-      console.log('[CategorySection] Change detection triggered');
-    }, 0);
-    setTimeout(() => {
-      this.cdr.detectChanges();
-      console.log('[CategorySection] Second change detection triggered');
-    }, 100);
-    console.log('[CategorySection] All article titles updated');
+    this.cdr.detectChanges();
   }
 
   loadCategoryNews() {
@@ -926,40 +884,23 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           // Only normalize existing IDs - don't assign fallback IDs for database articles
           const newsWithIds = news.map(item => {
             // Normalize ID to string for consistent comparison
-            // Database articles should always have _id, so preserve it
             if (item.id) {
               item.id = typeof item.id === 'string' ? item.id : item.id.toString();
             }
             
-            // CRITICAL: Preserve original titles for translation
-            // The service may have modified title based on current language
-            // We need to store both original title (Hindi) and titleEn (English)
-            // If titleEn exists and title === titleEn, title was overwritten (English mode)
-            // In that case, we need to detect the original Hindi title
-            const currentLang = this.languageService.getCurrentLanguage();
-            let originalTitle = item.title;
-            let originalTitleEn = item.titleEn || item.title;
-            
-            // If current language is English and title === titleEn, title was overwritten
-            // We need to preserve what we think is the Hindi title
-            // Since we can't get it back, we'll use titleEn as English and translate title if needed
-            if (currentLang === 'en' && item.titleEn && item.title === item.titleEn) {
-              // Title was overwritten - we've lost the original Hindi title
-              // Store titleEn as English, and we'll translate it to Hindi when needed
-              originalTitleEn = item.titleEn;
-              originalTitle = item.titleEn; // Will be translated to Hindi when language changes
+            // CRITICAL: Use originalTitle/originalTitleEn from news service if available
+            // The service now preserves these from backend BEFORE translation
+            const serviceOriginalTitle = (item as any).originalTitle;
+            const serviceOriginalTitleEn = (item as any).originalTitleEn;
+            if (serviceOriginalTitle !== undefined && serviceOriginalTitleEn !== undefined) {
+              (item as any).originalTitle = serviceOriginalTitle;
+              (item as any).originalTitleEn = serviceOriginalTitleEn;
             } else {
-              // Preserve both titles
-              originalTitle = item.title;
-              originalTitleEn = item.titleEn || item.title;
+              // Fallback: preserve from current item
+              (item as any).originalTitle = item.title;
+              (item as any).originalTitleEn = item.titleEn || item.title;
             }
             
-            // Store originals for translation
-            (item as any).originalTitle = originalTitle;
-            (item as any).originalTitleEn = originalTitleEn;
-            
-            // Don't assign fallback IDs - articles without IDs are from external sources
-            // and shouldn't have "Read more" buttons anyway
             return item;
           });
           
@@ -1034,19 +975,18 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           if (initialArticles.length > 0) {
             const currentLang = this.languageService.getCurrentLanguage();
             const translatedArticles = await Promise.all(initialArticles.map(async (newsItem) => {
-              const originalTitle = newsItem.title;
-              const originalTitleEn = newsItem.titleEn;
+              const storedOriginal = (newsItem as any).originalTitle;
+              const storedOriginalEn = (newsItem as any).originalTitleEn;
+              const originalTitle = storedOriginal ?? newsItem.title;
+              const originalTitleEn = storedOriginalEn ?? newsItem.titleEn ?? newsItem.title;
               
-              // Determine which title to use based on current language
-              let titleToTranslate = originalTitle;
-              if (currentLang === 'en' && originalTitleEn) {
-                const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
-                if (!isTitleEnHindi) {
-                  titleToTranslate = originalTitleEn;
-                }
+              let titleToTranslate: string;
+              if (currentLang === 'en') {
+                titleToTranslate = !this.languageService.checkIfHindi(originalTitleEn) ? originalTitleEn : originalTitle;
+              } else {
+                titleToTranslate = this.languageService.checkIfHindi(originalTitle) ? originalTitle : (originalTitleEn || originalTitle);
               }
               
-              // Check if translation is needed
               const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
               const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
               
@@ -1055,13 +995,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                 try {
                   translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
                 } catch (error) {
-                  console.warn(`Failed to translate title for ${config.key}:`, error);
                   translatedTitle = titleToTranslate;
                 }
               }
               
               return {
-                id: newsItem.id, // Preserve MongoDB _id
+                id: newsItem.id,
                 title: translatedTitle,
                 image: newsItem.image || '',
                 time: newsItem.time,
@@ -1073,7 +1012,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                 isFeatured: newsItem.isFeatured || false
               };
             }));
-            this.categories[config.index].articles = [...translatedArticles]; // Only 20 articles initially, force change detection
+            this.categories[config.index].articles = [...translatedArticles];
           } else {
             this.categories[config.index].articles = [];
           }
@@ -1085,22 +1024,20 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           // Lazy load remaining cards in background (don't block page load)
           if (remainingArticles.length > 0) {
             setTimeout(() => {
-              // Translate and add remaining articles
               const currentLang = this.languageService.getCurrentLanguage();
               Promise.all(remainingArticles.map(async (newsItem) => {
-                const originalTitle = newsItem.title;
-                const originalTitleEn = newsItem.titleEn;
+                const storedOriginal = (newsItem as any).originalTitle;
+                const storedOriginalEn = (newsItem as any).originalTitleEn;
+                const originalTitle = storedOriginal ?? newsItem.title;
+                const originalTitleEn = storedOriginalEn ?? newsItem.titleEn ?? newsItem.title;
                 
-                // Determine which title to use based on current language
-                let titleToTranslate = originalTitle;
-                if (currentLang === 'en' && originalTitleEn) {
-                  const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
-                  if (!isTitleEnHindi) {
-                    titleToTranslate = originalTitleEn;
-                  }
+                let titleToTranslate: string;
+                if (currentLang === 'en') {
+                  titleToTranslate = !this.languageService.checkIfHindi(originalTitleEn) ? originalTitleEn : originalTitle;
+                } else {
+                  titleToTranslate = this.languageService.checkIfHindi(originalTitle) ? originalTitle : (originalTitleEn || originalTitle);
                 }
                 
-                // Check if translation is needed
                 const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
                 const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
                 
@@ -1109,13 +1046,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                   try {
                     translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
                   } catch (error) {
-                    console.warn(`Failed to translate title for ${config.key}:`, error);
                     translatedTitle = titleToTranslate;
                   }
                 }
                 
                 return {
-                  id: newsItem.id, // Preserve MongoDB _id
+                  id: newsItem.id,
                   title: translatedTitle,
                   image: newsItem.image || '',
                   time: newsItem.time,
@@ -1479,22 +1415,20 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         const articlesToShow = filteredNews.slice(0, initialVisibleCards);
         
         if (articlesToShow.length > 0) {
-          // Translate titles if needed
           const currentLang = this.languageService.getCurrentLanguage();
           const translatedArticles = await Promise.all(articlesToShow.map(async (newsItem) => {
-            const originalTitle = newsItem.title;
-            const originalTitleEn = newsItem.titleEn;
+            const storedOriginal = (newsItem as any).originalTitle;
+            const storedOriginalEn = (newsItem as any).originalTitleEn;
+            const originalTitle = storedOriginal ?? newsItem.title;
+            const originalTitleEn = storedOriginalEn ?? newsItem.titleEn ?? newsItem.title;
             
-            // Determine which title to use based on current language
-            let titleToTranslate = originalTitle;
-            if (currentLang === 'en' && originalTitleEn) {
-              const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
-              if (!isTitleEnHindi) {
-                titleToTranslate = originalTitleEn;
-              }
+            let titleToTranslate: string;
+            if (currentLang === 'en') {
+              titleToTranslate = !this.languageService.checkIfHindi(originalTitleEn) ? originalTitleEn : originalTitle;
+            } else {
+              titleToTranslate = this.languageService.checkIfHindi(originalTitle) ? originalTitle : (originalTitleEn || originalTitle);
             }
             
-            // Check if translation is needed
             const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
             const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
             
@@ -1503,13 +1437,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               try {
                 translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
               } catch (error) {
-                console.warn(`Failed to translate title for ${config.key}:`, error);
                 translatedTitle = titleToTranslate;
               }
             }
             
             return {
-              id: newsItem.id, // Preserve MongoDB _id
+              id: newsItem.id,
               title: translatedTitle,
               image: newsItem.image || '',
               time: newsItem.time,
@@ -1522,7 +1455,6 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             };
           }));
           
-          // Update the category articles (force change detection)
           this.categories[config.index].articles = [...translatedArticles];
           
           const removedCount = originalNews.length - filteredNews.length;
