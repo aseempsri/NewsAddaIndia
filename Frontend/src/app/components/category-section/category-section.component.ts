@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { NewsService, NewsArticle } from '../../services/news.service';
@@ -568,7 +568,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     private modalService: ModalService,
     private languageService: LanguageService,
     private displayedNewsService: DisplayedNewsService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -799,14 +800,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     const currentLang = this.languageService.getCurrentLanguage();
     console.log('[CategorySection] updateArticleTitles called, current language:', currentLang);
     
-    for (const category of this.categories) {
-      const catIndex = this.categories.indexOf(category);
+    // Process each category
+    for (let catIndex = 0; catIndex < this.categories.length; catIndex++) {
+      const category = this.categories[catIndex];
       if (catIndex < categoryKeys.length) {
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
+        
         if (originalNews && originalNews.length > 0) {
           console.log(`[CategorySection] Updating ${originalNews.length} articles for category ${categoryKey}`);
-          // Process ALL articles (not just visible ones)
+          
+          // Process ALL articles from originalNewsItems
           const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
             const originalTitle = newsItem.title;
             const originalTitleEn = newsItem.titleEn;
@@ -854,17 +858,23 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               isFeatured: newsItem.isFeatured || false
             };
           }));
-          // Force change detection by creating new array reference and updating all articles
-          category.articles = [...translatedArticles];
-          console.log(`[CategorySection] Updated ${category.articles.length} articles for ${categoryKey}, first title:`, category.articles[0]?.title?.substring(0, 30));
+          
+          // Update category articles with new array reference
+          this.categories[catIndex] = {
+            ...category,
+            articles: [...translatedArticles]
+          };
+          console.log(`[CategorySection] Updated ${translatedArticles.length} articles for ${categoryKey}, first title:`, translatedArticles[0]?.title?.substring(0, 30));
         } else {
           console.warn(`[CategorySection] No original news items found for category ${categoryKey}`);
         }
       }
     }
-    // Force change detection for categories array
+    
+    // Force change detection by creating new categories array reference
     this.categories = [...this.categories];
-    console.log('[CategorySection] All article titles updated');
+    this.cdr.detectChanges();
+    console.log('[CategorySection] All article titles updated, change detection triggered');
   }
 
   loadCategoryNews() {
