@@ -797,6 +797,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     // Update article titles based on language with real-time translation
     const categoryKeys = ['Entertainment', 'Sports', 'National', 'International', 'Politics', 'Health', 'Business', 'Technology', 'Religious'];
     const currentLang = this.languageService.getCurrentLanguage();
+    console.log('[CategorySection] updateArticleTitles called, current language:', currentLang);
     
     for (const category of this.categories) {
       const catIndex = this.categories.indexOf(category);
@@ -804,7 +805,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         const categoryKey = categoryKeys[catIndex];
         const originalNews = this.originalNewsItems[categoryKey];
         if (originalNews && originalNews.length > 0) {
-          // Process all articles
+          console.log(`[CategorySection] Updating ${originalNews.length} articles for category ${categoryKey}`);
+          // Process ALL articles (not just visible ones)
           const translatedArticles = await Promise.all(originalNews.map(async (newsItem) => {
             const originalTitle = newsItem.title;
             const originalTitleEn = newsItem.titleEn;
@@ -852,10 +854,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
               isFeatured: newsItem.isFeatured || false
             };
           }));
-          category.articles = translatedArticles;
+          // Force change detection by creating new array reference and updating all articles
+          category.articles = [...translatedArticles];
+          console.log(`[CategorySection] Updated ${category.articles.length} articles for ${categoryKey}, first title:`, category.articles[0]?.title?.substring(0, 30));
+        } else {
+          console.warn(`[CategorySection] No original news items found for category ${categoryKey}`);
         }
       }
     }
+    // Force change detection for categories array
+    this.categories = [...this.categories];
+    console.log('[CategorySection] All article titles updated');
   }
 
   loadCategoryNews() {
@@ -957,13 +966,34 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           
           // Translate titles for initial visible articles only
           if (initialArticles.length > 0) {
+            const currentLang = this.languageService.getCurrentLanguage();
             const translatedArticles = await Promise.all(initialArticles.map(async (newsItem) => {
-              let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
-              try {
-                translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-              } catch (error) {
-                console.warn(`Failed to translate title for ${config.key}:`, error);
+              const originalTitle = newsItem.title;
+              const originalTitleEn = newsItem.titleEn;
+              
+              // Determine which title to use based on current language
+              let titleToTranslate = originalTitle;
+              if (currentLang === 'en' && originalTitleEn) {
+                const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+                if (!isTitleEnHindi) {
+                  titleToTranslate = originalTitleEn;
+                }
               }
+              
+              // Check if translation is needed
+              const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+              const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+              
+              let translatedTitle = titleToTranslate;
+              if (needsTranslation) {
+                try {
+                  translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
+                } catch (error) {
+                  console.warn(`Failed to translate title for ${config.key}:`, error);
+                  translatedTitle = titleToTranslate;
+                }
+              }
+              
               return {
                 id: newsItem.id, // Preserve MongoDB _id
                 title: translatedTitle,
@@ -977,7 +1007,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                 isFeatured: newsItem.isFeatured || false
               };
             }));
-            this.categories[config.index].articles = translatedArticles; // Only 20 articles initially
+            this.categories[config.index].articles = [...translatedArticles]; // Only 20 articles initially, force change detection
           } else {
             this.categories[config.index].articles = [];
           }
@@ -990,13 +1020,34 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
           if (remainingArticles.length > 0) {
             setTimeout(() => {
               // Translate and add remaining articles
+              const currentLang = this.languageService.getCurrentLanguage();
               Promise.all(remainingArticles.map(async (newsItem) => {
-                let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
-                try {
-                  translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-                } catch (error) {
-                  console.warn(`Failed to translate title for ${config.key}:`, error);
+                const originalTitle = newsItem.title;
+                const originalTitleEn = newsItem.titleEn;
+                
+                // Determine which title to use based on current language
+                let titleToTranslate = originalTitle;
+                if (currentLang === 'en' && originalTitleEn) {
+                  const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+                  if (!isTitleEnHindi) {
+                    titleToTranslate = originalTitleEn;
+                  }
                 }
+                
+                // Check if translation is needed
+                const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+                const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+                
+                let translatedTitle = titleToTranslate;
+                if (needsTranslation) {
+                  try {
+                    translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
+                  } catch (error) {
+                    console.warn(`Failed to translate title for ${config.key}:`, error);
+                    translatedTitle = titleToTranslate;
+                  }
+                }
+                
                 return {
                   id: newsItem.id, // Preserve MongoDB _id
                   title: translatedTitle,
@@ -1010,7 +1061,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
                   isFeatured: newsItem.isFeatured || false
                 };
               })).then(translatedRemaining => {
-                // Add remaining articles to the category
+                // Add remaining articles to the category (force change detection)
                 this.categories[config.index].articles = [...this.categories[config.index].articles, ...translatedRemaining];
                 // Load images for remaining articles
                 this.fetchImagesForCategory(config.index, remainingArticles, true);
@@ -1363,13 +1414,34 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
         
         if (articlesToShow.length > 0) {
           // Translate titles if needed
+          const currentLang = this.languageService.getCurrentLanguage();
           const translatedArticles = await Promise.all(articlesToShow.map(async (newsItem) => {
-            let translatedTitle = this.languageService.getDisplayTitle(newsItem.title, newsItem.titleEn);
-            try {
-              translatedTitle = await this.languageService.translateToCurrentLanguage(newsItem.title);
-            } catch (error) {
-              console.warn(`Failed to translate title for ${config.key}:`, error);
+            const originalTitle = newsItem.title;
+            const originalTitleEn = newsItem.titleEn;
+            
+            // Determine which title to use based on current language
+            let titleToTranslate = originalTitle;
+            if (currentLang === 'en' && originalTitleEn) {
+              const isTitleEnHindi = this.languageService.checkIfHindi(originalTitleEn);
+              if (!isTitleEnHindi) {
+                titleToTranslate = originalTitleEn;
+              }
             }
+            
+            // Check if translation is needed
+            const isTitleHindi = this.languageService.checkIfHindi(titleToTranslate);
+            const needsTranslation = (currentLang === 'en' && isTitleHindi) || (currentLang === 'hi' && !isTitleHindi);
+            
+            let translatedTitle = titleToTranslate;
+            if (needsTranslation) {
+              try {
+                translatedTitle = await this.languageService.translateToCurrentLanguage(titleToTranslate);
+              } catch (error) {
+                console.warn(`Failed to translate title for ${config.key}:`, error);
+                translatedTitle = titleToTranslate;
+              }
+            }
+            
             return {
               id: newsItem.id, // Preserve MongoDB _id
               title: translatedTitle,
@@ -1384,8 +1456,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
             };
           }));
           
-          // Update the category articles
-          this.categories[config.index].articles = translatedArticles;
+          // Update the category articles (force change detection)
+          this.categories[config.index].articles = [...translatedArticles];
           
           const removedCount = originalNews.length - filteredNews.length;
           console.log(`[CategorySection] Re-filtered ${config.key}: ${articlesToShow.length} visible articles (removed ${removedCount} duplicates from ${originalNews.length} total)`);
