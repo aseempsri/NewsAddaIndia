@@ -32,6 +32,8 @@ interface NewsForm {
   trendingTitle: string;
   trendingTitleEn: string;
   pushNotification: boolean;
+  pushNotificationEn: boolean;
+  pushNotificationHi: boolean;
 }
 
 @Component({
@@ -374,17 +376,26 @@ interface NewsForm {
                       <span class="text-sm font-medium">Trending</span>
                     </label>
                   </div>
-                  <div class="mt-2">
+                  <div class="mt-2 space-y-2">
                     <label class="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        [(ngModel)]="newsForm.pushNotification"
-                        name="pushNotification"
+                        [(ngModel)]="newsForm.pushNotificationEn"
+                        name="pushNotificationEn"
                         class="rounded"
                       />
-                      <span class="text-sm font-medium">Push Notification</span>
+                      <span class="text-sm font-medium">Push Notification in English</span>
                     </label>
-                    <p class="text-xs text-muted-foreground mt-1 ml-6">Send a push notification to subscribers when this post is published</p>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        [(ngModel)]="newsForm.pushNotificationHi"
+                        name="pushNotificationHi"
+                        class="rounded"
+                      />
+                      <span class="text-sm font-medium">Push Notification in Hindi</span>
+                    </label>
+                    <p class="text-xs text-muted-foreground mt-1 ml-6">Send push notification(s) to subscribers when this post is published. Select one or both languages.</p>
                   </div>
                   
                   <!-- Trending Title (shown only when Trending is checked) -->
@@ -665,7 +676,9 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
     isTrending: false,
     trendingTitle: '',
     trendingTitleEn: '',
-    pushNotification: false
+    pushNotification: false,
+    pushNotificationEn: false,
+    pushNotificationHi: false
   };
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
@@ -1042,7 +1055,8 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
     formData.append('isBreaking', this.newsForm.isBreaking.toString());
     formData.append('isFeatured', this.newsForm.isFeatured.toString());
     formData.append('isTrending', this.newsForm.isTrending.toString());
-    formData.append('pushNotification', this.newsForm.pushNotification.toString());
+    formData.append('pushNotificationEn', this.newsForm.pushNotificationEn.toString());
+    formData.append('pushNotificationHi', this.newsForm.pushNotificationHi.toString());
     // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
     if (this.newsForm.isTrending) {
       // If trending is checked, send trendingTitle (even if empty, backend will validate)
@@ -1097,7 +1111,9 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
             isTrending: false,
             trendingTitle: '',
             trendingTitleEn: '',
-            pushNotification: false
+            pushNotification: false,
+            pushNotificationEn: false,
+            pushNotificationHi: false
           };
           this.tagsInput = '';
           this.previewImageUrl = null;

@@ -34,6 +34,8 @@ interface LiveNews {
   trendingTitle?: string;
   trendingTitleEn?: string;
   pushNotification?: boolean;
+  pushNotificationEn?: boolean;
+  pushNotificationHi?: boolean;
   date: string;
   createdAt: string;
   updatedAt: string;
@@ -387,17 +389,26 @@ interface LiveNews {
                         <span class="text-sm font-medium">Trending</span>
                       </label>
                     </div>
-                    <div class="mt-2">
+                    <div class="mt-2 space-y-2">
                       <label class="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          [(ngModel)]="newsData.pushNotification"
-                          name="pushNotification"
+                          [(ngModel)]="newsData.pushNotificationEn"
+                          name="pushNotificationEn"
                           class="rounded"
                         />
-                        <span class="text-sm font-medium">Push Notification</span>
+                        <span class="text-sm font-medium">Push Notification in English</span>
                       </label>
-                      <p class="text-xs text-muted-foreground mt-1 ml-6">Send a push notification to subscribers when this post is updated</p>
+                      <label class="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="newsData.pushNotificationHi"
+                          name="pushNotificationHi"
+                          class="rounded"
+                        />
+                        <span class="text-sm font-medium">Push Notification in Hindi</span>
+                      </label>
+                      <p class="text-xs text-muted-foreground mt-1 ml-6">Send push notification(s) to subscribers when this post is updated. Select one or both languages.</p>
                     </div>
                     
                     <!-- Trending Title (shown only when Trending is checked) -->
@@ -668,6 +679,8 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy, CanDeactiv
     trendingTitle: '',
     trendingTitleEn: '',
     pushNotification: false,
+    pushNotificationEn: false,
+    pushNotificationHi: false,
     date: '',
     createdAt: '',
     updatedAt: ''
@@ -1264,7 +1277,8 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy, CanDeactiv
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
     formData.append('isTrending', this.newsData.isTrending.toString());
-    formData.append('pushNotification', (this.newsData.pushNotification || false).toString());
+    formData.append('pushNotificationEn', (this.newsData.pushNotificationEn || false).toString());
+    formData.append('pushNotificationHi', (this.newsData.pushNotificationHi || false).toString());
     // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
     if (this.newsData.isTrending) {
       // If trending is checked, send trendingTitle (even if empty, backend will validate)

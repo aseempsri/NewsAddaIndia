@@ -736,7 +736,7 @@ function generateSummary(content, maxWords = 60) {
 // POST /api/news - Create new news (Admin only)
 router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn, pushNotification } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn, pushNotification, pushNotificationEn, pushNotificationHi } = req.body;
 
     // Validate required fields
     if (!title || !excerpt || !category) {
@@ -844,8 +844,10 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 
     await news.save();
 
-    if (pushNotification === 'true' || pushNotification === true) {
-      sendPushForNews(news).catch(err => console.error('[Backend POST /api/news] Push notification error:', err.message));
+    const pushEn = pushNotificationEn === 'true' || pushNotificationEn === true || (pushNotification === 'true' || pushNotification === true);
+    const pushHi = pushNotificationHi === 'true' || pushNotificationHi === true;
+    if (pushEn || pushHi) {
+      sendPushForNews(news, { pushEn, pushHi }).catch(err => console.error('[Backend POST /api/news] Push notification error:', err.message));
     }
 
     res.status(201).json({
@@ -1211,10 +1213,11 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
 
     await news.save();
 
-    const pushNotification = req.body.pushNotification === 'true' || req.body.pushNotification === true;
-    if (pushNotification) {
+    const pushEn = req.body.pushNotificationEn === 'true' || req.body.pushNotificationEn === true || req.body.pushNotification === 'true' || req.body.pushNotification === true;
+    const pushHi = req.body.pushNotificationHi === 'true' || req.body.pushNotificationHi === true;
+    if (pushEn || pushHi) {
       const savedForPush = await News.findById(req.params.id).lean();
-      sendPushForNews(savedForPush).catch(err => console.error('[Backend PUT /api/news/:id] Push notification error:', err.message));
+      sendPushForNews(savedForPush, { pushEn, pushHi }).catch(err => console.error('[Backend PUT /api/news/:id] Push notification error:', err.message));
     }
 
     // Reload from DB to ensure we have the latest data

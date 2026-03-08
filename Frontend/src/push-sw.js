@@ -1,16 +1,19 @@
 /* Push notification service worker - handles incoming push events */
 self.addEventListener('push', (event) => {
-  let data = { title: 'News Adda India', body: 'New article', url: '/' };
+  let data = { title: 'News Adda India', body: 'New article', url: '/', image: null };
   try {
     if (event.data) {
       data = event.data.json();
     }
   } catch (_) {}
+  const url = data.url || '/';
+  const urlToOpen = url.startsWith('http') ? url : (self.location.origin + (url.startsWith('/') ? url : '/' + url));
   const options = {
     body: data.body || 'Read the latest news',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    data: { url: data.url || '/', id: data.id },
+    image: data.image || undefined,
+    data: { url: urlToOpen, id: data.id },
     actions: [{ action: 'open', title: 'Read' }]
   };
   event.waitUntil(
@@ -20,17 +23,17 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/';
+  const urlToOpen = event.notification.data?.url || self.location.origin + '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
+          client.navigate(urlToOpen);
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow(urlToOpen);
       }
     })
   );
