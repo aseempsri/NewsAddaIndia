@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -43,6 +43,7 @@ app.use('/api/cricket', require('./routes/cricket'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/tts', require('./routes/tts'));
 app.use('/api/market', require('./routes/market'));
+app.use('/api/push', require('./routes/push'));
 
 // Route for social media crawlers - serve HTML with meta tags
 app.get('/news/:slug', async (req, res) => {

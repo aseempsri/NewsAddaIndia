@@ -6,6 +6,7 @@ const fs = require('fs');
 const PendingNews = require('../models/PendingNews');
 const News = require('../models/News');
 const { authenticateAdmin } = require('../middleware/auth');
+const { sendPushForNews } = require('../services/pushNotification.service');
 
 const router = express.Router();
 
@@ -469,6 +470,7 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
       isBreaking: req.body.isBreaking === 'true' || req.body.isBreaking === true,
       isFeatured: req.body.isFeatured === 'true' || req.body.isFeatured === true,
       isTrending: req.body.isTrending === 'true' || req.body.isTrending === true,
+      pushNotification: req.body.pushNotification === 'true' || req.body.pushNotification === true,
       // Preserve empty string if sent for trendingTitle
       trendingTitle: 'trendingTitle' in req.body ? (req.body.trendingTitle !== undefined && req.body.trendingTitle !== null && req.body.trendingTitle !== '' ? req.body.trendingTitle.trim() : '') : pendingNews.trendingTitle,
       // Preserve empty string if sent
@@ -627,6 +629,11 @@ router.post('/:id/publish', authenticateAdmin, async (req, res) => {
       // Create news article
       const news = new News(newsData);
       await news.save();
+      
+      if (pendingNews.pushNotification) {
+        const savedForPush = await News.findById(news._id).lean();
+        sendPushForNews(savedForPush).catch(err => console.error('[Backend POST publish] Push notification error:', err.message));
+      }
       
       // Delete pending news
       await PendingNews.findByIdAndDelete(req.params.id);

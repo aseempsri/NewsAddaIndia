@@ -40,7 +40,10 @@ export interface Translations {
   privacy: string;
   terms: string;
   cookies: string;
-  
+  getNotifications: string;
+  notificationsSubscribed: string;
+  subscribing: string;
+
   // Sidebar
   subscribeToNewsletter: string;
   subscribeDescription: string;
@@ -109,6 +112,9 @@ const translations: Record<Language, Translations> = {
     privacy: 'Privacy',
     terms: 'Terms',
     cookies: 'Cookies',
+    getNotifications: 'Get notifications',
+    notificationsSubscribed: 'Subscribed',
+    subscribing: 'Subscribing...',
     subscribeToNewsletter: 'Subscribe to Newsletter',
     subscribeDescription: 'Subscribe to our newsletter for daily news updates delivered to your inbox.',
     subscribeNow: 'Subscribe Now',
@@ -170,6 +176,9 @@ const translations: Record<Language, Translations> = {
     privacy: 'गोपनीयता',
     terms: 'नियम',
     cookies: 'कुकीज़',
+    getNotifications: 'नोटिफिकेशन पाएं',
+    notificationsSubscribed: 'सब्सक्राइब हो गया',
+    subscribing: 'सब्सक्राइब हो रहा...',
     subscribeToNewsletter: 'न्यूज़लेटर की सदस्यता लें',
     subscribeDescription: 'दैनिक समाचार अपडेट के लिए हमारे न्यूज़लेटर की सदस्यता लें।',
     subscribeNow: 'अभी सदस्यता लें',

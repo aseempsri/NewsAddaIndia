@@ -13,7 +13,8 @@
         "seed:test-archived": "node scripts/seedTestArchivedNews.js",
         "check:pending": "node scripts/checkPendingNewsCount.js",
         "clear:news": "node scripts/clearAllNews.js",
-        "count:articles": "node scripts/countUniqueArticles.js"
+        "count:articles": "node scripts/countUniqueArticles.js",
+        "push:generate-keys": "npx web-push generate-vapid-keys"
     },
     "keywords": [],
     "author": "",
@@ -30,6 +31,7 @@
         "multer": "^1.4.5-lts.1",
         "node-cron": "^3.0.3",
         "sharp": "^0.33.1",
+        "web-push": "^3.6.7",
         "xml2js": "^0.6.2"
     },
     "devDependencies": {

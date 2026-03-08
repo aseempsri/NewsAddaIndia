@@ -8,6 +8,7 @@ import { LanguageService, Language } from '../../services/language.service';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { ModalService } from '../../services/modal.service';
 import { ScrollRestorationService } from '../../services/scroll-restoration.service';
+import { PushNotificationService } from '../../services/push-notification.service';
 import { environment } from '../../../environments/environment';
 import { catchError, filter } from 'rxjs/operators';
 import { of, Subscription } from 'rxjs';
@@ -67,6 +68,26 @@ interface NavLink {
 
             <!-- Actions -->
             <div class="flex items-center gap-2.5 shrink-0">
+              <!-- Bell Icon - Push Notifications (before language toggle) -->
+              @if (pushSupported) {
+                <button
+                  type="button"
+                  (click)="onPushSubscribe()"
+                  [disabled]="pushSubscribing"
+                  [attr.aria-label]="pushSubscribed ? 'Subscribed to notifications' : 'Subscribe to notifications'"
+                  class="relative p-1.5 rounded-lg text-muted-foreground hover:text-accent hover:bg-secondary/50 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  @if (pushSubscribed) {
+                    <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-accent flex items-center justify-center">
+                      <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    </span>
+                  }
+                </button>
+              }
               <!-- Language Toggle Switch (E -> H) -->
               <button
                 type="button"
@@ -178,6 +199,15 @@ interface NavLink {
             </span>
           </div>
           <div class="flex items-center gap-3">
+            @if (pushSupported && pushSubscribed) {
+              <span class="flex items-center gap-1.5 text-muted-foreground">
+                <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {{ t.notificationsSubscribed || 'Subscribed' }}
+              </span>
+              <div class="w-px h-4 bg-border"></div>
+            }
             @if (currentTemperature !== null) {
               <span class="text-muted-foreground">{{ currentTemperature }}°C</span>
             } @else {
@@ -323,6 +353,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     : (environment.production ? '' : 'http://localhost:3000');
   private languageSubscription?: Subscription;
   private themeSubscription?: Subscription;
+  private pushSubscription?: Subscription;
   private weatherRefreshInterval: any;
 
   navLinks: NavLink[] = [];
@@ -330,7 +361,10 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   isHomePage = false;
   isModalOpen = false;
   isDesktop = false;
-  
+  pushSupported = false;
+  pushSubscribed = false;
+  pushSubscribing = false;
+
   @ViewChild('mobileNavContainer', { static: false }) mobileNavContainer?: ElementRef<HTMLElement>;
   showRightArrow = false;
 
@@ -342,17 +376,20 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private modalService: ModalService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private scrollRestorationService: ScrollRestorationService
+    private scrollRestorationService: ScrollRestorationService,
+    private pushService: PushNotificationService
   ) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
     this.logoPath = baseHref + 'assets/videos/slogo.png';
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     console.log('[Header] ngOnInit called');
     this.fetchReaderCount();
     this.fetchWeather();
+    this.pushSupported = await this.pushService.isSupported();
+    this.pushSubscribed = await this.pushService.isSubscribed();
     
     // Get current language and ensure it's properly initialized
     this.currentLanguage = this.languageService.getCurrentLanguage();
@@ -430,6 +467,11 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
       this.currentTheme = theme;
     });
 
+    this.pushSubscription = this.pushService.subscribed$.subscribe(subscribed => {
+      this.pushSubscribed = subscribed;
+      this.cdr.markForCheck();
+    });
+
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
       this.isModalOpen = state.isOpen;
@@ -452,6 +494,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
     this.themeSubscription?.unsubscribe();
+    this.pushSubscription?.unsubscribe();
     if (this.weatherRefreshInterval) {
       clearInterval(this.weatherRefreshInterval);
     }
@@ -591,6 +634,21 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
         this.currentTemperature = Math.round(data.current.temperature_2m);
       }
     });
+  }
+
+  async onPushSubscribe() {
+    if (!this.pushSupported || this.pushSubscribed || this.pushSubscribing) return;
+    this.pushSubscribing = true;
+    this.cdr.markForCheck();
+    try {
+      await this.pushService.subscribe();
+      this.pushSubscribed = true;
+    } catch (e) {
+      console.error('Push subscribe failed:', e);
+    } finally {
+      this.pushSubscribing = false;
+      this.cdr.markForCheck();
+    }
   }
 
   @HostListener('window:scroll', [])

@@ -33,6 +33,7 @@ interface LiveNews {
   isTrending: boolean;
   trendingTitle?: string;
   trendingTitleEn?: string;
+  pushNotification?: boolean;
   date: string;
   createdAt: string;
   updatedAt: string;
@@ -386,6 +387,18 @@ interface LiveNews {
                         <span class="text-sm font-medium">Trending</span>
                       </label>
                     </div>
+                    <div class="mt-2">
+                      <label class="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="newsData.pushNotification"
+                          name="pushNotification"
+                          class="rounded"
+                        />
+                        <span class="text-sm font-medium">Push Notification</span>
+                      </label>
+                      <p class="text-xs text-muted-foreground mt-1 ml-6">Send a push notification to subscribers when this post is updated</p>
+                    </div>
                     
                     <!-- Trending Title (shown only when Trending is checked) -->
                     @if (newsData.isTrending) {
@@ -654,6 +667,7 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy, CanDeactiv
     isTrending: false,
     trendingTitle: '',
     trendingTitleEn: '',
+    pushNotification: false,
     date: '',
     createdAt: '',
     updatedAt: ''
@@ -1250,6 +1264,7 @@ export class AdminEditLivePostComponent implements OnInit, OnDestroy, CanDeactiv
     formData.append('isBreaking', this.newsData.isBreaking.toString());
     formData.append('isFeatured', this.newsData.isFeatured.toString());
     formData.append('isTrending', this.newsData.isTrending.toString());
+    formData.append('pushNotification', (this.newsData.pushNotification || false).toString());
     // Always send trendingTitle when isTrending is true, or send empty string to clear it if trending is unchecked
     if (this.newsData.isTrending) {
       // If trending is checked, send trendingTitle (even if empty, backend will validate)

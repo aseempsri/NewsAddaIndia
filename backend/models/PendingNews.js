@@ -85,6 +85,10 @@ const pendingNewsSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    pushNotification: {
+        type: Boolean,
+        default: false
+    },
     // Source information for NewsData.io articles
     source: {
         type: String,

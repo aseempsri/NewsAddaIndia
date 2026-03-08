@@ -1,8 +1,9 @@
-import { Component, OnInit, HostListener, OnDestroy } from '@angular/core';
+import { Component, OnInit, HostListener, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header.component';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { LanguageService, Language } from '../../services/language.service';
+import { PushNotificationService } from '../../services/push-notification.service';
 import { ScrollRestorationService } from '../../services/scroll-restoration.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { AdService } from '../../services/ad.service';
@@ -134,14 +135,29 @@ import { filter } from 'rxjs/operators';
       
       <!-- Mobile Top Bar - Below News Ticker -->
       <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full">
-        <div class="container mx-auto px-3 py-1 flex items-center justify-between text-xs">
-          <span class="flex items-center gap-1 text-muted-foreground">
+        <div class="container mx-auto px-3 py-1 flex items-center justify-between text-xs gap-2">
+          <span class="flex items-center gap-1 text-muted-foreground shrink-0">
             <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span class="leading-tight">{{ mobileTopBarDate }}</span>
           </span>
-          <span class="text-accent font-medium leading-tight">{{ getFormattedReaderCount() }}</span>
+          <div class="flex items-center gap-2 min-w-0">
+            @if (pushSupported && pushSubscribed) {
+              <span class="flex items-center gap-1 text-muted-foreground shrink-0">
+                <svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span class="leading-tight">{{ getPushLabelSubscribed() }}</span>
+              </span>
+              <div class="w-px h-3 bg-border shrink-0"></div>
+            }
+            @if (mobileTopBarTemperature !== null) {
+              <span class="text-muted-foreground shrink-0">{{ mobileTopBarTemperature }}°C</span>
+              <div class="w-px h-3 bg-border shrink-0"></div>
+            }
+            <span class="text-accent font-medium leading-tight shrink-0">{{ getFormattedReaderCount() }}</span>
+          </div>
         </div>
       </div>
       
@@ -163,28 +179,6 @@ import { filter } from 'rxjs/operators';
           </div>
         </div>
       </main>
-
-      <!-- Subscribe Card - Mobile only (shown before footer) -->
-      <div class="lg:hidden container mx-auto px-2 sm:px-4 py-4 w-full max-w-full">
-        <div class="relative overflow-hidden rounded-xl p-3 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 border border-primary/30 stay-informed-mobile">
-          <div class="absolute top-0 right-0 w-20 h-20 bg-primary/20 rounded-full blur-2xl"></div>
-          <div class="relative">
-            <h3 class="font-display text-base font-bold mb-1.5 leading-relaxed pt-0.5 pb-0.5">
-              {{ getStayInformedText() }}
-            </h3>
-            <p class="text-base text-muted-foreground mb-3">
-              {{ getSubscribeDescription() }}
-            </p>
-            <input
-              type="email"
-              [placeholder]="getEnterYourEmail()"
-              class="w-full px-3 py-2.5 rounded-lg bg-background/50 border border-border/50 text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 mb-2" />
-            <button class="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-base font-semibold hover:bg-primary/90 transition-colors glow-primary">
-              {{ getSubscribeNow() }}
-            </button>
-          </div>
-        </div>
-      </div>
 
       <app-footer />
       
@@ -312,6 +306,8 @@ export class IndexComponent implements OnInit, OnDestroy {
   mobileTopBarTemperature: number | null = null;
   mobileTopBarReaderCount = 4320;
   mobileTopBarReaders = '';
+  pushSupported = false;
+  pushSubscribed = false;
   // Same-origin when apiUrl is empty in production
   private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
     ? environment.apiUrl
@@ -338,8 +334,12 @@ export class IndexComponent implements OnInit, OnDestroy {
     private displayedNewsService: DisplayedNewsService,
     private router: Router,
     private http: HttpClient,
-    private adService: AdService
+    private adService: AdService,
+    private pushService: PushNotificationService,
+    private cdr: ChangeDetectorRef
   ) {}
+
+  private pushSubscription?: Subscription;
 
   ngOnInit() {
     // Show main content immediately (intro video removed)
@@ -468,12 +468,21 @@ export class IndexComponent implements OnInit, OnDestroy {
     return this.adService.hasAdMedia(adId);
   }
 
-  initializeMobileTopBar() {
+  async initializeMobileTopBar() {
     // Fetch reader count
     this.fetchReaderCount();
     
     // Fetch weather
     this.fetchWeather();
+    
+    // Initialize push notification state
+    this.pushSupported = await this.pushService.isSupported();
+    this.pushSubscribed = await this.pushService.isSubscribed();
+    this.pushSubscription = this.pushService.subscribed$.subscribe(subscribed => {
+      this.pushSubscribed = subscribed;
+      this.cdr.markForCheck();
+    });
+    this.cdr.markForCheck();
     
     // Update date and location
     this.updateMobileTopBarData();
@@ -524,24 +533,9 @@ export class IndexComponent implements OnInit, OnDestroy {
     return `${this.mobileTopBarReaderCount}+ ${readersText}`;
   }
 
-  getStayInformedText(): string {
+  getPushLabelSubscribed(): string {
     const t = this.languageService.getTranslations();
-    return t.stayInformed || 'Stay Informed';
-  }
-
-  getSubscribeDescription(): string {
-    const t = this.languageService.getTranslations();
-    return t.subscribeDescription || 'Subscribe to our newsletter for daily news updates delivered to your inbox.';
-  }
-
-  getEnterYourEmail(): string {
-    const t = this.languageService.getTranslations();
-    return t.enterYourEmail || 'Enter your email';
-  }
-
-  getSubscribeNow(): string {
-    const t = this.languageService.getTranslations();
-    return t.subscribeNow || 'Subscribe Now';
+    return t.notificationsSubscribed || 'Subscribed';
   }
 
   fetchReaderCount() {
@@ -580,6 +574,7 @@ export class IndexComponent implements OnInit, OnDestroy {
     this.themeSubscription?.unsubscribe();
     this.languageSubscription?.unsubscribe();
     this.adSubscription?.unsubscribe();
+    this.pushSubscription?.unsubscribe();
     if (this.weatherRefreshInterval) {
       clearInterval(this.weatherRefreshInterval);
     }
