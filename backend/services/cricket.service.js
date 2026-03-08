@@ -1,5 +1,9 @@
 const axios = require('axios');
+const https = require('https');
 const CricketMatch = require('../models/CricketMatch');
+
+// Agent that skips SSL verification for outbound API calls (fixes "unable to get local issuer certificate" on servers with minimal CA bundle)
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 class CricketService {
   constructor() {
@@ -31,7 +35,8 @@ class CricketService {
           apikey: this.cricApiKey,
           offset: 0
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000, // 10 second timeout
+        httpsAgent
       });
 
       // Check response structure

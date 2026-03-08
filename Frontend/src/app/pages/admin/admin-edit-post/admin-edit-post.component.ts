@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import type { CanDeactivate } from '../../../guards/can-deactivate.guard';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -105,7 +106,7 @@ interface PendingNews {
               <div class="grid lg:grid-cols-2 gap-6">
                 <!-- Form Section -->
                 <div class="glass-card p-6 rounded-xl">
-                <form (ngSubmit)="updateNews()" enctype="multipart/form-data" class="space-y-6">
+                <form (ngSubmit)="updateNews()" (input)="markFormDirty()" (change)="markFormDirty()" enctype="multipart/form-data" class="space-y-6">
                   <!-- Title -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Title *</label>
@@ -248,6 +249,7 @@ interface PendingNews {
                     <p class="text-xs text-muted-foreground mb-2">Enter the complete article content that will be displayed on the news detail page</p>
                     <ckeditor
                       [(ngModel)]="newsData.content"
+                      (ngModelChange)="markFormDirty()"
                       [editor]="Editor"
                       [config]="editorConfig"
                       name="content"
@@ -280,6 +282,7 @@ interface PendingNews {
                     </div>
                     <ckeditor
                       [(ngModel)]="newsData.contentEn"
+                      (ngModelChange)="markFormDirty()"
                       [editor]="Editor"
                       [config]="editorConfig"
                       name="contentEn"
@@ -620,7 +623,7 @@ interface PendingNews {
     }
   `]
 })
-export class AdminEditPostComponent implements OnInit, OnDestroy {
+export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate {
   isAuthenticated = false;
   currentAdminTheme: AdminTheme = 'light';
   private adminThemeSubscription?: Subscription;
@@ -666,6 +669,7 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
   currentImageUrl: string | null = null;
   currentImages: string[] = [];
   newImages: File[] = [];
+  formDirty = false;
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
 
@@ -741,6 +745,21 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.adminThemeSubscription?.unsubscribe();
+  }
+
+  canDeactivate(): boolean {
+    return !this.formDirty;
+  }
+
+  markFormDirty() {
+    this.formDirty = true;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent) {
+    if (this.formDirty) {
+      event.preventDefault();
+    }
   }
 
   toggleAdminTheme() {
@@ -1328,6 +1347,7 @@ export class AdminEditPostComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.submitSuccess = response.message || 'Post updated successfully!';
+          this.formDirty = false;
           setTimeout(() => {
             this.router.navigate(['/admin/review']);
           }, 1500);

@@ -11,6 +11,7 @@ import { AdminEditPostComponent } from './pages/admin/admin-edit-post/admin-edit
 import { AdminEditLivePostComponent } from './pages/admin/admin-edit-live-post/admin-edit-live-post.component';
 import { AdminAdsComponent } from './pages/admin/admin-ads/admin-ads.component';
 import { AdminArchivedNewsComponent } from './pages/admin/admin-archived-news/admin-archived-news.component';
+import { canDeactivateGuard } from './guards/can-deactivate.guard';
 
 export const routes: Routes = [
   { path: '', component: IndexComponent },
@@ -25,12 +26,12 @@ export const routes: Routes = [
   { path: 'business', redirectTo: 'category/business', pathMatch: 'full' },
   { path: 'religious', redirectTo: 'category/religious', pathMatch: 'full' },
   { path: 'admin', component: AdminDashboardComponent },
-  { path: 'admin/create', component: AdminCreatePostComponent },
+  { path: 'admin/create', component: AdminCreatePostComponent, canDeactivate: [canDeactivateGuard] },
   { path: 'admin/review', component: AdminReviewPostsComponent },
   { path: 'admin/review-live', component: AdminReviewLivePostsComponent },
   { path: 'admin/archived', component: AdminArchivedNewsComponent },
-  { path: 'admin/edit/:id', component: AdminEditPostComponent },
-  { path: 'admin/edit-live/:id', component: AdminEditLivePostComponent },
+  { path: 'admin/edit/:id', component: AdminEditPostComponent, canDeactivate: [canDeactivateGuard] },
+  { path: 'admin/edit-live/:id', component: AdminEditLivePostComponent, canDeactivate: [canDeactivateGuard] },
   { path: 'admin/ads', component: AdminAdsComponent },
   { path: '**', component: NotFoundComponent }
 ];

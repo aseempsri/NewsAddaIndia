@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import type { CanDeactivate } from '../../../guards/can-deactivate.guard';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -611,7 +612,7 @@ interface NewsForm {
     }
   `]
 })
-export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewInit {
+export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewInit, CanDeactivate {
   @ViewChild('formSection', { static: false }) formSection?: ElementRef;
   @ViewChild('previewSection', { static: false }) previewSection?: ElementRef;
   
@@ -729,6 +730,22 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
 
   ngOnDestroy() {
     this.adminThemeSubscription?.unsubscribe();
+  }
+
+  canDeactivate(): boolean {
+    return !this.hasUnsavedChanges();
+  }
+
+  private hasUnsavedChanges(): boolean {
+    const f = this.newsForm;
+    return !!(f.title?.trim() || f.excerpt?.trim() || f.summary?.trim() || f.content?.trim());
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent) {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
   }
 
   toggleAdminTheme() {
