@@ -8,11 +8,13 @@ self.addEventListener('push', (event) => {
   } catch (_) {}
   const url = data.url || '/';
   const urlToOpen = url.startsWith('http') ? url : (self.location.origin + (url.startsWith('/') ? url : '/' + url));
+  const imageUrl = data.image && (data.image.startsWith('http://') || data.image.startsWith('https://')) ? data.image : null;
+  const logoUrl = self.location.origin + '/assets/videos/slogo.png';
   const options = {
     body: data.body || 'Read the latest news',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    image: data.image || undefined,
+    icon: imageUrl || logoUrl,
+    badge: logoUrl,
+    image: imageUrl || logoUrl,
     data: { url: urlToOpen, id: data.id },
     actions: [{ action: 'open', title: 'Read' }]
   };

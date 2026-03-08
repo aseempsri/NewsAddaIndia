@@ -48,12 +48,16 @@ function getBaseUrl() {
 }
 
 /**
- * Build absolute URL for an image path (e.g. /uploads/foo.jpg)
+ * Build absolute URL for an image path (e.g. /uploads/foo.jpg or uploads/foo.jpg)
+ * Returns null if path is invalid. If already a full http(s) URL, returns as-is.
  */
 function getImageUrl(imagePath) {
   if (!imagePath || typeof imagePath !== 'string') return null;
+  const trimmed = imagePath.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   const base = getBaseUrl();
-  const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return `${base}${path}`;
 }
 
@@ -80,6 +84,9 @@ async function sendPushForNews(news, options = {}) {
     const url = `${baseUrl}${path}`;
 
     const imageUrl = getImageUrl(news.image || (news.images && news.images[0]));
+    if (imageUrl) {
+      console.log('[PushNotification] Article image URL:', imageUrl);
+    }
 
     const notifications = [];
     if (pushEn) {
