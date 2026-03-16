@@ -1,5 +1,6 @@
 const express = require('express');
 const PushSubscription = require('../models/PushSubscription');
+const { authenticateAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -34,6 +35,17 @@ router.post('/subscribe', express.json(), async (req, res) => {
   } catch (err) {
     console.error('[Push subscribe] Error:', err);
     res.status(500).json({ error: 'Failed to save subscription' });
+  }
+});
+
+// GET /api/push/subscribers/count - Get push notification subscriber count (Admin only)
+router.get('/subscribers/count', authenticateAdmin, async (req, res) => {
+  try {
+    const count = await PushSubscription.countDocuments();
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('[Push subscribers count] Error:', err);
+    res.status(500).json({ error: 'Failed to get subscriber count' });
   }
 });
 

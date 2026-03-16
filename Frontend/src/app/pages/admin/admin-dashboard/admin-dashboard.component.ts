@@ -100,6 +100,23 @@ import { Subscription } from 'rxjs';
               </div>
             </div>
 
+            <!-- Subscriber Count Card -->
+            <div class="mt-8">
+              <div class="glass-card p-6 rounded-xl max-w-xs">
+                <div class="flex items-center gap-4">
+                  <div class="w-14 h-14 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm text-muted-foreground font-medium">Subscriber</p>
+                    <p class="text-3xl font-bold">{{ subscriberCount ?? '—' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Menu Options -->
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               <!-- Create Post Option -->
@@ -224,6 +241,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   loginError = '';
   isLoading = false;
   authToken = '';
+  subscriberCount: number | null = null;
 
   constructor(
     private http: HttpClient,
@@ -263,6 +281,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.valid) {
           this.isAuthenticated = true;
+          this.fetchSubscriberCount();
         } else {
           localStorage.removeItem('admin_token');
           this.authToken = '';
@@ -271,6 +290,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       error: () => {
         localStorage.removeItem('admin_token');
         this.authToken = '';
+      }
+    });
+  }
+
+  fetchSubscriberCount() {
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+    this.http.get<{ success: boolean; count: number }>(`${this.getApiUrl()}/api/push/subscribers/count`, { headers }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.subscriberCount = response.count;
+        }
+      },
+      error: () => {
+        this.subscriberCount = null;
       }
     });
   }
@@ -290,6 +323,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           this.isAuthenticated = true;
           this.username = '';
           this.password = '';
+          this.fetchSubscriberCount();
         } else {
           this.loginError = response.error || 'Login failed';
         }
