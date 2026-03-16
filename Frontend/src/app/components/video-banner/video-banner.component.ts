@@ -374,7 +374,7 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
 
   // Video URL - Fallback to local video file
   // videoUrl = 'assets/videos/Video-279.mp4';
-  videoUrl = 'assets/videos/Video4.mp4';
+  videoUrl = 'assets/videos/Video5.mp4';
 
   // Audio state - starts muted for autoplay, then attempts to unmute
   isMuted = true;
