@@ -95,7 +95,16 @@ export class PushNotificationService {
     try {
       const reg = await this.getRegistration();
       const sub = reg ? await reg.pushManager.getSubscription() : null;
-      if (sub) await sub.unsubscribe();
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        try {
+          await this.http.post(`${this.apiUrl}/api/push/unsubscribe`, { endpoint }).toPromise();
+        } catch {
+          // Best-effort: local unsubscribe succeeded even if backend fails
+        }
+        this.subscribedSubject.next(false);
+      }
       return { success: true };
     } catch {
       return { success: false };

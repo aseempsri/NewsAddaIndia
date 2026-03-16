@@ -38,6 +38,21 @@ router.post('/subscribe', express.json(), async (req, res) => {
   }
 });
 
+// POST /api/push/unsubscribe - Remove push subscription (no auth - called by client with endpoint)
+router.post('/unsubscribe', express.json(), async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (!endpoint) {
+      return res.status(400).json({ error: 'Endpoint required' });
+    }
+    const result = await PushSubscription.deleteOne({ endpoint });
+    res.json({ success: true, removed: result.deletedCount > 0 });
+  } catch (err) {
+    console.error('[Push unsubscribe] Error:', err);
+    res.status(500).json({ error: 'Failed to remove subscription' });
+  }
+});
+
 // GET /api/push/subscribers/count - Get push notification subscriber count (Admin only)
 router.get('/subscribers/count', authenticateAdmin, async (req, res) => {
   try {
