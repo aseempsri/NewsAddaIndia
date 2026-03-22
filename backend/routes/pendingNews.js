@@ -480,32 +480,44 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
       updatedAt: Date.now()
     };
     
-    // Handle multiple images upload (max 3)
-    if (req.files && req.files.length > 0) {
-      try {
-        // Delete old images if they exist
-        if (pendingNews.images && pendingNews.images.length > 0) {
-          pendingNews.images.forEach(oldImagePath => {
-            const fullPath = path.join(uploadsDir, path.basename(oldImagePath));
-            if (fs.existsSync(fullPath)) {
-              fs.unlink(fullPath, (err) => {
-                if (err) console.error('Error deleting old image:', err);
-              });
-            }
-          });
-        }
-        // Also delete old single image if exists
-        if (pendingNews.image) {
-          const oldImagePath = path.join(uploadsDir, path.basename(pendingNews.image));
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlink(oldImagePath, (err) => {
-              if (err) console.error('Error deleting old image:', err);
-            });
+    // Parse existingImagePaths (from gallery selection)
+    let existingImagePaths = [];
+    try {
+      const parsed = typeof req.body.existingImagePaths === 'string' ? JSON.parse(req.body.existingImagePaths) : req.body.existingImagePaths;
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) {
+          if (p && typeof p === 'string' && (p.startsWith('/uploads/') || p.startsWith('uploads/'))) {
+            existingImagePaths.push(p.startsWith('/') ? p : `/${p}`);
           }
         }
-        
-        let imagePaths = [];
-        let imagePath = '';
+      }
+    } catch (e) { /* ignore */ }
+
+    const hasNewFiles = req.files && req.files.length > 0;
+    const hasExistingPaths = existingImagePaths.length > 0;
+
+    // Handle images: gallery-only, new uploads, or both
+    if (hasExistingPaths && !hasNewFiles) {
+      const finalPaths = existingImagePaths.slice(0, 3);
+      updateData.images = finalPaths;
+      updateData.image = finalPaths[0] || '';
+    } else if (hasNewFiles) {
+      try {
+        // Delete old images we're removing (not in existingImagePaths)
+        const keepSet = new Set(existingImagePaths.map(p => (p.startsWith('/') ? p : `/${p}`)));
+        const toCheck = [...(pendingNews.images || []), pendingNews.image].filter(Boolean);
+        toCheck.forEach(oldImagePath => {
+          const normalized = oldImagePath.startsWith('/') ? oldImagePath : `/${oldImagePath}`;
+          if (!keepSet.has(normalized)) {
+            const fullPath = path.join(__dirname, '..', oldImagePath);
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath);
+            }
+          }
+        });
+
+        let imagePaths = [...existingImagePaths];
+        let imagePath = imagePaths[0] || '';
         
         for (const file of req.files) {
           const inputPath = file.path;
@@ -539,12 +551,12 @@ router.put('/:id', authenticateAdmin, (req, res, next) => {
             }
           }
         }
-        
-        updateData.images = imagePaths;
-        updateData.image = imagePath; // First image for backward compatibility
+
+        const merged = imagePaths.slice(0, 3);
+        updateData.images = merged;
+        updateData.image = merged[0] || '';
       } catch (imageError) {
         console.error('Error processing images:', imageError);
-        // Continue without updating images if processing fails
       }
     }
     

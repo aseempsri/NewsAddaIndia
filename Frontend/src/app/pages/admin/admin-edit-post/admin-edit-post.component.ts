@@ -10,7 +10,9 @@ import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { LanguageService } from '../../../services/language.service';
+import { ImageGalleryPickerService } from '../../../services/image-gallery-picker.service';
 
 interface PendingNews {
   _id: string;
@@ -472,14 +474,20 @@ interface PendingNews {
                   <!-- Image Upload (Max 3) -->
                   <div>
                     <label class="block text-sm font-medium mb-2">Images (Max 3)</label>
-                    @if (currentImages.length > 0) {
+                    @if (currentImages.length > 0 || galleryImagePaths.length > 0) {
                       <div class="mb-3">
-                        <p class="text-xs text-muted-foreground mb-2 font-semibold">Current images ({{ currentImages.length }}):</p>
+                        <p class="text-xs text-muted-foreground mb-2 font-semibold">Current images ({{ getTotalImageCount() }}):</p>
                         <div class="flex flex-wrap gap-3">
                           @for (img of currentImages; track $index) {
                             <div class="relative">
                               <img [src]="img" [alt]="'Current image ' + ($index + 1)" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
                               <span class="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full font-semibold">{{ $index + 1 }}</span>
+                            </div>
+                          }
+                          @for (path of galleryImagePaths; track path) {
+                            <div class="relative">
+                              <img [src]="getImageUrl(path)" alt="From gallery" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
+                              <span class="absolute top-1 right-1 bg-cyan-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">G</span>
                             </div>
                           }
                         </div>
@@ -490,22 +498,39 @@ interface PendingNews {
                         <img [src]="currentImageUrl" alt="Current image" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
                       </div>
                     }
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      (change)="onFilesSelected($event)"
-                      class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                    />
-                    @if (newImages.length > 0) {
+                    <div class="flex flex-wrap gap-2 mb-2">
+                      <label class="px-4 py-2 rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary/50 transition-colors">
+                        <span>Choose Files</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          (change)="onFilesSelected($event)"
+                          class="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        (click)="openGalleryPicker()"
+                        [disabled]="getTotalImageCount() >= 3"
+                        class="px-4 py-2 rounded-lg border border-border bg-background text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        Choose from Gallery
+                      </button>
+                    </div>
+                    @if (newImages.length > 0 || galleryImagePaths.length > 0) {
                       <div class="mt-2 space-y-1">
-                        @for (img of newImages; track $index) {
-                          <p class="text-sm text-muted-foreground">New image {{ $index + 1 }}: {{ img.name }}</p>
+                        @if (newImages.length > 0) {
+                          @for (img of newImages; track $index) {
+                            <p class="text-sm text-muted-foreground">New upload {{ $index + 1 }}: {{ img.name }}</p>
+                          }
                         }
-                        <p class="text-xs text-muted-foreground mt-2">{{ newImages.length }} / 3 images selected</p>
+                        @if (galleryImagePaths.length > 0) {
+                          <p class="text-sm text-muted-foreground">{{ galleryImagePaths.length }} from gallery</p>
+                        }
+                        <p class="text-xs text-muted-foreground mt-2">{{ getTotalImageCount() }} / 3 images</p>
                       </div>
                     } @else {
-                      <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images. The first image will be shown on the card.</p>
+                      <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images or choose from gallery. The first image will be shown on the card.</p>
                     }
                   </div>
 
@@ -539,9 +564,9 @@ interface PendingNews {
                     <article class="news-card group">
                       <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
                         <!-- Image Preview -->
-                        @if (previewImageUrl || (currentImages.length > 0 && currentImages[0])) {
+                        @if (previewImageUrl || (currentImages.length > 0 && currentImages[0]) || (galleryImagePaths.length > 0 && getImageUrl(galleryImagePaths[0]))) {
                           <img
-                            [src]="previewImageUrl || currentImages[0]"
+                            [src]="previewImageUrl || currentImages[0] || getImageUrl(galleryImagePaths[0])"
                             [alt]="newsData.title || 'Preview'"
                             class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
                         } @else if (currentImageUrl) {
@@ -696,6 +721,7 @@ export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate 
   currentImageUrl: string | null = null;
   currentImages: string[] = [];
   newImages: File[] = [];
+  galleryImagePaths: string[] = [];
   formDirty = false;
 
   availablePages = ['home', 'national', 'international', 'politics', 'health', 'entertainment', 'sports', 'business', 'religious'];
@@ -743,7 +769,8 @@ export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate 
     private languageService: LanguageService,
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
-    private adminThemeService: AdminThemeService
+    private adminThemeService: AdminThemeService,
+    private imageGalleryPicker: ImageGalleryPickerService
   ) {
     const token = localStorage.getItem('admin_token');
     if (token) {
@@ -935,11 +962,38 @@ export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate 
     });
   }
 
+  private galleryPickerSub?: Subscription;
+
+  getTotalImageCount(): number {
+    return this.currentImages.length + this.newImages.length + this.galleryImagePaths.length;
+  }
+
+  openGalleryPicker() {
+    if (this.getTotalImageCount() >= 3) return;
+    this.galleryPickerSub?.unsubscribe();
+    this.imageGalleryPicker.open({
+      maxSelectable: 3 - this.getTotalImageCount(),
+      authToken: this.authToken
+    });
+    this.galleryPickerSub = this.imageGalleryPicker.selected$.pipe(take(1)).subscribe(paths => {
+      this.galleryImagePaths = paths.slice(0, 3 - this.currentImages.length - this.newImages.length);
+      this.galleryPickerSub?.unsubscribe();
+    });
+    this.imageGalleryPicker.cancelled$.pipe(take(1)).subscribe(() => {
+      this.galleryPickerSub?.unsubscribe();
+    });
+  }
+
+  onGallerySelected(paths: string[]) {
+    const remaining = 3 - this.currentImages.length - this.newImages.length;
+    this.galleryImagePaths = paths.slice(0, remaining);
+  }
+
   onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      // Limit to max 3 images
-      const filesArray = Array.from(input.files).slice(0, 3);
+      const remaining = 3 - this.currentImages.length - this.galleryImagePaths.length;
+      const filesArray = Array.from(input.files).slice(0, remaining);
       this.newImages = filesArray;
       
       // Create preview URL for first image
@@ -1361,8 +1415,14 @@ export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate 
       formData.append('trendingTitle', '');
       formData.append('trendingTitleEn', '');
     }
+
+    // Build existingImagePaths: current from post + gallery selection
+    const existingPaths = [...(this.newsData.images && Array.isArray(this.newsData.images) ? this.newsData.images : this.newsData.image ? [this.newsData.image] : []), ...this.galleryImagePaths];
+    if (existingPaths.length > 0) {
+      formData.append('existingImagePaths', JSON.stringify(existingPaths));
+    }
     
-    // Append all new images (max 3)
+    // Append new file uploads
     if (this.newImages.length > 0) {
       this.newImages.forEach((image, index) => {
         formData.append('images', image);

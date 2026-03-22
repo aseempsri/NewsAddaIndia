@@ -10,7 +10,9 @@ import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { LanguageService } from '../../../services/language.service';
+import { ImageGalleryPickerService } from '../../../services/image-gallery-picker.service';
 
 interface NewsForm {
   title: string;
@@ -458,22 +460,37 @@ interface NewsForm {
                 <!-- Image Upload (Max 3) -->
                 <div>
                   <label class="block text-sm font-medium mb-2">Images (Max 3)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    (change)="onFilesSelected($event)"
-                    class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                  />
-                  @if (newsForm.images.length > 0) {
+                  <div class="flex flex-wrap gap-2 mb-2">
+                    <label class="px-4 py-2 rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary/50 transition-colors">
+                      <span>Choose Files</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        (change)="onFilesSelected($event)"
+                        class="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      (click)="openGalleryPicker()"
+                      [disabled]="getCurrentImageCount() >= 3"
+                      class="px-4 py-2 rounded-lg border border-border bg-background text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      Choose from Gallery
+                    </button>
+                  </div>
+                  @if (newsForm.images.length > 0 || galleryImagePaths.length > 0) {
                     <div class="mt-2 space-y-1">
                       @for (img of newsForm.images; track $index) {
-                        <p class="text-sm text-muted-foreground">Image {{ $index + 1 }}: {{ img.name }}</p>
+                        <p class="text-sm text-muted-foreground">Uploaded {{ $index + 1 }}: {{ img.name }}</p>
                       }
-                      <p class="text-xs text-muted-foreground mt-2">{{ newsForm.images.length }} / 3 images selected</p>
+                      @for (path of galleryImagePaths; track path) {
+                        <p class="text-sm text-muted-foreground">From gallery: {{ path.split('/').pop() }}</p>
+                      }
+                      <p class="text-xs text-muted-foreground mt-2">{{ getCurrentImageCount() }} / 3 images selected</p>
                     </div>
                   } @else {
-                    <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images. The first image will be shown on the card.</p>
+                    <p class="text-xs text-muted-foreground mt-1">You can upload up to 3 images or choose from the gallery. The first image will be shown on the card.</p>
                   }
                 </div>
 
@@ -653,6 +670,7 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
   submitSuccess = '';
   tagsInput = '';
   previewImageUrl: string | null = null;
+  galleryImagePaths: string[] = [];
   currentAdminTheme: AdminTheme = 'light';
   private adminThemeSubscription?: Subscription;
   private isScrolling = false;
@@ -723,7 +741,8 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
     private router: Router,
     private sanitizer: DomSanitizer,
     private adminThemeService: AdminThemeService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private imageGalleryPicker: ImageGalleryPickerService
   ) {
     // Check if already authenticated
     const token = localStorage.getItem('admin_token');
@@ -857,26 +876,61 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
     this.router.navigate(['/admin']);
   }
 
+  getCurrentImageCount(): number {
+    return this.newsForm.images.length + this.galleryImagePaths.length;
+  }
+
+  private galleryPickerSub?: Subscription;
+
+  openGalleryPicker() {
+    if (this.getCurrentImageCount() >= 3) return;
+    this.galleryPickerSub?.unsubscribe();
+    this.imageGalleryPicker.open({
+      maxSelectable: 3 - this.getCurrentImageCount(),
+      authToken: this.authToken
+    });
+    this.galleryPickerSub = this.imageGalleryPicker.selected$.pipe(take(1)).subscribe(paths => {
+      this.galleryImagePaths = paths.slice(0, 3 - this.newsForm.images.length);
+      this.updatePreviewFromImages();
+      this.galleryPickerSub?.unsubscribe();
+    });
+    this.imageGalleryPicker.cancelled$.pipe(take(1)).subscribe(() => {
+      this.galleryPickerSub?.unsubscribe();
+    });
+  }
+
+  onGallerySelected(paths: string[]) {
+    const remaining = 3 - this.newsForm.images.length;
+    this.galleryImagePaths = paths.slice(0, remaining);
+    this.updatePreviewFromImages();
+  }
+
+  private updatePreviewFromImages() {
+    if (this.newsForm.images.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.previewImageUrl = e.target?.result as string;
+      };
+      reader.readAsDataURL(this.newsForm.images[0]);
+    } else if (this.galleryImagePaths.length > 0) {
+      const base = this.getApiUrl();
+      const path = this.galleryImagePaths[0].startsWith('/') ? this.galleryImagePaths[0] : `/${this.galleryImagePaths[0]}`;
+      this.previewImageUrl = base ? `${base}${path}` : path;
+    } else {
+      this.previewImageUrl = null;
+    }
+  }
+
   onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      // Limit to max 3 images
-      const filesArray = Array.from(input.files).slice(0, 3);
+      const remaining = 3 - this.galleryImagePaths.length;
+      const filesArray = Array.from(input.files).slice(0, remaining);
       this.newsForm.images = filesArray;
-      
-      // Create preview URL for first image
-      if (filesArray.length > 0) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.previewImageUrl = e.target?.result as string;
-        };
-        reader.readAsDataURL(filesArray[0]);
-      } else {
-        this.previewImageUrl = null;
-      }
+      this.updatePreviewFromImages();
     } else {
       this.newsForm.images = [];
-      this.previewImageUrl = null;
+      this.updatePreviewFromImages();
     }
   }
 
@@ -1068,8 +1122,13 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
       formData.append('trendingTitle', '');
       formData.append('trendingTitleEn', '');
     }
+
+    // Gallery-selected image paths (reuse existing uploads)
+    if (this.galleryImagePaths.length > 0) {
+      formData.append('imagePaths', JSON.stringify(this.galleryImagePaths));
+    }
     
-    // Append all images (max 3)
+    // Append uploaded images (max 3 total with gallery)
     if (this.newsForm.images.length > 0) {
       this.newsForm.images.forEach((image, index) => {
         formData.append('images', image);
@@ -1117,6 +1176,7 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
           };
           this.tagsInput = '';
           this.previewImageUrl = null;
+          this.galleryImagePaths = [];
           // Clear file input
           const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
           if (fileInput) {

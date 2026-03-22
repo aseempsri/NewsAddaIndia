@@ -404,6 +404,41 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/news/images/gallery - Get all images from published news (Admin only, desc by date)
+router.get('/images/gallery', authenticateAdmin, async (req, res) => {
+  try {
+    const news = await News.find({ published: true })
+      .select('_id title titleEn image images createdAt slug')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const items = [];
+    for (const n of news) {
+      const images = [];
+      if (n.image && String(n.image).trim()) images.push(n.image);
+      if (Array.isArray(n.images)) {
+        for (const img of n.images) {
+          if (img && String(img).trim() && !images.includes(img)) images.push(img);
+        }
+      }
+      for (const img of images) {
+        items.push({
+          url: img.startsWith('/') ? img : `/${img}`,
+          newsId: n._id,
+          slug: n.slug,
+          title: n.titleEn || n.title || '',
+          createdAt: n.createdAt
+        });
+      }
+    }
+
+    res.json({ success: true, items });
+  } catch (err) {
+    console.error('[News images gallery] Error:', err);
+    res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
 // GET /api/news/:id - Get single news article (by ObjectId or by slug)
 router.get('/:id', async (req, res) => {
   try {
@@ -736,7 +771,7 @@ function generateSummary(content, maxWords = 60) {
 // POST /api/news - Create new news (Admin only)
 router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn, pushNotification, pushNotificationEn, pushNotificationHi } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn, pushNotification, pushNotificationEn, pushNotificationHi, imagePaths: imagePathsBody } = req.body;
 
     // Validate required fields
     if (!title || !excerpt || !category) {
@@ -748,6 +783,19 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 
     let imagePath = '';
     let imagePaths = [];
+
+    // Parse existing image paths from gallery selection (reuse existing uploads)
+    try {
+      const parsed = typeof imagePathsBody === 'string' ? JSON.parse(imagePathsBody) : imagePathsBody;
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) {
+          if (p && typeof p === 'string' && (p.startsWith('/uploads/') || p.startsWith('uploads/'))) {
+            const normalized = p.startsWith('/') ? p : `/${p}`;
+            imagePaths.push(normalized);
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
 
     // Process multiple images if uploaded (max 3)
     if (req.files && req.files.length > 0) {
@@ -797,6 +845,14 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
         }
       }
     }
+
+    // Use first gallery path as main image if no uploads
+    if (imagePath === '' && imagePaths.length > 0) {
+      imagePath = imagePaths[0];
+    }
+
+    // Limit total to 3
+    imagePaths = imagePaths.slice(0, 3);
 
     // Parse tags and pages from JSON strings if needed
     let parsedTags = [];
@@ -878,10 +934,23 @@ router.post('/', authenticateAdmin, upload.array('images', 3), handleMulterError
 // PUT /api/news/:id - Update news (Admin only)
 router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount: 3 }]), handleMulterError, async (req, res) => {
   try {
-    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn } = req.body;
+    const { title, titleEn, excerpt, excerptEn, summary, summaryEn, content, contentEn, category, tags, pages, author, published, isBreaking, isFeatured, isTrending, trendingTitle, trendingTitleEn, existingImagePaths: existingPathsBody } = req.body;
 
     // Extract files from req.files.images (when using upload.fields)
     const imageFiles = req.files && req.files.images ? req.files.images : [];
+
+    // Parse existing image paths (from current post + gallery selection - paths to keep)
+    let existingImagePaths = [];
+    try {
+      const parsed = typeof existingPathsBody === 'string' ? JSON.parse(existingPathsBody) : existingPathsBody;
+      if (Array.isArray(parsed)) {
+        for (const p of parsed) {
+          if (p && typeof p === 'string' && (p.startsWith('/uploads/') || p.startsWith('uploads/'))) {
+            existingImagePaths.push(p.startsWith('/') ? p : `/${p}`);
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
 
     console.log('[Backend PUT /api/news/:id] Update request received:', {
       id: req.params.id,
@@ -1114,33 +1183,40 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
     }
 
     // Handle multiple images update
-    if (imageFiles && imageFiles.length > 0) {
-      console.log('[Backend PUT /api/news/:id] Processing', imageFiles.length, 'new image(s)');
+    const hasNewFiles = imageFiles && imageFiles.length > 0;
+    const hasExistingPaths = existingImagePaths && existingImagePaths.length > 0;
 
-      // Delete old images if they exist
-      if (news.images && news.images.length > 0) {
-        console.log('[Backend PUT /api/news/:id] Deleting', news.images.length, 'old image(s)');
-        news.images.forEach(oldImagePath => {
+    if (hasExistingPaths && !hasNewFiles) {
+      // Gallery-only or keep-only: use existing paths, don't delete anything
+      const finalPaths = existingImagePaths.slice(0, 3);
+      news.images = finalPaths;
+      news.image = finalPaths[0] || '';
+      console.log('[Backend PUT /api/news/:id] Using existing image paths (no new uploads):', finalPaths);
+    } else if (hasNewFiles) {
+      console.log('[Backend PUT /api/news/:id] Processing', imageFiles.length, 'new image(s), keeping', existingImagePaths.length, 'existing');
+
+      // Delete old images that we're REMOVING (not in existingImagePaths - i.e. we're replacing with new selection)
+      const keepSet = new Set(existingImagePaths.map(p => (p.startsWith('/') ? p : `/${p}`)));
+      const toDelete = [...(news.images || []), news.image].filter(Boolean);
+      toDelete.forEach(oldImagePath => {
+        const normalized = oldImagePath.startsWith('/') ? oldImagePath : `/${oldImagePath}`;
+        if (!keepSet.has(normalized)) {
           const fullPath = path.join(__dirname, '..', oldImagePath);
           if (fs.existsSync(fullPath)) {
             fs.unlinkSync(fullPath);
-            console.log('[Backend PUT /api/news/:id] Deleted old image:', oldImagePath);
-          } else {
-            console.log('[Backend PUT /api/news/:id] Old image not found:', oldImagePath);
+            console.log('[Backend PUT /api/news/:id] Deleted removed image:', oldImagePath);
           }
-        });
-      }
-      // Also delete old single image if exists
-      if (news.image) {
+        }
+      });
+      if (news.image && !keepSet.has(news.image.startsWith('/') ? news.image : `/${news.image}`)) {
         const oldImagePath = path.join(__dirname, '..', news.image);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
-          console.log('[Backend PUT /api/news/:id] Deleted old single image:', news.image);
         }
       }
 
-      let imagePaths = [];
-      let imagePath = '';
+      let imagePaths = [...existingImagePaths];
+      let imagePath = imagePaths[0] || '';
 
       for (const file of imageFiles) {
         console.log('[Backend PUT /api/news/:id] Processing file:', file.filename, file.size, 'bytes');
@@ -1187,8 +1263,10 @@ router.put('/:id', authenticateAdmin, upload.fields([{ name: 'images', maxCount:
         }
       }
 
-      news.images = imagePaths;
-      news.image = imagePath; // First image for backward compatibility
+      // Merge existing + new, limit to 3
+      const merged = imagePaths.slice(0, 3);
+      news.images = merged;
+      news.image = merged[0] || '';
       console.log('[Backend PUT /api/news/:id] Updated images:', {
         image: news.image,
         images: news.images,
