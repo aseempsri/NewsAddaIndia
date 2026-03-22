@@ -634,8 +634,12 @@ interface NewsForm {
       color: black !important;
     }
     ::ng-deep .ckeditor-custom .ck-editor__editable p {
-      margin-bottom: 1em;
+      margin-top: 1em !important;
+      margin-bottom: 1em !important;
       line-height: 1.6;
+    }
+    ::ng-deep .ckeditor-custom .ck-editor__editable p:first-child {
+      margin-top: 0 !important;
     }
     ::ng-deep .ckeditor-custom .ck-editor__editable p,
     ::ng-deep .ckeditor-custom .ck-editor__editable h1,
@@ -650,6 +654,28 @@ interface NewsForm {
     ::ng-deep .ckeditor-custom .ck-editor__editable strong,
     ::ng-deep .ckeditor-custom .ck-editor__editable em {
       color: black !important;
+    }
+    /* Dark mode: make toolbar icons and labels visible */
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar {
+      --ck-color-text: hsl(0, 0%, 90%);
+      --ck-color-button-default-color: hsl(0, 0%, 90%);
+      --ck-color-button-on-color: hsl(0, 0%, 98%);
+    }
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-button,
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-dropdown__button {
+      color: hsl(0, 0%, 90%) !important;
+    }
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-button__label,
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-dropdown__button .ck-button__label {
+      color: hsl(0, 0%, 90%) !important;
+    }
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-icon,
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar .ck-icon * {
+      color: hsl(0, 0%, 90%) !important;
+      fill: hsl(0, 0%, 90%) !important;
+    }
+    :host-context(.dark) ::ng-deep .ckeditor-custom .ck-toolbar svg {
+      fill: hsl(0, 0%, 90%) !important;
     }
   `]
 })
@@ -1298,14 +1324,53 @@ export class AdminCreatePostComponent implements OnInit, OnDestroy, AfterViewIni
         const blockElements = tempDiv.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, blockquote');
         const translatedBlocks: string[] = [];
         
-        // Translate each block element
-        for (const block of Array.from(blockElements)) {
-          const text = block.textContent?.trim() || '';
-          if (text) {
-            const translated = await this.languageService.translateText(text, 'hi', 'en');
-            // Preserve the tag name
-            const tagName = block.tagName.toLowerCase();
-            translatedBlocks.push(`<${tagName}>${translated}</${tagName}>`);
+        // Use leaf blocks only - skip containers that hold other blocks
+        const blocksToProcess = Array.from(blockElements).filter(el => {
+          const tag = el.tagName.toLowerCase();
+          const isContentBlock = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tag);
+          const containsOtherBlock = Array.from(blockElements).some(b => b !== el && el.contains(b));
+          return isContentBlock && !containsOtherBlock;
+        });
+        const blocks = blocksToProcess.length > 0 ? blocksToProcess : Array.from(blockElements);
+
+        const processInlineNode = async (node: ChildNode): Promise<string> => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = (node.textContent || '').trim();
+            if (!text) return '';
+            return await this.languageService.translateText(text, 'hi', 'en');
+          }
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            if (tag === 'br') return '<br>';
+            let inner = '';
+            for (const child of Array.from(el.childNodes)) {
+              inner += await processInlineNode(child);
+            }
+            if (!inner.trim()) return '';
+            if (tag === 'strong' || tag === 'b') return `<strong>${inner}</strong>`;
+            if (tag === 'em' || tag === 'i') return `<em>${inner}</em>`;
+            if (tag === 'span') {
+              const fontWeight = (el as HTMLElement).style?.fontWeight || el.getAttribute('style') || '';
+              if (/font-weight:\s*(bold|[6-9]00)/i.test(fontWeight)) return `<strong>${inner}</strong>`;
+              return `<span>${inner}</span>`;
+            }
+            if (['a', 'u', 's'].includes(tag)) return `<${tag}>${inner}</${tag}>`;
+            return inner;
+          }
+          return '';
+        };
+
+        for (const block of blocks) {
+          const tagName = block.tagName.toLowerCase();
+          if (!['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'].includes(tagName)) continue;
+          const parts: string[] = [];
+          for (const child of Array.from(block.childNodes)) {
+            parts.push(await processInlineNode(child));
+          }
+          const innerHtml = parts.join('');
+          if (innerHtml.trim()) {
+            translatedBlocks.push(`<${tagName}>${innerHtml}</${tagName}>`);
           }
         }
         

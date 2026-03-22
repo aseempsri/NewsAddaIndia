@@ -254,8 +254,26 @@ import { Subscription } from 'rxjs';
       font-size: 1.125rem;
     }
     .news-content p {
-      margin-bottom: 1.75rem;
+      margin-top: 1em !important;
+      margin-bottom: 1em !important;
       color: hsl(var(--muted-foreground));
+    }
+    .news-content p:first-child {
+      margin-top: 0 !important;
+    }
+    /* Bold-only paragraphs = subheadings - 1 line space above and below */
+    .news-content p:has(> strong:only-child),
+    .news-content p:has(> b:only-child) {
+      margin-top: 1em !important;
+      margin-bottom: 1em !important;
+    }
+    .news-content p:has(> strong:only-child):first-child,
+    .news-content p:has(> b:only-child):first-child {
+      margin-top: 0 !important;
+    }
+    .news-content strong, .news-content b {
+      font-weight: 700;
+      color: hsl(var(--foreground));
     }
     .news-content h2 {
       margin-top: 3rem;
@@ -896,7 +914,12 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    // Convert line breaks to paragraphs
+    // If content already has HTML from CKEditor (p, strong, h2, etc.), use as-is to preserve formatting
+    if (/<\s*(p|div|strong|b|h[1-6]|ul|ol|li|blockquote)\b/i.test(content)) {
+      return content;
+    }
+
+    // Plain text: convert line breaks to paragraphs
     return content
       .split('\n\n')
       .map(paragraph => paragraph.trim())

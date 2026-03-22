@@ -206,8 +206,26 @@ import { Subscription } from 'rxjs';
       line-height: 1.8;
     }
     .news-content p {
-      margin-bottom: 1.5rem;
+      margin-top: 1em !important;
+      margin-bottom: 1em !important;
       color: hsl(var(--muted-foreground));
+    }
+    .news-content p:first-child {
+      margin-top: 0 !important;
+    }
+    /* Bold-only paragraphs = subheadings - 1 line space above and below */
+    .news-content p:has(> strong:only-child),
+    .news-content p:has(> b:only-child) {
+      margin-top: 1em !important;
+      margin-bottom: 1em !important;
+    }
+    .news-content p:has(> strong:only-child):first-child,
+    .news-content p:has(> b:only-child):first-child {
+      margin-top: 0 !important;
+    }
+    .news-content strong, .news-content b {
+      font-weight: 700;
+      color: hsl(var(--foreground));
     }
     .news-content h2, .news-content h3 {
       margin-top: 2rem;
@@ -300,7 +318,8 @@ import { Subscription } from 'rxjs';
         max-width: 100%;
       }
       .news-content p {
-        margin-bottom: 1.75rem;
+        margin-top: 1em !important;
+        margin-bottom: 1em !important;
         font-size: 1.125rem;
         line-height: 1.9;
         color: hsl(var(--foreground));
@@ -362,7 +381,8 @@ import { Subscription } from 'rxjs';
       .news-content p {
         font-size: 1.25rem;
         line-height: 2;
-        margin-bottom: 2rem;
+        margin-top: 1em !important;
+        margin-bottom: 1em !important;
         color: hsl(var(--foreground));
       }
       .news-content h2, .news-content h3 {
@@ -377,7 +397,8 @@ import { Subscription } from 'rxjs';
         line-height: 1.7;
       }
       .news-content p {
-        margin-bottom: 1.25rem;
+        margin-top: 1em !important;
+        margin-bottom: 1em !important;
       }
     }
   `]
@@ -1051,7 +1072,12 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
       return '';
     }
 
-    // Convert line breaks to paragraphs
+    // If content already has HTML from CKEditor (p, strong, h2, etc.), use as-is to preserve formatting
+    if (/<\s*(p|div|strong|b|h[1-6]|ul|ol|li|blockquote)\b/i.test(content)) {
+      return content;
+    }
+
+    // Plain text: convert line breaks to paragraphs
     return content
       .split('\n\n')
       .map(paragraph => paragraph.trim())
