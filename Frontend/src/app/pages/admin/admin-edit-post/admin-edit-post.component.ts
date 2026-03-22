@@ -479,15 +479,31 @@ interface PendingNews {
                         <p class="text-xs text-muted-foreground mb-2 font-semibold">Current images ({{ getTotalImageCount() }}):</p>
                         <div class="flex flex-wrap gap-3">
                           @for (img of currentImages; track $index) {
-                            <div class="relative">
+                            <div class="relative group">
                               <img [src]="img" [alt]="'Current image ' + ($index + 1)" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
-                              <span class="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full font-semibold">{{ $index + 1 }}</span>
+                              <button
+                                type="button"
+                                (click)="removeCurrentImage($index)"
+                                class="absolute top-1 right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                                aria-label="Remove image">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
                             </div>
                           }
                           @for (path of galleryImagePaths; track path) {
-                            <div class="relative">
+                            <div class="relative group">
                               <img [src]="getImageUrl(path)" alt="From gallery" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
-                              <span class="absolute top-1 right-1 bg-cyan-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">G</span>
+                              <button
+                                type="button"
+                                (click)="removeGalleryImage(path)"
+                                class="absolute top-1 right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                                aria-label="Remove image">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
                             </div>
                           }
                         </div>
@@ -495,7 +511,18 @@ interface PendingNews {
                     } @else if (currentImageUrl) {
                       <div class="mb-3">
                         <p class="text-xs text-muted-foreground mb-2 font-semibold">Current image:</p>
-                        <img [src]="currentImageUrl" alt="Current image" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
+                        <div class="relative group inline-block">
+                          <img [src]="currentImageUrl" alt="Current image" class="w-32 h-32 object-cover rounded-lg border-2 border-border shadow-md" />
+                          <button
+                            type="button"
+                            (click)="removeCurrentImage(0)"
+                            class="absolute top-1 right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                            aria-label="Remove image">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     }
                     <div class="flex flex-wrap gap-2 mb-2">
@@ -987,6 +1014,22 @@ export class AdminEditPostComponent implements OnInit, OnDestroy, CanDeactivate 
   onGallerySelected(paths: string[]) {
     const remaining = 3 - this.currentImages.length - this.newImages.length;
     this.galleryImagePaths = paths.slice(0, remaining);
+  }
+
+  removeCurrentImage(index: number) {
+    if (this.currentImages.length > 0) {
+      this.currentImages.splice(index, 1);
+      if (this.newsData.images && Array.isArray(this.newsData.images)) {
+        this.newsData.images.splice(index, 1);
+      }
+    } else if (this.currentImageUrl && index === 0) {
+      this.currentImageUrl = null;
+      this.newsData.image = '';
+    }
+  }
+
+  removeGalleryImage(path: string) {
+    this.galleryImagePaths = this.galleryImagePaths.filter(p => p !== path);
   }
 
   onFilesSelected(event: Event) {
