@@ -45,6 +45,20 @@ app.use('/api/tts', require('./routes/tts'));
 app.use('/api/market', require('./routes/market'));
 app.use('/api/push', require('./routes/push'));
 
+/**
+ * Append a per-article query param to image URL for og:image / Twitter cards.
+ * WhatsApp and Facebook cache previews by URL; without this, back-to-back shares
+ * can show the previous article's image when the same path pattern is reused.
+ */
+function cacheBustOgImageUrl(baseUrl, newsDoc) {
+  if (!baseUrl) return '';
+  const idPart = newsDoc._id ? String(newsDoc._id) : '0';
+  const t = newsDoc.updatedAt ? new Date(newsDoc.updatedAt).getTime() : Date.now();
+  const v = `${idPart.slice(-10)}_${t}`;
+  const sep = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${sep}og_v=${encodeURIComponent(v)}`;
+}
+
 // Route for social media crawlers - serve HTML with meta tags
 app.get('/news/:slug', async (req, res) => {
   try {
@@ -135,6 +149,8 @@ app.get('/news/:slug', async (req, res) => {
 
     console.log('[Meta Route] Normalized image URL:', normalizedImageUrl);
 
+    const ogImageUrl = normalizedImageUrl ? cacheBustOgImageUrl(normalizedImageUrl, news) : '';
+
     const title = news.title || news.titleEn || 'News Adda India';
     const description = (news.excerpt || '').slice(0, 200).replace(/<[^>]*>/g, '');
     const slug = news.slug || param;
@@ -160,8 +176,8 @@ app.get('/news/:slug', async (req, res) => {
   <meta property="og:url" content="${articleUrl}" />
   <meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />
   <meta property="og:description" content="${description.replace(/"/g, '&quot;')}" />
-  ${normalizedImageUrl ? `<meta property="og:image" content="${normalizedImageUrl.replace(/"/g, '&quot;')}" />
-  <meta property="og:image:secure_url" content="${normalizedImageUrl.replace(/"/g, '&quot;')}" />
+  ${ogImageUrl ? `<meta property="og:image" content="${ogImageUrl.replace(/"/g, '&quot;')}" />
+  <meta property="og:image:secure_url" content="${ogImageUrl.replace(/"/g, '&quot;')}" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />` : ''}
@@ -171,7 +187,7 @@ app.get('/news/:slug', async (req, res) => {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}" />
   <meta name="twitter:description" content="${description.replace(/"/g, '&quot;')}" />
-  ${normalizedImageUrl ? `<meta name="twitter:image" content="${normalizedImageUrl.replace(/"/g, '&quot;')}" />` : ''}
+  ${ogImageUrl ? `<meta name="twitter:image" content="${ogImageUrl.replace(/"/g, '&quot;')}" />` : ''}
   
   <link rel="canonical" href="${articleUrl}" />
   
@@ -182,16 +198,16 @@ app.get('/news/:slug', async (req, res) => {
 <body>
   <h1>${title.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
   <p>${description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
-  ${normalizedImageUrl ? `<img src="${normalizedImageUrl.replace(/"/g, '&quot;')}" alt="${title.replace(/"/g, '&quot;')}" style="max-width: 100%;" />` : ''}
+  ${ogImageUrl ? `<img src="${ogImageUrl.replace(/"/g, '&quot;')}" alt="${title.replace(/"/g, '&quot;')}" style="max-width: 100%;" />` : ''}
   <p><a href="${articleUrl}">Read full article</a></p>
 </body>
 </html>`;
 
-    console.log('[Meta Route] Sending HTML response with image URL:', normalizedImageUrl);
+    console.log('[Meta Route] Sending HTML response with og:image URL:', ogImageUrl || '(none)');
     
-    // Set headers for better crawler compatibility
+    // Do not cache HTML per-URL at CDNs — wrong article meta can be served for back-to-back publishes
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Cache-Control', 'private, no-cache, must-revalidate');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow'); // Don't index this redirect page
     
     res.send(html);
