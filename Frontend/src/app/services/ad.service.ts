@@ -22,7 +22,7 @@ export class AdService {
   // Same-origin when apiUrl is empty in production
   private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
     ? environment.apiUrl
-    : (environment.production ? '' : 'http://localhost:3000');
+    : (environment.production ? '' : '');
 
   constructor(private http: HttpClient) {
     this.loadAds();

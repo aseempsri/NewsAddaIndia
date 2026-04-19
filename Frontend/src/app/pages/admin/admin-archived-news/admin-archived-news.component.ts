@@ -573,6 +573,6 @@ export class AdminArchivedNewsComponent implements OnInit, OnDestroy {
   private getApiUrl(): string {
     return (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
       ? environment.apiUrl
-      : (environment.production ? '' : 'http://localhost:3000');
+      : (environment.production ? '' : '');
   }
 }

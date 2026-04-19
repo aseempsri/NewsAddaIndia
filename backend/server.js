@@ -44,6 +44,7 @@ app.use('/api/ads', require('./routes/ads'));
 app.use('/api/tts', require('./routes/tts'));
 app.use('/api/market', require('./routes/market'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/youtube', require('./routes/youtube'));
 
 /**
  * Append a per-article query param to image URL for og:image / Twitter cards.

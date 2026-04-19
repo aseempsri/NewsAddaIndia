@@ -350,7 +350,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   // Same-origin when apiUrl is empty in production (see news.service.ts)
   private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
     ? environment.apiUrl
-    : (environment.production ? '' : 'http://localhost:3000');
+    : (environment.production ? '' : '');
   private languageSubscription?: Subscription;
 
   constructor(

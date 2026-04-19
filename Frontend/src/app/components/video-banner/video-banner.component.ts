@@ -1,6 +1,8 @@
 import { Component, ViewChild, ElementRef, OnInit, AfterViewInit, ChangeDetectorRef, Input, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { InstagramService } from '../../services/instagram.service';
+import { YoutubeService, YoutubeLatestVideo } from '../../services/youtube.service';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
 
@@ -8,12 +10,25 @@ import { Subscription } from 'rxjs';
   selector: 'app-video-banner',
   standalone: true,
   imports: [CommonModule],
+  host: {
+    class: 'block w-full min-w-0'
+  },
   template: `
     <!-- Mobile View - Complete Video Visible -->
     <section class="lg:hidden relative w-full overflow-hidden bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 pt-16">
       <div 
-        class="relative w-full aspect-video cursor-pointer flex items-center justify-center"
-        (click)="redirectToYouTube()">
+        class="relative w-full aspect-video flex items-center justify-center"
+        [class.cursor-pointer]="!showYoutubeEmbed"
+        (click)="onBannerClick()">
+        @if (showYoutubeEmbed && safeYoutubeEmbedUrl) {
+        <iframe
+          class="absolute inset-0 z-[2] w-full h-full border-0"
+          [src]="safeYoutubeEmbedUrl"
+          title="NewsAdda India Live — latest YouTube video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          (load)="onYoutubeIframeLoad()"></iframe>
+        } @else {
         <video
           #videoPlayer
           class="w-full h-full object-cover pointer-events-none transition-all duration-500"
@@ -31,9 +46,10 @@ import { Subscription } from 'rxjs';
           <source [src]="videoUrl" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
+        }
         
-        <!-- Loading Animation -->
-        @if (isLoading) {
+        <!-- Loading Animation (MP4 only — YouTube iframe load is cross-origin and often never fires, which left this overlay stuck) -->
+        @if (isLoading && !showYoutubeEmbed) {
           <div class="absolute inset-0 flex items-center justify-center bg-secondary/30 backdrop-blur-sm z-20">
             <div class="flex flex-col items-center gap-4">
               <!-- Spinner -->
@@ -47,14 +63,16 @@ import { Subscription } from 'rxjs';
           </div>
         }
         
+        @if (!showYoutubeEmbed) {
         <!-- Overlay gradient for visual depth -->
-        <div class="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/30 pointer-events-none"></div>
+        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-background/30 via-transparent to-background/30 pointer-events-none"></div>
         
         <!-- Subtle shimmer effect -->
-        <div class="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)] pointer-events-none"></div>
+        <div class="absolute inset-0 z-[1] opacity-5 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)] pointer-events-none"></div>
+        }
         
         <!-- Audio Toggle Button with Social Media Icons (Right side) -->
-        <div class="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-3 group" [class.opacity-0]="isLoading">
+        <div class="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-3 group" [class.opacity-0]="isLoading && !showYoutubeEmbed">
           <!-- Social Media Icons - Vertical Stack (shown on hover) - Hidden on mobile -->
           <div class="social-icons-container hidden flex-col gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
             <a [href]="instagramUrl" target="_blank" rel="noopener noreferrer" 
@@ -91,6 +109,7 @@ import { Subscription } from 'rxjs';
             </a>
           </div>
           
+          @if (!showYoutubeEmbed) {
           <!-- Indicator Dots (shows there are more buttons) - Hidden on mobile -->
           <div class="hidden flex-col gap-1 mb-1 opacity-60 group-hover:opacity-0 transition-opacity duration-300">
             <div class="w-1 h-1 rounded-full bg-primary/60 animate-pulse"></div>
@@ -116,6 +135,7 @@ import { Subscription } from 'rxjs';
               </svg>
             }
           </button>
+          }
         </div>
       </div>
     </section>
@@ -142,8 +162,9 @@ import { Subscription } from 'rxjs';
       <div class="container mx-auto px-4 md:px-6 lg:px-8 overflow-hidden">
         <!-- Creative Frame Container -->
         <div 
-          class="relative mx-auto max-w-7xl cursor-pointer group px-2"
-          (click)="redirectToYouTube()">
+          class="relative mx-auto max-w-7xl group px-2"
+          [class.cursor-pointer]="!showYoutubeEmbed"
+          (click)="onBannerClick()">
           
           <!-- Outer decorative border -->
           <div class="absolute -inset-2 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 rounded-2xl blur-sm opacity-50 group-hover:opacity-75 transition-opacity duration-300 pointer-events-none"></div>
@@ -156,6 +177,15 @@ import { Subscription } from 'rxjs';
             
             <!-- Video container - maintains aspect ratio and shows full frame -->
             <div class="relative w-full h-[67.5vh] bg-gradient-to-br from-secondary/30 via-primary/10 to-accent/20 flex items-center justify-center">
+              @if (showYoutubeEmbed && safeYoutubeEmbedUrl) {
+              <iframe
+                class="absolute inset-0 z-[2] w-full h-full rounded-lg border-0 shadow-2xl"
+                [src]="safeYoutubeEmbedUrl"
+                title="NewsAdda India Live — latest YouTube video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                (load)="onYoutubeIframeLoad()"></iframe>
+              } @else {
               <video
                 #videoPlayerDesktop
                 class="w-full h-full object-cover rounded-lg shadow-2xl pointer-events-none transition-all duration-500"
@@ -175,9 +205,10 @@ import { Subscription } from 'rxjs';
                 <source [src]="videoUrl" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
+              }
               
-              <!-- Loading Animation -->
-              @if (isLoading) {
+              <!-- Loading Animation (MP4 only; see mobile block) -->
+              @if (isLoading && !showYoutubeEmbed) {
                 <div class="absolute inset-0 flex items-center justify-center bg-secondary/40 backdrop-blur-md rounded-lg z-20">
                   <div class="flex flex-col items-center gap-4">
                     <!-- Spinner -->
@@ -191,8 +222,10 @@ import { Subscription } from 'rxjs';
                 </div>
               }
               
-              <!-- Subtle inner glow effect -->
-              <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none rounded-lg"></div>
+              @if (!showYoutubeEmbed) {
+              <!-- Subtle inner glow effect (keep below MP4 only — was painting over the iframe) -->
+              <div class="absolute inset-0 z-[1] bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none rounded-lg"></div>
+              }
             </div>
             
             <!-- Decorative corner accents -->
@@ -202,7 +235,7 @@ import { Subscription } from 'rxjs';
             <div class="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-primary/40 rounded-br-lg"></div>
             
             <!-- Audio Toggle Button with Social Media Icons (Right side) -->
-            <div class="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-3 group" [class.opacity-0]="isLoading">
+            <div class="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-3 group" [class.opacity-0]="isLoading && !showYoutubeEmbed">
               <!-- Social Media Icons - Vertical Stack (shown on hover) -->
               <div class="social-icons-container flex flex-col gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
                 <a [href]="instagramUrl" target="_blank" rel="noopener noreferrer" 
@@ -239,6 +272,7 @@ import { Subscription } from 'rxjs';
                 </a>
               </div>
               
+              @if (!showYoutubeEmbed) {
               <!-- Indicator Dots (shows there are more buttons) -->
               <div class="flex flex-col gap-1 mb-1 opacity-60 group-hover:opacity-0 transition-opacity duration-300">
                 <div class="w-1 h-1 rounded-full bg-primary/60 animate-pulse"></div>
@@ -264,6 +298,7 @@ import { Subscription } from 'rxjs';
                   </svg>
                 }
               </button>
+              }
             </div>
           </div>
         </div>
@@ -397,7 +432,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
   // Social Media URLs
   instagramUrl = 'https://www.instagram.com/newsaddaindialive/';
   youtubeUrl = 'https://www.youtube.com/@newsaddaindialive';
-  youtubeLatestVideoUrl: string | null = null; // Latest video URL (will be fetched)
+  youtubeLatestVideoUrl: string | null = null;
+  showYoutubeEmbed = false;
+  safeYoutubeEmbedUrl: SafeResourceUrl | null = null;
   twitterUrl = 'https://twitter.com/NewsAddaIndia1';
   facebookUrl = 'https://facebook.com/InfoNewsaddaindia';
 
@@ -407,35 +444,65 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
 
   constructor(
     private instagramService: InstagramService,
+    private youtubeService: YoutubeService,
     private themeService: ThemeService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) { }
 
   ngOnInit() {
-    // Keep video muted by default
     this.shouldBeUnmuted = false;
 
-    // Initialize theme
     this.currentTheme = this.themeService.getCurrentTheme();
     this.themeSubscription = this.themeService.theme$.subscribe(theme => {
       this.currentTheme = theme;
     });
 
-    // Attempt to fetch the latest Instagram reel
-    this.instagramService.getLatestReelVideoUrl().subscribe(
-      (reelVideoUrl) => {
-        if (reelVideoUrl) {
-          this.videoUrl = reelVideoUrl;
-          this.isLoading = true; // Reset loading state when URL changes
-          console.log('Using latest Instagram reel:', reelVideoUrl);
-        } else {
-          console.log('Using fallback video:', this.videoUrl);
-        }
+    this.youtubeService.getLatestVideo().subscribe((info) => {
+      if (info?.videoId && /^[\w-]{11}$/.test(info.videoId)) {
+        this.applyYoutubeEmbed(info);
+        return;
       }
-    );
+      this.applyInstagramOrFallback();
+    });
+  }
 
-    // Use channel URL directly (YouTube service removed)
+  private applyYoutubeEmbed(info: YoutubeLatestVideo): void {
+    const q = 'autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&controls=1';
+    const base = info.embedUrl || `https://www.youtube.com/embed/${info.videoId}`;
+    const url = base.includes('?') ? `${base}&${q}` : `${base}?${q}`;
+    this.safeYoutubeEmbedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    this.showYoutubeEmbed = true;
+    this.youtubeLatestVideoUrl = info.watchUrl;
+    // Do not keep isLoading=true for YouTube: iframe (load) is unreliable cross-origin, so the spinner overlay never cleared.
+    this.isLoading = false;
+    this.cdr.markForCheck();
+  }
+
+  private applyInstagramOrFallback(): void {
     this.youtubeLatestVideoUrl = this.youtubeUrl;
+    this.instagramService.getLatestReelVideoUrl().subscribe((reelVideoUrl) => {
+      if (reelVideoUrl) {
+        this.videoUrl = reelVideoUrl;
+        this.isLoading = true;
+        console.log('Using latest Instagram reel:', reelVideoUrl);
+      } else {
+        console.log('Using fallback video:', this.videoUrl);
+      }
+      this.cdr.markForCheck();
+    });
+  }
+
+  onBannerClick(): void {
+    if (this.showYoutubeEmbed) {
+      return;
+    }
+    this.redirectToYouTube();
+  }
+
+  onYoutubeIframeLoad(): void {
+    this.isLoading = false;
+    this.cdr.markForCheck();
   }
 
   ngOnDestroy() {
@@ -443,7 +510,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
   }
 
   ngAfterViewInit() {
-    // Ensure video elements are properly initialized
+    if (this.showYoutubeEmbed) {
+      return;
+    }
     const videos = [
       this.videoPlayerMobile?.nativeElement,
       this.videoPlayerDesktop?.nativeElement
@@ -503,6 +572,9 @@ export class VideoBannerComponent implements OnInit, AfterViewInit, OnChanges, O
   }
 
   toggleAudio(event: Event) {
+    if (this.showYoutubeEmbed) {
+      return;
+    }
     event.stopPropagation(); // Prevent triggering the click on the video container
     this.isMuted = !this.isMuted;
     const video = this.getVideoElement();

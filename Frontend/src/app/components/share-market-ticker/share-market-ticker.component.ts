@@ -106,7 +106,7 @@ export class ShareMarketTickerComponent implements OnInit, AfterViewInit {
 
   private apiBase = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
     ? environment.apiUrl.replace(/\/$/, '')
-    : (environment.production ? '' : 'http://localhost:3000');
+    : (environment.production ? '' : '');
 
   constructor(private http: HttpClient) {}
 
