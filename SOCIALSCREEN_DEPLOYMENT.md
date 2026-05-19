@@ -87,19 +87,24 @@ Wait for DNS to propagate (`dig socialscreen.in` or `nslookup socialscreen.in`) 
 
 A ready-made config is in the repo: **`nginx-socialscreen.conf`** (mirror of NewsAdda’s `nginx-news-adda-fixed.conf`, with `root /var/www/socialscreen` and `server_name socialscreen.in`).
 
-### 1. Install the site config
+### 1. Install the site config (HTTP first — required before SSL)
+
+**Do not** copy `nginx-socialscreen.conf` until Certbot has created certificates. That file references `/etc/letsencrypt/live/socialscreen.in/` and `nginx -t` will fail if those files are missing.
 
 ```bash
 cd /root/NewsAddaIndia
-sudo cp nginx-socialscreen.conf /etc/nginx/sites-available/socialscreen
+sudo cp nginx-socialscreen-http-only.conf /etc/nginx/sites-available/socialscreen
 sudo ln -sf /etc/nginx/sites-available/socialscreen /etc/nginx/sites-enabled/socialscreen
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 Keep your existing NewsAdda config enabled (e.g. `/etc/nginx/sites-enabled/news-adda`). **Do not** remove it — both sites run in parallel.
 
-### 2. HTTP-only test (before SSL)
+Test: `curl -I http://socialscreen.in/` and `curl http://socialscreen.in/api/news?limit=1`
 
-For a quick test, temporarily comment out the entire `server { listen 443 ... }` block in `/etc/nginx/sites-available/socialscreen`, and replace the HTTP `return 301` with a simple static server:
+### 2. HTTP-only test (optional manual block)
+
+If you prefer editing by hand instead of `nginx-socialscreen-http-only.conf`, use a simple static server:
 
 ```nginx
 server {
@@ -127,23 +132,22 @@ curl http://socialscreen.in/api/news?limit=1
 
 ### 3. SSL with Let’s Encrypt (Certbot)
 
-Ensure DNS points to the VPS and `/var/www/socialscreen` exists.
+Ensure DNS points to the VPS, `/var/www/socialscreen` exists, and **step 1 HTTP config is active** (`nginx -t` passes).
 
-**Option A — webroot (matches config in `nginx-socialscreen.conf`):**
-
-```bash
-# Temporary: serve HTTP without forcing HTTPS (use HTTP-only block above, or only ACME location)
-sudo certbot certonly --webroot -w /var/www/socialscreen \
-  -d socialscreen.in -d www.socialscreen.in
-```
-
-**Option B — Certbot nginx plugin (simpler if you use a minimal HTTP server block first):**
+**Recommended — Certbot nginx plugin:**
 
 ```bash
 sudo certbot --nginx -d socialscreen.in -d www.socialscreen.in
 ```
 
-Then restore/use the full **`nginx-socialscreen.conf`** (HTTPS + HTTP redirect) and reload:
+**Option B — webroot:**
+
+```bash
+sudo certbot certonly --webroot -w /var/www/socialscreen \
+  -d socialscreen.in -d www.socialscreen.in
+```
+
+Then install the full HTTPS config and reload:
 
 ```bash
 sudo cp /root/NewsAddaIndia/nginx-socialscreen.conf /etc/nginx/sites-available/socialscreen
