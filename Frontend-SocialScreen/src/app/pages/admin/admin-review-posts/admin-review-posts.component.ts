@@ -1,0 +1,562 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router, RouterModule } from '@angular/router';
+import { environment } from '../../../../environments/environment';
+import { DeletePasswordModalComponent } from '../../../components/delete-password-modal/delete-password-modal.component';
+import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
+import { ModalService } from '../../../services/modal.service';
+import { NewsDetailModalComponent } from '../../../components/news-detail-modal/news-detail-modal.component';
+import { NewsArticle } from '../../../services/news.service';
+import { Subscription } from 'rxjs';
+
+interface PendingNews {
+  _id: string;
+  title: string;
+  titleEn: string;
+  excerpt: string;
+  summary?: string;
+  content: string;
+  category: string;
+  tags: string[];
+  pages: string[];
+  author: string;
+  image: string;
+  isBreaking: boolean;
+  isFeatured: boolean;
+  generatedBy?: string;
+  generatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  source?: 'pending' | 'unpublished'; // 'pending' from PendingNews, 'unpublished' from News
+  sourceName?: string; // Source name (e.g., 'NewsData.io')
+  sourceUrl?: string; // Source URL
+}
+
+@Component({
+  selector: 'app-admin-review-posts',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, DeletePasswordModalComponent, NewsDetailModalComponent],
+  template: `
+    <div class="min-h-screen bg-background py-8">
+      <div class="container mx-auto px-4 max-w-7xl">
+        @if (isAuthenticated) {
+          <div class="space-y-6">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <a routerLink="/admin" class="text-primary hover:text-primary/80">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </a>
+                <h1 class="text-3xl font-bold">Review Unpublished Posts</h1>
+                <span class="px-3 py-1 text-sm bg-primary/10 text-primary rounded-full">
+                  {{ pendingNews.length }} pending
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <!-- Theme Toggle Button -->
+                <button
+                  (click)="toggleAdminTheme()"
+                  [attr.aria-label]="currentAdminTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'"
+                  [class]="'relative w-12 h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shadow-lg ' + (currentAdminTheme === 'dark' ? 'bg-gradient-to-r from-gray-700 to-gray-900 shadow-gray-700/50' : 'bg-gradient-to-r from-yellow-400 to-orange-500 shadow-yellow-400/50')">
+                  <div
+                    [class]="'absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center ' + (currentAdminTheme === 'dark' ? 'translate-x-[22px]' : '')">
+                    @if (currentAdminTheme === 'dark') {
+                      <svg class="w-3.5 h-3.5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    } @else {
+                      <svg class="w-3.5 h-3.5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    }
+                  </div>
+                  <div class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-semibold text-white pointer-events-none">
+                    <span [class]="'transition-opacity duration-300 ' + (currentAdminTheme === 'light' ? 'opacity-100' : 'opacity-50')">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </span>
+                    <span [class]="'transition-opacity duration-300 ' + (currentAdminTheme === 'dark' ? 'opacity-100' : 'opacity-50')">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      </svg>
+                    </span>
+                  </div>
+                </button>
+                <button
+                  (click)="logout()"
+                  class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                  Logout
+                </button>
+              </div>
+            </div>
+
+            @if (isLoading) {
+              <div class="text-center py-12">
+                <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-muted-foreground">Loading pending posts...</p>
+              </div>
+            } @else if (pendingNews.length === 0) {
+              <div class="text-center py-12 glass-card rounded-xl">
+                <svg class="w-16 h-16 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h2 class="text-2xl font-bold mb-2">No Pending Posts</h2>
+                <p class="text-muted-foreground">All posts have been reviewed. New AI-generated posts will appear here.</p>
+              </div>
+            } @else {
+              <!-- Pending News Grid -->
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @for (news of pendingNews; track news._id) {
+                  <article class="glass-card rounded-xl overflow-hidden group">
+                    <!-- Image -->
+                    <div class="relative aspect-[16/10] overflow-hidden bg-secondary/20">
+                      @if (getImageUrl(news.image)) {
+                        <img
+                          [src]="getImageUrl(news.image)"
+                          [alt]="news.title"
+                          class="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
+                      } @else {
+                        <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
+                          <svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      }
+                      <!-- Category Badge -->
+                      <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
+                        @if (news.isBreaking) {
+                          <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white animate-pulse">
+                            BREAKING
+                          </span>
+                        }
+                        <span [class]="'px-3 py-1 text-xs font-semibold rounded-full ' + getCategoryColor(news.category)">
+                          {{ news.category }}
+                        </span>
+                        @if (news.source === 'unpublished') {
+                          <span class="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white">
+                            Unpublished
+                          </span>
+                        } @else {
+                          <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">
+                            Pending
+                          </span>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="p-5">
+                      <h3 class="font-display text-lg font-semibold leading-tight mb-2 line-clamp-2">
+                        {{ news.title }}
+                      </h3>
+                      <p class="text-muted-foreground text-sm line-clamp-2 mb-4">
+                        {{ filterPaidPlansText(news.excerpt) }}
+                      </p>
+
+                      <!-- Meta Info -->
+                      <div class="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                        <span>By {{ news.author }}</span>
+                        <span>{{ formatDate(news.createdAt) }}</span>
+                      </div>
+
+                      <!-- Tags -->
+                      @if (news.tags && news.tags.length > 0) {
+                        <div class="flex flex-wrap gap-1 mb-4">
+                          @for (tag of news.tags.slice(0, 3); track tag) {
+                            <span class="px-2 py-1 text-xs bg-secondary rounded-md">{{ tag }}</span>
+                          }
+                        </div>
+                      }
+
+                      <!-- Pages -->
+                      @if (news.pages && news.pages.length > 0) {
+                        <div class="mb-4">
+                          <p class="text-xs text-muted-foreground mb-1">Visible on:</p>
+                          <div class="flex flex-wrap gap-1">
+                            @for (page of news.pages; track page) {
+                              <span class="px-2 py-1 text-xs bg-primary/10 text-primary rounded-md">{{ page }}</span>
+                            }
+                          </div>
+                        </div>
+                      }
+
+                      <!-- Action Buttons -->
+                      <div class="space-y-2 pt-4 border-t border-border/30">
+                        <div class="flex gap-2">
+                          <button
+                            (click)="viewNews(news)"
+                            class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+                            View
+                          </button>
+                          <button
+                            (click)="editNews(news)"
+                            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                            Edit
+                          </button>
+                        </div>
+                        <div class="flex gap-2">
+                          <button
+                            (click)="publishNews(news._id)"
+                            [disabled]="processingIds.has(news._id)"
+                            class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            @if (processingIds.has(news._id)) {
+                              <span class="flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Publishing...
+                              </span>
+                            } @else {
+                              PUBLISH
+                            }
+                          </button>
+                          <button
+                            (click)="deleteNews(news._id)"
+                            [disabled]="processingIds.has(news._id)"
+                            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+
+            @if (error) {
+              <div class="glass-card p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p class="text-red-500">{{ error }}</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+      
+      <!-- News Detail Modal -->
+      @if (modalState.isOpen && modalState.news) {
+        <app-news-detail-modal
+          [news]="modalState.news"
+          [isOpen]="modalState.isOpen"
+          [isBreaking]="modalState.isBreaking || false"
+          (closeModal)="closeModal()">
+        </app-news-detail-modal>
+      }
+      
+      <!-- Delete Password Modal -->
+      <app-delete-password-modal
+        [isOpen]="showPasswordModal"
+        (confirmed)="onPasswordConfirmed()"
+        (cancelled)="showPasswordModal = false; pendingDeleteId = null">
+      </app-delete-password-modal>
+    </div>
+  `,
+  styles: []
+})
+export class AdminReviewPostsComponent implements OnInit, OnDestroy {
+  currentAdminTheme: AdminTheme = 'light';
+  private adminThemeSubscription?: Subscription;
+  isAuthenticated = false;
+  authToken = '';
+  pendingNews: PendingNews[] = [];
+  isLoading = false;
+  error = '';
+  processingIds = new Set<string>();
+  showPasswordModal = false;
+  pendingDeleteId: string | null = null;
+  modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
+    isOpen: false,
+    news: null,
+    isBreaking: false
+  };
+
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private adminThemeService: AdminThemeService,
+    private modalService: ModalService
+  ) {
+    // Check if already authenticated
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      this.authToken = token;
+      this.verifyToken();
+    } else {
+      this.router.navigate(['/admin']);
+    }
+  }
+
+  ngOnInit() {
+    // Initialize admin theme
+    this.currentAdminTheme = this.adminThemeService.getCurrentTheme();
+    this.adminThemeService.checkAndApplyTheme();
+    
+    // Subscribe to theme changes
+    this.adminThemeSubscription = this.adminThemeService.theme$.subscribe(theme => {
+      this.currentAdminTheme = theme;
+    });
+    
+    // Subscribe to modal state changes
+    this.modalService.getModalState().subscribe(state => {
+      this.modalState = state;
+    });
+    
+    if (this.isAuthenticated) {
+      this.loadPendingNews();
+    }
+  }
+
+  verifyToken() {
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+    this.http.get<{ valid: boolean }>(`${this.getApiUrl()}/api/auth/verify`, { headers }).subscribe({
+      next: (response) => {
+        if (response.valid) {
+          this.isAuthenticated = true;
+          this.loadPendingNews();
+        } else {
+          localStorage.removeItem('admin_token');
+          this.router.navigate(['/admin']);
+        }
+      },
+      error: () => {
+        localStorage.removeItem('admin_token');
+        this.router.navigate(['/admin']);
+      }
+    });
+  }
+
+  loadPendingNews() {
+    this.isLoading = true;
+    this.error = '';
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+
+    this.http.get<{ success: boolean; data: PendingNews[]; error?: string }>(
+      `${this.getApiUrl()}/api/pending-news`,
+      { headers }
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.pendingNews = response.data;
+        } else {
+          this.error = response.error || 'Failed to load pending news';
+        }
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.error = err.error?.error || 'Failed to load pending news. Please try again.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  publishNews(id: string) {
+    if (this.processingIds.has(id)) return;
+
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) return;
+
+    this.processingIds.add(id);
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+
+    // Determine source type
+    const source = news.source || 'pending';
+
+    this.http.post<{ success: boolean; message?: string; error?: string }>(
+      `${this.getApiUrl()}/api/pending-news/${id}/publish`,
+      { source },
+      { headers }
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Remove from list
+          this.pendingNews = this.pendingNews.filter(news => news._id !== id);
+        } else {
+          this.error = response.error || 'Failed to publish news';
+        }
+        this.processingIds.delete(id);
+      },
+      error: (err) => {
+        this.error = err.error?.error || 'Failed to publish news. Please try again.';
+        this.processingIds.delete(id);
+      }
+    });
+  }
+
+  viewNews(news: PendingNews) {
+    // Convert PendingNews to NewsArticle format for modal
+    const newsArticle: NewsArticle = {
+      id: news._id,
+      category: news.category,
+      title: news.title,
+      titleEn: news.titleEn || news.title,
+      excerpt: news.excerpt,
+      image: news.image,
+      time: this.formatDate(news.createdAt),
+      author: news.author,
+      date: this.formatDate(news.createdAt),
+      isBreaking: news.isBreaking,
+      isFeatured: news.isFeatured,
+      isTrending: false
+    };
+    
+    // Open modal with news details
+    this.modalService.openModal(newsArticle, news.isBreaking || false);
+  }
+
+  editNews(news: PendingNews) {
+    // Store news in sessionStorage for edit page
+    if (news.source === 'unpublished') {
+      // For unpublished posts, use the live post edit route
+      sessionStorage.setItem('editLiveNews', JSON.stringify(news));
+      this.router.navigate(['/admin/edit-live', news._id]);
+    } else {
+      // For pending posts, use the pending post edit route
+      sessionStorage.setItem('editNews', JSON.stringify(news));
+      this.router.navigate(['/admin/edit', news._id]);
+    }
+  }
+
+  deleteNews(id: string) {
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) return;
+
+    // Store the ID and show password modal
+    this.pendingDeleteId = id;
+    this.showPasswordModal = true;
+  }
+
+  onPasswordConfirmed() {
+    if (!this.pendingDeleteId) return;
+
+    const id = this.pendingDeleteId;
+    const news = this.pendingNews.find(n => n._id === id);
+    if (!news) {
+      this.showPasswordModal = false;
+      this.pendingDeleteId = null;
+      return;
+    }
+
+    const source = news.source || 'pending';
+
+    if (this.processingIds.has(id)) {
+      this.showPasswordModal = false;
+      this.pendingDeleteId = null;
+      return;
+    }
+
+    this.processingIds.add(id);
+    this.showPasswordModal = false;
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+
+    this.http.delete<{ success: boolean; message?: string; error?: string }>(
+      `${this.getApiUrl()}/api/pending-news/${id}?source=${source}`,
+      { headers }
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Remove from list
+          this.pendingNews = this.pendingNews.filter(news => news._id !== id);
+        } else {
+          this.error = response.error || 'Failed to delete news';
+        }
+        this.processingIds.delete(id);
+        this.pendingDeleteId = null;
+      },
+      error: (err) => {
+        this.error = err.error?.error || 'Failed to delete news. Please try again.';
+        this.processingIds.delete(id);
+        this.pendingDeleteId = null;
+      }
+    });
+  }
+
+  closeModal() {
+    this.modalService.closeModal();
+  }
+
+  ngOnDestroy() {
+    this.adminThemeSubscription?.unsubscribe();
+  }
+
+  toggleAdminTheme() {
+    this.adminThemeService.toggleTheme();
+  }
+
+  logout() {
+    localStorage.removeItem('admin_token');
+    this.authToken = '';
+    this.isAuthenticated = false;
+    this.router.navigate(['/admin']);
+  }
+
+  getImageUrl(image: string): string {
+    if (!image) return '';
+    if (image.startsWith('http')) return image;
+    const apiUrl = this.getApiUrl();
+    return `${apiUrl}${image}`;
+  }
+
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  getCategoryColor(category: string): string {
+    const colors: Record<string, string> = {
+      'National': 'bg-blue-500 text-white',
+      'International': 'bg-purple-500 text-white',
+      'Sports': 'bg-green-500 text-white',
+      'Business': 'bg-yellow-500 text-white',
+      'Entertainment': 'bg-pink-500 text-white',
+      'Health': 'bg-red-500 text-white',
+      'Politics': 'bg-indigo-500 text-white',
+      'Religious': 'bg-indigo-500 text-white'
+    };
+    return colors[category] || 'bg-primary text-primary-foreground';
+  }
+
+  private getApiUrl(): string {
+    return (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
+      ? environment.apiUrl
+      : (environment.production ? '' : '');
+  }
+
+  /**
+   * Filter out "ONLY AVAILABLE IN PAID PLANS" and similar paid/premium text from content
+   */
+  filterPaidPlansText(text: string): string {
+    if (!text) return '';
+    
+    // List of paid/premium keywords to filter out
+    const paidKeywords = [
+      'only available in paid plans',
+      'only available in paid version',
+      'paid version',
+      'premium version',
+      'paid content',
+      'members only',
+      'only available in paid',
+      'paid plans',
+      'premium plans'
+    ];
+    
+    let filteredText = text;
+    
+    // Remove each keyword (case insensitive)
+    for (const keyword of paidKeywords) {
+      const regex = new RegExp(keyword, 'gi');
+      filteredText = filteredText.replace(regex, '');
+    }
+    
+    // Clean up extra spaces and newlines
+    filteredText = filteredText.replace(/\s+/g, ' ').trim();
+    
+    return filteredText;
+  }
+}
+
