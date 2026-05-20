@@ -127,45 +127,6 @@ interface SideNews {
             </div>
           </article>
           
-          <!-- Ad 1 - After Featured News (Mobile Only, Between 1st and 2nd News) -->
-          @if (isAdEnabled('ad1')) {
-            <div class="w-full min-h-[200px] sm:min-h-[250px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
-              <a
-                [href]="getAdLink('ad1') || 'javascript:void(0)'"
-                [target]="getAdLink('ad1') ? '_blank' : '_self'"
-                [rel]="getAdLink('ad1') ? 'noopener noreferrer' : ''"
-                class="block w-full h-full cursor-pointer">
-                @if (hasAdMedia('ad1')) {
-                  @if (getAdMediaType('ad1') === 'image') {
-                    <img
-                      [src]="getAdMediaUrl('ad1')"
-                      [alt]="getAdAltText('ad1')"
-                      class="w-full h-full object-cover"
-                    />
-                  } @else if (getAdMediaType('ad1') === 'video') {
-                    <video
-                      #ad1VideoMobile
-                      [src]="getAdMediaUrl('ad1')"
-                      autoplay
-                      muted
-                      loop
-                      playsinline
-                      preload="auto"
-                      (canplay)="onAdVideoCanPlay('ad1', $event)"
-                      (error)="onAdVideoError('ad1', $event)"
-                      (loadeddata)="onAdVideoLoaded('ad1', $event)"
-                      class="w-full h-full object-cover"
-                    ></video>
-                  }
-                } @else {
-                  <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
-                    <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 1</span>
-                  </div>
-                }
-              </a>
-            </div>
-          }
-
           <!-- Side News Items (2nd and 3rd News) -->
           @for (news of sideNews; track $index; let i = $index) {
               <article
@@ -249,45 +210,6 @@ interface SideNews {
                   </div>
                 </div>
               </article>
-              
-              <!-- Ad 2 - After 1st Side News (Mobile Only, Between 2nd and 3rd News) -->
-              @if (i === 0 && isAdEnabled('ad2')) {
-                <div class="w-full min-h-[200px] sm:min-h-[250px] rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg">
-                  <a
-                    [href]="getAdLink('ad2') || 'javascript:void(0)'"
-                    [target]="getAdLink('ad2') ? '_blank' : '_self'"
-                    [rel]="getAdLink('ad2') ? 'noopener noreferrer' : ''"
-                    class="block w-full h-full cursor-pointer">
-                    @if (hasAdMedia('ad2')) {
-                      @if (getAdMediaType('ad2') === 'image') {
-                        <img
-                          [src]="getAdMediaUrl('ad2')"
-                          [alt]="getAdAltText('ad2')"
-                          class="w-full h-full object-cover"
-                        />
-                      } @else if (getAdMediaType('ad2') === 'video') {
-                        <video
-                          #ad2VideoMobile
-                          [src]="getAdMediaUrl('ad2')"
-                          autoplay
-                          muted
-                          loop
-                          playsinline
-                          preload="auto"
-                          (canplay)="onAdVideoCanPlay('ad2', $event)"
-                          (error)="onAdVideoError('ad2', $event)"
-                          (loadeddata)="onAdVideoLoaded('ad2', $event)"
-                          class="w-full h-full object-cover"
-                        ></video>
-                      }
-                    } @else {
-                      <div class="w-full h-full bg-white dark:bg-gray-800 flex items-center justify-center">
-                        <span class="text-purple-600 dark:text-purple-400 font-semibold text-base sm:text-lg">Ad 2</span>
-                      </div>
-                    }
-                  </a>
-                </div>
-              }
           }
         </div>
 

@@ -46,8 +46,43 @@ const upload = multer({
   }
 });
 
+function deleteMediaFile(mediaUrl) {
+  if (!mediaUrl) return;
+  const filePath = path.join(__dirname, '..', mediaUrl);
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error('Error deleting file:', err);
+    }
+  }
+}
+
+function fileToMediaItem(file) {
+  const mediaType = file.mimetype.startsWith('image/') ? 'image' : 'video';
+  const mediaUrl = `/uploads/ads/${file.filename}`;
+  return { mediaType, mediaUrl };
+}
+
+function buildMediaAppend(existingAd, file) {
+  return buildMediaAppendMany(existingAd, [file]);
+}
+
+function buildMediaAppendMany(existingAd, files) {
+  const synced = existingAd ? Ad.syncLegacyMediaFields(existingAd) : { mediaItems: [] };
+  const added = (files || []).map(fileToMediaItem);
+  const mediaItems = [...(synced.mediaItems || []), ...added];
+  return {
+    mediaItems,
+    mediaUrl: mediaItems.length > 0 ? mediaItems[0].mediaUrl : null,
+    mediaType: mediaItems.length > 0 ? mediaItems[0].mediaType : null
+  };
+}
+
 async function initMissingAds(site) {
-  const adIds = ['ad1', 'ad2', 'ad3', 'ad4', 'ad5'];
+  const adIds = site === 'socialscreen'
+    ? Ad.getSocialScreenAdIds()
+    : (Ad.NEWSADDA_AD_IDS || ['ad1', 'ad2', 'ad3', 'ad4', 'ad5']);
   let ads = await Ad.getAllAds(site);
   const existingAdIds = ads.map(ad => ad.adId);
   const missingAdIds = adIds.filter(id => !existingAdIds.includes(id));
@@ -57,6 +92,7 @@ async function initMissingAds(site) {
         enabled: false,
         mediaType: null,
         mediaUrl: null,
+        mediaItems: [],
         linkUrl: null,
         altText: ''
       });
@@ -143,15 +179,48 @@ router.post('/toggle-all', authenticateAdmin, async (req, res) => {
   }
 });
 
-// PUT update ad (admin only)
-router.put('/:adId', authenticateAdmin, upload.single('media'), async (req, res) => {
+// POST append one or more media files (admin only) — atomic, avoids race on multi-upload
+router.post('/:adId/media', authenticateAdmin, upload.array('media', 20), async (req, res) => {
+  try {
+    const { adId } = req.params;
+    const site = resolveSite(req);
+    const files = req.files || [];
+
+    if (!Ad.isValidAdId(adId, site)) {
+      return res.status(400).json({ success: false, error: 'Invalid ad ID' });
+    }
+
+    if (files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No media files provided' });
+    }
+
+    const existingAd = await Ad.findOne({ adId, site });
+    const updateData = buildMediaAppendMany(existingAd, files);
+    const updatedAd = await Ad.updateAd(adId, site, updateData);
+
+    res.json({
+      success: true,
+      data: updatedAd,
+      site,
+      added: files.length
+    });
+  } catch (error) {
+    console.error('Error uploading ad media:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to upload media'
+    });
+  }
+});
+
+// PUT update ad (admin only) — supports multiple `media` files in one request
+router.put('/:adId', authenticateAdmin, upload.array('media', 20), async (req, res) => {
   try {
     const { adId } = req.params;
     const site = resolveSite(req);
     const { enabled, linkUrl, altText } = req.body;
 
-    const validAdIds = ['ad1', 'ad2', 'ad3', 'ad4', 'ad5'];
-    if (!validAdIds.includes(adId)) {
+    if (!Ad.isValidAdId(adId, site)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid ad ID'
@@ -172,24 +241,10 @@ router.put('/:adId', authenticateAdmin, upload.single('media'), async (req, res)
       updateData.altText = altText || '';
     }
 
-    if (req.file) {
-      const mediaType = req.file.mimetype.startsWith('image/') ? 'image' : 'video';
-      const mediaUrl = `/uploads/ads/${req.file.filename}`;
-
-      const existingAd = await Ad.getAdById(adId, site);
-      if (existingAd && existingAd.mediaUrl) {
-        const oldFilePath = path.join(__dirname, '..', existingAd.mediaUrl);
-        if (fs.existsSync(oldFilePath)) {
-          try {
-            fs.unlinkSync(oldFilePath);
-          } catch (err) {
-            console.error('Error deleting old file:', err);
-          }
-        }
-      }
-
-      updateData.mediaType = mediaType;
-      updateData.mediaUrl = mediaUrl;
+    const uploadedFiles = req.files && req.files.length > 0 ? req.files : (req.file ? [req.file] : []);
+    if (uploadedFiles.length > 0) {
+      const existingAd = await Ad.findOne({ adId, site });
+      Object.assign(updateData, buildMediaAppendMany(existingAd, uploadedFiles));
     }
 
     const updatedAd = await Ad.updateAd(adId, site, updateData);
@@ -208,7 +263,7 @@ router.put('/:adId', authenticateAdmin, upload.single('media'), async (req, res)
   }
 });
 
-// DELETE ad media (admin only)
+// DELETE all ad media (admin only)
 router.delete('/:adId/media', authenticateAdmin, async (req, res) => {
   try {
     const { adId } = req.params;
@@ -222,23 +277,18 @@ router.delete('/:adId/media', authenticateAdmin, async (req, res) => {
       });
     }
 
-    if (ad.mediaUrl) {
-      const filePath = path.join(__dirname, '..', ad.mediaUrl);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-        } catch (err) {
-          console.error('Error deleting file:', err);
-        }
-      }
+    for (const item of ad.mediaItems || []) {
+      deleteMediaFile(item.mediaUrl);
+    }
+    if (ad.mediaUrl && !(ad.mediaItems || []).some((i) => i.mediaUrl === ad.mediaUrl)) {
+      deleteMediaFile(ad.mediaUrl);
     }
 
-    await Ad.updateAd(adId, site, {
+    const updatedAd = await Ad.updateAd(adId, site, {
       mediaType: null,
-      mediaUrl: null
+      mediaUrl: null,
+      mediaItems: []
     });
-
-    const updatedAd = await Ad.getAdById(adId, site);
 
     res.json({
       success: true,
@@ -250,6 +300,64 @@ router.delete('/:adId/media', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete ad media'
+    });
+  }
+});
+
+// DELETE one media item by index (admin only)
+router.delete('/:adId/media/:mediaIndex', authenticateAdmin, async (req, res) => {
+  try {
+    const { adId, mediaIndex } = req.params;
+    const site = resolveSite(req);
+    const index = parseInt(mediaIndex, 10);
+
+    if (Number.isNaN(index) || index < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid media index'
+      });
+    }
+
+    const ad = await Ad.getAdById(adId, site);
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        error: 'Ad not found'
+      });
+    }
+
+    let items = [...(ad.mediaItems || [])];
+    if (items.length === 0 && ad.mediaUrl) {
+      items = [{ mediaType: ad.mediaType || 'image', mediaUrl: ad.mediaUrl }];
+    }
+    if (index >= items.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Media item not found'
+      });
+    }
+
+    const [removed] = items.splice(index, 1);
+    deleteMediaFile(removed.mediaUrl);
+
+    const updatePayload = {
+      mediaItems: items,
+      mediaUrl: items.length > 0 ? items[0].mediaUrl : null,
+      mediaType: items.length > 0 ? items[0].mediaType : null
+    };
+
+    const updatedAd = await Ad.updateAd(adId, site, updatePayload);
+
+    res.json({
+      success: true,
+      data: updatedAd,
+      site
+    });
+  } catch (error) {
+    console.error('Error deleting ad media item:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete ad media item'
     });
   }
 });

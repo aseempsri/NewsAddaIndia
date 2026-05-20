@@ -7,9 +7,20 @@ Separate Angular app from `Frontend/` (NewsAddaIndia). Shares the same **backend
 - Branding: Social Screen logo and name
 - **No author/publisher** on news cards or article pages
 - Ads: `site=socialscreen` via `/api/ads?site=socialscreen`
-- Admin: **`/admin/ads` only** (login included) — manage Social Screen ad slots
+- Admin: **`/admin/ads` only** — nine section cards (Home + 8 categories). **Home sidebar:** Weather → AD1 → Cricket → AD2 → Panchang → AD3 → AD4
+- Ad IDs in DB: `home-ad1`, `national-ad1`, etc. (`site=socialscreen`)
+- Category pages (`/category/national`, etc.): after every 3 story cards, **AD1–AD3** show centered (desktop 3-column rows; mobile stacked)
 
 ## Local development
+
+**One-time (if `/admin/ads` shows "Failed to load ads")** — your MongoDB may still have the old `adId`-only unique index. From the repo root:
+
+```bash
+cd backend
+node scripts/migrateAdsSiteField.js
+```
+
+Then restart the backend. This adds `site=socialscreen` ad slots and does not remove NewsAdda ad data.
 
 ```bash
 cd Frontend-SocialScreen

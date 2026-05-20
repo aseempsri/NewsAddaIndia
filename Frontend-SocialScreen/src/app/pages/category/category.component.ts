@@ -7,12 +7,25 @@ import { NewsService, NewsArticle } from '../../services/news.service';
 import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../../components/news-detail-modal/news-detail-modal.component';
+import { SectionInlineAdComponent } from '../../components/section-inline-ad/section-inline-ad.component';
+import { AdService } from '../../services/ad.service';
+import { sectionAdId } from '../../config/ad-sections';
+import { CategoryArticleCardComponent } from './category-article-card.component';
+import { buildCategoryGridBlocks, cardGridPlacement, CategoryGridBlock } from './category-grid-layout';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-category',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, FooterComponent, NewsDetailModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    HeaderComponent,
+    FooterComponent,
+    NewsDetailModalComponent,
+    SectionInlineAdComponent,
+    CategoryArticleCardComponent,
+  ],
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
@@ -35,108 +48,88 @@ import { Subscription } from 'rxjs';
               <p class="text-muted-foreground mt-2 ml-4">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
             </div>
 
-            <!-- News Grid -->
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 2×2 cards + tall ad: card1 card2 | AD (2 rows) / card3 card4 -->
+            <div class="space-y-8 lg:space-y-10">
               @if (isLoading) {
-                @for (item of [1,2,3,4,5,6,7,8,9]; track $index) {
-                  <article class="news-card group">
-                    <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
-                      <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
-                        <div class="flex flex-col items-center gap-2">
-                          <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  @for (item of [1,2,3,4,5,6,7,8,9,10,11,12]; track item) {
+                    <article class="news-card group">
+                      <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
+                        <div class="absolute inset-0 flex items-center justify-center bg-secondary/50">
+                          <div class="flex flex-col items-center gap-2">
+                            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
+                          </div>
                         </div>
                       </div>
+                      <div class="p-5 bg-background rounded-b-xl">
+                        <div class="h-4 bg-secondary/50 rounded mb-2 animate-pulse"></div>
+                        <div class="h-3 bg-secondary/30 rounded mb-4 animate-pulse"></div>
+                      </div>
+                    </article>
+                  }
+                </div>
+              } @else {
+                @for (block of gridBlocks; track block.trackId) {
+                  <!-- Mobile / tablet: cards then ad -->
+                  <div class="lg:hidden space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      @for (news of block.cards; track news.id || $index; let ci = $index) {
+                        <app-category-article-card
+                          [news]="news"
+                          [displayTitle]="getDisplayTitle(news)"
+                          [categoryName]="getCategoryName(news.category)"
+                          [categoryColor]="getCategoryColor(news.category)"
+                          [headlineColor]="getHeadlineColor(news.category)"
+                          [loadingImageLabel]="t.loadingImage"
+                          [animationDelay]="ci * 100"
+                          (articleClick)="openNewsModal($event)"
+                          (touchStart)="onCardTouchStart($event)"
+                          (touchEnd)="onCardTouchEnd($event)"
+                          (touchMove)="onTouchMove($event)"
+                        />
+                      }
                     </div>
-                    <div class="p-5 bg-background rounded-b-xl">
-                      <div class="h-4 bg-secondary/50 rounded mb-2 animate-pulse"></div>
-                      <div class="h-3 bg-secondary/30 rounded mb-4 animate-pulse"></div>
-                    </div>
-                  </article>
-                }
-              }
-              @if (!isLoading) {
-                @for (news of filteredNews; track news.id || $index; let i = $index) {
-                <article
-                  class="news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col"
-                  [style.animation-delay]="i * 100 + 'ms'">
-                  <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 flex-shrink-0">
-                    <!-- Loading Animation - Show while image is loading -->
-                    @if (news.imageLoading || !news.image) {
-                      <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
-                        <div class="flex flex-col items-center gap-2">
-                          <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span class="text-xs text-muted-foreground">{{ t.loadingImage }}</span>
-                        </div>
+                    @if (isAdVisible(block.adSlot)) {
+                      <app-section-inline-ad [sectionId]="categorySectionId" [slot]="block.adSlot" variant="banner" />
+                    }
+                  </div>
+
+                  <!-- Desktop: 3-col grid, ad spans 2 rows -->
+                  <div
+                    [class]="
+                      isAdVisible(block.adSlot)
+                        ? 'hidden lg:grid lg:grid-cols-3 lg:grid-rows-2 gap-4 lg:gap-6'
+                        : 'hidden lg:grid lg:grid-cols-2 lg:grid-rows-2 gap-4 lg:gap-6'
+                    "
+                  >
+                    @for (news of block.cards; track news.id || $index; let ci = $index) {
+                      <div [class]="cardGridPlacement(ci)">
+                        <app-category-article-card
+                          [news]="news"
+                          [displayTitle]="getDisplayTitle(news)"
+                          [categoryName]="getCategoryName(news.category)"
+                          [categoryColor]="getCategoryColor(news.category)"
+                          [headlineColor]="getHeadlineColor(news.category)"
+                          [loadingImageLabel]="t.loadingImage"
+                          [animationDelay]="ci * 100"
+                          (articleClick)="openNewsModal($event)"
+                          (touchStart)="onCardTouchStart($event)"
+                          (touchEnd)="onCardTouchEnd($event)"
+                          (touchMove)="onTouchMove($event)"
+                        />
                       </div>
                     }
-                    <!-- Image - Only show when loaded -->
-                    @if (news.image && !news.imageLoading) {
-                      <img
-                        [src]="news.image"
-                        [alt]="news.title"
-                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        style="filter: none; -webkit-filter: none; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: high-quality;" />
+                    @if (isAdVisible(block.adSlot)) {
+                      <div class="lg:col-start-3 lg:row-start-1 lg:row-span-2 flex items-stretch min-h-0 self-stretch">
+                        <app-section-inline-ad
+                          [sectionId]="categorySectionId"
+                          [slot]="block.adSlot"
+                          variant="tall"
+                        />
+                      </div>
                     }
-                    <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
-                      @if (news.isTrending) {
-                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                          </svg>
-                          <span class="text-xs leading-none">🔥</span>
-                          <span>TRENDING</span>
-                          <span class="text-xs leading-none">🔥</span>
-                        </span>
-                      }
-                      @if (news.isBreaking) {
-                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-red-600 to-red-700 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                          </svg>
-                          <span>BREAKING</span>
-                        </span>
-                      }
-                      @if (news.isFeatured) {
-                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-xl border-2 border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
-                          <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                          </svg>
-                          <span>FEATURED</span>
-                        </span>
-                      }
-                      <span [class]="'inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full shadow-lg ' + getCategoryColor(news.category)">
-                        {{ getCategoryName(news.category) }}
-                      </span>
-                    </div>
                   </div>
-
-                  <!-- Border Line with Gradient -->
-                  <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
-
-                  <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1 min-h-0">
-                    <div class="flex-1 min-w-0 mb-3 min-h-0">
-                      <h3 
-                        [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
-                        (click)="openNewsModal(news)"
-                        (touchstart)="onTouchStart($event, news)"
-                        (touchend)="onTouchEnd($event, news)"
-                        (touchmove)="onTouchMove($event)"
-                        style="touch-action: pan-y;">
-                        {{ getDisplayTitle(news) }}
-                      </h3>
-                    </div>
-                    <!-- Author and Date - Bottom aligned -->
-                    <div class="flex items-center justify-end text-[0.65rem] sm:text-xs text-muted-foreground mt-auto pt-2 border-t border-border/30">
-                  <span class="flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{{ news.date || news.time }}</span>
-                      </span>
-                    </div>
-                  </div>
-                </article>
                 }
               }
             </div>
@@ -161,7 +154,10 @@ import { Subscription } from 'rxjs';
 })
 export class CategoryComponent implements OnInit, OnDestroy {
   categoryName: string = '';
+  categorySectionId = '';
   filteredNews: NewsArticle[] = [];
+  gridBlocks: CategoryGridBlock[] = [];
+  cardGridPlacement = cardGridPlacement;
   isLoading = true;
   t: any = {};
   private languageSubscription?: Subscription;
@@ -175,7 +171,8 @@ export class CategoryComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private newsService: NewsService,
     private modalService: ModalService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private adService: AdService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -188,6 +185,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
     this.route.params.subscribe(params => {
       const categoryParam = params['category'];
       // Capitalize first letter
+      this.categorySectionId = (categoryParam || '').toLowerCase();
       this.categoryName = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
       this.loadNews();
     });
@@ -260,6 +258,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
     this.newsService.fetchNewsByPage(pageName, 12).subscribe({
       next: async (news) => {
         this.filteredNews = news;
+        this.gridBlocks = buildCategoryGridBlocks(news);
         // Translate titles after loading
         await this.translateNewsTitles();
         this.isLoading = false;
@@ -269,6 +268,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading news:', error);
         this.filteredNews = [];
+        this.gridBlocks = [];
         this.isLoading = false;
       }
     });
@@ -541,6 +541,19 @@ export class CategoryComponent implements OnInit, OnDestroy {
   private touchStartY: number = 0;
   private touchMoved: boolean = false;
   private touchTargetNews: NewsArticle | null = null;
+
+  isAdVisible(slot: number): boolean {
+    const adId = sectionAdId(this.categorySectionId, slot);
+    return this.adService.isAdEnabled(adId) && this.adService.hasAdMedia(adId);
+  }
+
+  onCardTouchStart(payload: { event: TouchEvent; news: NewsArticle }) {
+    this.onTouchStart(payload.event, payload.news);
+  }
+
+  onCardTouchEnd(payload: { event: TouchEvent; news: NewsArticle }) {
+    this.onTouchEnd(payload.event, payload.news);
+  }
 
   onTouchStart(event: TouchEvent, news: NewsArticle) {
     this.touchStartTime = Date.now();

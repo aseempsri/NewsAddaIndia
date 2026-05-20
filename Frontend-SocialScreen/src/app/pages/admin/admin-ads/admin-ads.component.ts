@@ -9,6 +9,12 @@ import { Location } from '@angular/common';
 const AD_SITE = environment.adSite || 'socialscreen';
 import { AdminThemeService, AdminTheme } from '../../../services/admin-theme.service';
 import { Subscription } from 'rxjs';
+import { AD_SECTIONS, sectionAdId } from '../../../config/ad-sections';
+
+interface AdMediaItem {
+  mediaType: 'image' | 'video';
+  mediaUrl: string;
+}
 
 interface Ad {
   _id?: string;
@@ -16,6 +22,7 @@ interface Ad {
   enabled: boolean;
   mediaType: 'image' | 'video' | null;
   mediaUrl: string | null;
+  mediaItems?: AdMediaItem[];
   linkUrl: string | null;
   altText: string;
   createdAt?: string;
@@ -39,7 +46,6 @@ interface Ad {
                   </svg>
                 </a>
                 <img [src]="logoPath" alt="" class="block h-10 sm:h-12 w-auto max-w-[280px] object-contain object-left" height="48" />
-                <span class="text-lg font-semibold text-muted-foreground">Ad Management</span>
               </div>
               <div class="flex items-center gap-3">
                 <!-- Theme Toggle Button -->
@@ -68,108 +74,140 @@ interface Ad {
               </div>
             </div>
 
-            <!-- Main Toggle Switch -->
-            <div class="glass-card p-6 rounded-xl">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h2 class="text-xl font-bold mb-2">All Ads</h2>
-                  <p class="text-muted-foreground text-sm">Toggle all ad spaces on or off</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    [(ngModel)]="allAdsEnabled"
-                    (change)="toggleAllAds()"
-                    class="sr-only peer"
-                  />
-                  <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                  <span class="ml-3 text-sm font-medium text-foreground">
-                    {{ allAdsEnabled ? 'Enabled' : 'Disabled' }}
-                  </span>
-                </label>
-              </div>
-            </div>
+            <!-- Section cards: Home + 8 categories -->
+            <div class="grid gap-6 lg:grid-cols-2">
+              @for (section of adSections; track section.id) {
+                <div class="glass-card p-6 rounded-xl border border-border/60">
+                  <h2 class="text-xl font-bold mb-4 text-primary">{{ section.title }}</h2>
 
-            <!-- Ad Spaces -->
-            <div class="space-y-6">
-              @for (ad of ads; track ad.adId) {
-                <div class="glass-card p-6 rounded-xl">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold">{{ ad.adId.toUpperCase() }}</h3>
+                  <!-- All Ads for this section -->
+                  <div class="flex items-center justify-between mb-6 pb-4 border-b border-border/50">
+                    <div>
+                      <p class="font-semibold">All Ads</p>
+                      <p class="text-muted-foreground text-sm">Toggle all slots in {{ section.title }}</p>
+                    </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        [checked]="ad.enabled"
-                        (change)="toggleAd(ad.adId, $event)"
+                        [checked]="isSectionAllEnabled(section.id)"
+                        (change)="toggleSectionAll(section.id, $event)"
                         class="sr-only peer"
                       />
-                      <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                      <span class="ml-3 text-sm font-medium text-foreground">
-                        {{ ad.enabled ? 'Enabled' : 'Disabled' }}
+                      <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                      <span class="ml-3 text-sm font-medium">
+                        {{ isSectionAllEnabled(section.id) ? 'Enabled' : 'Disabled' }}
                       </span>
                     </label>
                   </div>
 
-                  <!-- Current Media Preview -->
-                  @if (ad.mediaUrl) {
-                    <div class="mb-4 p-4 bg-secondary/50 rounded-lg">
-                      <p class="text-sm font-medium mb-2">Current Media:</p>
-                      @if (ad.mediaType === 'image') {
-                        <img
-                          [src]="getMediaUrl(ad.mediaUrl)"
-                          [alt]="ad.altText || ad.adId"
-                          class="max-w-full h-auto max-h-64 rounded-lg"
-                        />
-                      } @else if (ad.mediaType === 'video') {
-                        <video
-                          [src]="getMediaUrl(ad.mediaUrl)"
-                          controls
-                          class="max-w-full h-auto max-h-64 rounded-lg"
-                        ></video>
+                  <div class="space-y-6">
+                    @for (slot of section.slots; track slot) {
+                      @if (getAdRecord(section.id, slot); as ad) {
+                        <div class="rounded-lg border border-border/40 p-4 bg-secondary/20">
+                          <div class="flex items-center justify-between mb-3">
+                            <div>
+                              <h3 class="text-lg font-bold">AD{{ slot }}</h3>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                [checked]="ad.enabled"
+                                (change)="toggleAd(ad.adId, $event)"
+                                class="sr-only peer"
+                              />
+                              <div class="w-14 h-7 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+                              <span class="ml-3 text-sm font-medium">
+                                {{ ad.enabled ? 'Enabled' : 'Disabled' }}
+                              </span>
+                            </label>
+                          </div>
+
+                          @if (getAdMediaList(ad).length > 0) {
+                            <div class="mb-3 p-3 bg-secondary/50 rounded-lg space-y-3">
+                              <div class="flex items-center justify-between gap-2">
+                                <p class="text-sm font-medium">
+                                  Media ({{ getAdMediaList(ad).length }})
+                                  @if (getAdMediaList(ad).length > 1) {
+                                    <span class="text-muted-foreground font-normal">— rotates on each site refresh</span>
+                                  }
+                                </p>
+                                <button (click)="deleteAllMedia(ad.adId)" class="px-2 py-1 bg-red-500/90 text-white rounded-lg hover:bg-red-600 text-xs">
+                                  Delete all
+                                </button>
+                              </div>
+                              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                @for (item of getAdMediaList(ad); track item.mediaUrl; let mi = $index) {
+                                  <div class="relative rounded-md border border-border/50 overflow-hidden bg-background group">
+                                    <span class="absolute top-1 left-1 z-10 text-[9px] font-semibold bg-black/70 text-white px-1 py-0.5 rounded">
+                                      #{{ mi + 1 }}
+                                    </span>
+                                    @if (item.mediaType === 'image') {
+                                      <img
+                                        [src]="getMediaUrl(item.mediaUrl)"
+                                        [alt]="ad.altText || ad.adId"
+                                        class="w-full h-16 sm:h-20 object-cover"
+                                      />
+                                    } @else {
+                                      <video
+                                        [src]="getMediaUrl(item.mediaUrl)"
+                                        class="w-full h-16 sm:h-20 object-cover"
+                                      ></video>
+                                    }
+                                    <button
+                                      type="button"
+                                      (click)="deleteMediaItem(ad.adId, mi, $event)"
+                                      class="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center rounded bg-red-600 text-white text-xs leading-none hover:bg-red-700"
+                                      title="Remove"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+
+                          <div class="space-y-3">
+                            <div>
+                              <label class="block text-sm font-medium mb-1">Add image(s) or video</label>
+                              <p class="text-xs text-muted-foreground mb-1">Select multiple images to rotate in this ad slot on each page refresh.</p>
+                              <input
+                                type="file"
+                                [id]="'file-' + ad.adId"
+                                accept="image/*,video/*"
+                                multiple
+                                [disabled]="uploadingAdId === ad.adId"
+                                (change)="onFilesSelected(ad.adId, $event)"
+                                class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm disabled:opacity-50"
+                              />
+                              @if (uploadingAdId === ad.adId) {
+                                <p class="text-xs text-muted-foreground mt-1">Uploading…</p>
+                              }
+                            </div>
+                            <div>
+                              <label class="block text-sm font-medium mb-1">Link URL (optional)</label>
+                              <input
+                                type="url"
+                                [(ngModel)]="ad.linkUrl"
+                                (blur)="updateAd(ad.adId, { linkUrl: ad.linkUrl })"
+                                placeholder="https://example.com"
+                                class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label class="block text-sm font-medium mb-1">Alt Text (optional)</label>
+                              <input
+                                type="text"
+                                [(ngModel)]="ad.altText"
+                                (blur)="updateAd(ad.adId, { altText: ad.altText })"
+                                placeholder="Description for accessibility"
+                                class="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       }
-                      <button
-                        (click)="deleteMedia(ad.adId)"
-                        class="mt-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
-                        Delete Media
-                      </button>
-                    </div>
-                  }
-
-                  <!-- Upload Section -->
-                  <div class="space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-2">Upload Image/Video</label>
-                      <input
-                        type="file"
-                        [id]="'file-' + ad.adId"
-                        accept="image/*,video/*"
-                        (change)="onFileSelected(ad.adId, $event)"
-                        class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      />
-                      <p class="text-xs text-muted-foreground mt-1">Accepted: Images (JPG, PNG, GIF, WebP) and Videos (MP4, WebM, etc.)</p>
-                    </div>
-
-                    <div>
-                      <label class="block text-sm font-medium mb-2">Link URL (optional)</label>
-                      <input
-                        type="url"
-                        [(ngModel)]="ad.linkUrl"
-                        (blur)="updateAd(ad.adId, { linkUrl: ad.linkUrl })"
-                        placeholder="https://example.com"
-                        class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <label class="block text-sm font-medium mb-2">Alt Text (optional)</label>
-                      <input
-                        type="text"
-                        [(ngModel)]="ad.altText"
-                        (blur)="updateAd(ad.adId, { altText: ad.altText })"
-                        placeholder="Description for accessibility"
-                        class="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground"
-                      />
-                    </div>
+                    }
                   </div>
                 </div>
               }
@@ -242,10 +280,11 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
   loginError = '';
   isLoading = false;
   authToken = '';
-  ads: Ad[] = [];
-  allAdsEnabled = false;
+  adSections = AD_SECTIONS;
+  adsById: Record<string, Ad> = {};
   error = '';
   success = '';
+  uploadingAdId: string | null = null;
 
   logoPath: string;
 
@@ -343,53 +382,78 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
     this.http.get<{ success: boolean; data: Ad[] }>(`${this.getApiUrl()}/api/ads?site=${AD_SITE}`).subscribe({
       next: (response) => {
         if (response.success) {
-          // Initialize ads if they don't exist
-          const adIds = ['ad1', 'ad2', 'ad3', 'ad4', 'ad5'];
-          const existingAds = response.data;
-          
-          this.ads = adIds.map(adId => {
-            const existing = existingAds.find(a => a.adId === adId);
-            return existing || {
-              adId,
-              enabled: false,
-              mediaType: null,
-              mediaUrl: null,
-              linkUrl: null,
-              altText: ''
-            };
-          });
-
-          // Update allAdsEnabled based on current state
-          this.allAdsEnabled = this.ads.every(ad => ad.enabled);
+          const existingAds = response.data || [];
+          const map: Record<string, Ad> = {};
+          for (const section of this.adSections) {
+            for (const slot of section.slots) {
+              const adId = sectionAdId(section.id, slot);
+              const existing = existingAds.find(a => a.adId === adId);
+              map[adId] = existing || {
+                adId,
+                enabled: false,
+                mediaType: null,
+                mediaUrl: null,
+                mediaItems: [],
+                linkUrl: null,
+                altText: ''
+              };
+            }
+          }
+          this.adsById = map;
         }
       },
       error: (error) => {
         console.error('Error loading ads:', error);
-        this.error = 'Failed to load ads';
+        const msg = error.error?.error || '';
+        if (msg.includes('duplicate key') || msg.includes('E11000') || msg.includes('adId_1')) {
+          this.error =
+            'Ads database needs a one-time migration. From the repo: cd backend && node scripts/migrateAdsSiteField.js — then restart the API server.';
+        } else {
+          this.error = msg || 'Failed to load ads. Is the backend running on port 3000?';
+        }
       }
     });
   }
 
-  toggleAllAds() {
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
-    this.http.post<{ success: boolean; data: Ad[] }>(
-      `${this.getApiUrl()}/api/ads/toggle-all?site=${AD_SITE}`,
-      { enabled: this.allAdsEnabled, site: AD_SITE },
-      { headers }
-    ).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.ads = response.data.sort((a, b) => a.adId.localeCompare(b.adId));
-          this.success = `All ads ${this.allAdsEnabled ? 'enabled' : 'disabled'}`;
-          setTimeout(() => this.success = '', 3000);
-        }
-      },
-      error: (error) => {
-        console.error('Error toggling all ads:', error);
-        this.error = 'Failed to toggle all ads';
-        setTimeout(() => this.error = '', 3000);
-      }
-    });
+  getAdRecord(sectionId: string, slot: number): Ad {
+    const adId = sectionAdId(sectionId, slot);
+    return this.adsById[adId] || {
+      adId,
+      enabled: false,
+      mediaType: null,
+      mediaUrl: null,
+      mediaItems: [],
+      linkUrl: null,
+      altText: ''
+    };
+  }
+
+  getAdMediaList(ad: Ad): AdMediaItem[] {
+    if (ad.mediaItems && ad.mediaItems.length > 0) {
+      return ad.mediaItems.filter((i) => i && i.mediaUrl);
+    }
+    if (ad.mediaUrl && ad.mediaType) {
+      return [{ mediaType: ad.mediaType, mediaUrl: ad.mediaUrl }];
+    }
+    return [];
+  }
+
+  isSectionAllEnabled(sectionId: string): boolean {
+    const section = this.adSections.find(s => s.id === sectionId);
+    if (!section) return false;
+    return section.slots.every(slot => this.getAdRecord(sectionId, slot).enabled);
+  }
+
+  toggleSectionAll(sectionId: string, event: Event) {
+    const enabled = (event.target as HTMLInputElement).checked;
+    const section = this.adSections.find(s => s.id === sectionId);
+    if (!section) return;
+    for (const slot of section.slots) {
+      const adId = sectionAdId(sectionId, slot);
+      this.updateAd(adId, { enabled });
+    }
+    this.success = `${section.title}: all ads ${enabled ? 'enabled' : 'disabled'}`;
+    setTimeout(() => this.success = '', 3000);
   }
 
   toggleAd(adId: string, event: Event) {
@@ -397,39 +461,89 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
     this.updateAd(adId, { enabled: checked });
   }
 
-  onFileSelected(adId: string, event: Event) {
+  onFilesSelected(adId: string, event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+    const files = input.files;
+    if (!files || files.length === 0) return;
 
+    const fileList = Array.from(files);
     const formData = new FormData();
-    formData.append('media', file);
-    
+    for (const file of fileList) {
+      formData.append('media', file);
+    }
+
+    this.uploadingAdId = adId;
+    this.error = '';
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
-    
-    this.http.put<{ success: boolean; data: Ad }>(
-      `${this.getApiUrl()}/api/ads/${adId}?site=${AD_SITE}`,
-      formData,
-      { headers }
-    ).subscribe({
-      next: (response) => {
-        if (response.success) {
-          const index = this.ads.findIndex(a => a.adId === adId);
-          if (index !== -1) {
-            this.ads[index] = response.data;
-          }
-          this.success = 'Media uploaded successfully';
-          setTimeout(() => this.success = '', 3000);
-          // Reset file input
+
+    this.uploadMediaPut(adId, formData, fileList.length, input, headers, false);
+  }
+
+  /** PUT /api/ads/:id supports multiple files; POST /media is fallback for newer API builds. */
+  private uploadMediaPut(
+    adId: string,
+    formData: FormData,
+    fileCount: number,
+    input: HTMLInputElement,
+    headers: HttpHeaders,
+    triedPostFallback: boolean
+  ) {
+    this.http
+      .put<{ success: boolean; data: Ad }>(
+        `${this.getApiUrl()}/api/ads/${adId}?site=${AD_SITE}`,
+        formData,
+        { headers }
+      )
+      .subscribe({
+        next: (response) => {
+          this.uploadingAdId = null;
           input.value = '';
-        }
-      },
-      error: (error) => {
-        console.error('Error uploading media:', error);
-        this.error = error.error?.error || 'Failed to upload media';
-        setTimeout(() => this.error = '', 3000);
-      }
-    });
+          if (response.success) {
+            this.adsById[adId] = response.data;
+            this.success =
+              fileCount > 1 ? `${fileCount} files added to this ad slot` : 'Media uploaded successfully';
+            setTimeout(() => (this.success = ''), 3000);
+          }
+        },
+        error: (err) => {
+          if (err.status === 404 && !triedPostFallback) {
+            this.http
+              .post<{ success: boolean; data: Ad; added?: number }>(
+                `${this.getApiUrl()}/api/ads/${adId}/media?site=${AD_SITE}`,
+                formData,
+                { headers }
+              )
+              .subscribe({
+                next: (response) => {
+                  this.uploadingAdId = null;
+                  input.value = '';
+                  if (response.success) {
+                    this.adsById[adId] = response.data;
+                    const count = response.added ?? fileCount;
+                    this.success =
+                      count > 1 ? `${count} files added to this ad slot` : 'Media uploaded successfully';
+                    setTimeout(() => (this.success = ''), 3000);
+                  }
+                },
+                error: (postErr) => this.handleUploadError(postErr, input),
+              });
+            return;
+          }
+          this.handleUploadError(err, input);
+        },
+      });
+  }
+
+  private handleUploadError(err: { status?: number; error?: { error?: string } }, input: HTMLInputElement) {
+    this.uploadingAdId = null;
+    input.value = '';
+    console.error('Error uploading media:', err);
+    if (err.status === 404) {
+      this.error = 'Upload API not found. Restart the backend server (port 3000) and try again.';
+    } else {
+      this.error = err.error?.error || 'Failed to upload media';
+    }
+    setTimeout(() => (this.error = ''), 5000);
   }
 
   updateAd(adId: string, updateData: Partial<Ad>) {
@@ -442,12 +556,7 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         if (response.success) {
-          const index = this.ads.findIndex(a => a.adId === adId);
-          if (index !== -1) {
-            this.ads[index] = response.data;
-          }
-          // Update allAdsEnabled
-          this.allAdsEnabled = this.ads.every(ad => ad.enabled);
+          this.adsById[adId] = response.data;
         }
       },
       error: (error) => {
@@ -458,31 +567,67 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteMedia(adId: string) {
-    if (!confirm('Are you sure you want to delete this media?')) return;
+  deleteAllMedia(adId: string) {
+    if (!confirm('Delete all media for this ad slot?')) return;
 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
-    
-    this.http.delete<{ success: boolean; data: Ad }>(
-      `${this.getApiUrl()}/api/ads/${adId}/media?site=${AD_SITE}`,
-      { headers }
-    ).subscribe({
-      next: (response) => {
-        if (response.success) {
-          const index = this.ads.findIndex(a => a.adId === adId);
-          if (index !== -1) {
-            this.ads[index] = response.data;
+
+    this.http
+      .delete<{ success: boolean; data: Ad }>(
+        `${this.getApiUrl()}/api/ads/${adId}/media?site=${AD_SITE}`,
+        { headers }
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.adsById[adId] = response.data;
+            this.success = 'All media deleted';
+            setTimeout(() => (this.success = ''), 3000);
           }
-          this.success = 'Media deleted successfully';
-          setTimeout(() => this.success = '', 3000);
-        }
-      },
-      error: (error) => {
-        console.error('Error deleting media:', error);
-        this.error = 'Failed to delete media';
-        setTimeout(() => this.error = '', 3000);
-      }
-    });
+        },
+        error: (error) => {
+          console.error('Error deleting media:', error);
+          this.error = 'Failed to delete media';
+          setTimeout(() => (this.error = ''), 3000);
+        },
+      });
+  }
+
+  deleteMediaItem(adId: string, mediaIndex: number, event?: Event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const items = this.getAdMediaList(this.adsById[adId]);
+    if (items.length <= 1) {
+      this.deleteAllMedia(adId);
+      return;
+    }
+
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${this.authToken}`);
+
+    this.http
+      .delete<{ success: boolean; data: Ad }>(
+        `${this.getApiUrl()}/api/ads/${adId}/media/${mediaIndex}?site=${AD_SITE}`,
+        { headers }
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.adsById[adId] = response.data;
+            this.success = 'Media removed';
+            setTimeout(() => (this.success = ''), 3000);
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting media item:', error);
+          if (error.status === 404) {
+            this.error = 'Remove API not found. Restart the backend server (port 3000) and try again.';
+          } else {
+            this.error = error.error?.error || 'Failed to remove media';
+          }
+          setTimeout(() => (this.error = ''), 5000);
+        },
+      });
   }
 
   getMediaUrl(url: string | null): string {

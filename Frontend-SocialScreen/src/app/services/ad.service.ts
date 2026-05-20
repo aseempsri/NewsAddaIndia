@@ -2,6 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { allSocialScreenAdIds } from '../config/ad-sections';
+import { pickRotatedMediaIndex } from '../utils/ad-rotation';
+
+export interface AdMediaItem {
+  mediaType: 'image' | 'video';
+  mediaUrl: string;
+}
 
 export interface Ad {
   _id?: string;
@@ -9,8 +16,14 @@ export interface Ad {
   enabled: boolean;
   mediaType: 'image' | 'video' | null;
   mediaUrl: string | null;
+  mediaItems?: AdMediaItem[];
   linkUrl: string | null;
   altText: string;
+}
+
+interface ActiveAdMedia {
+  mediaType: 'image' | 'video';
+  mediaUrl: string;
 }
 
 @Injectable({
@@ -23,6 +36,8 @@ export class AdService {
   private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
     ? environment.apiUrl
     : (environment.production ? '' : '');
+  /** Media chosen for this page load (rotates on refresh when multiple items exist). */
+  private displayMediaByAdId = new Map<string, ActiveAdMedia>();
 
   constructor(private http: HttpClient) {
     this.loadAds();
@@ -32,7 +47,7 @@ export class AdService {
     this.http.get<{ success: boolean; data: Ad[] }>(`${this.apiUrl}/api/ads?site=${this.adSite}`).subscribe({
       next: (response) => {
         if (response.success) {
-          const adIds = ['ad1', 'ad2', 'ad3', 'ad4', 'ad5'];
+          const adIds = allSocialScreenAdIds();
           const existingAds = response.data || [];
           const allAds: Ad[] = adIds.map(adId => {
             const existing = existingAds.find(a => a.adId === adId);
@@ -41,10 +56,12 @@ export class AdService {
               enabled: false,
               mediaType: null,
               mediaUrl: null,
+              mediaItems: [],
               linkUrl: null,
               altText: ''
             };
           });
+          this.applyDisplayRotation(allAds);
           this.adsSubject.next(allAds);
         } else {
           this.initializeDefaultAds();
@@ -58,14 +75,42 @@ export class AdService {
   }
 
   private initializeDefaultAds() {
-    const defaultAds: Ad[] = [
-      { adId: 'ad1', enabled: false, mediaType: null, mediaUrl: null, linkUrl: null, altText: '' },
-      { adId: 'ad2', enabled: false, mediaType: null, mediaUrl: null, linkUrl: null, altText: '' },
-      { adId: 'ad3', enabled: false, mediaType: null, mediaUrl: null, linkUrl: null, altText: '' },
-      { adId: 'ad4', enabled: false, mediaType: null, mediaUrl: null, linkUrl: null, altText: '' },
-      { adId: 'ad5', enabled: false, mediaType: null, mediaUrl: null, linkUrl: null, altText: '' }
-    ];
+    const defaultAds: Ad[] = allSocialScreenAdIds().map(adId => ({
+      adId,
+      enabled: false,
+      mediaType: null,
+      mediaUrl: null,
+      mediaItems: [],
+      linkUrl: null,
+      altText: ''
+    }));
+    this.displayMediaByAdId.clear();
     this.adsSubject.next(defaultAds);
+  }
+
+  static getMediaItems(ad: Ad): AdMediaItem[] {
+    if (ad.mediaItems && ad.mediaItems.length > 0) {
+      return ad.mediaItems.filter((i) => i && i.mediaUrl);
+    }
+    if (ad.mediaUrl && ad.mediaType) {
+      return [{ mediaType: ad.mediaType, mediaUrl: ad.mediaUrl }];
+    }
+    return [];
+  }
+
+  private applyDisplayRotation(ads: Ad[]) {
+    this.displayMediaByAdId.clear();
+    for (const ad of ads) {
+      if (!ad.enabled) continue;
+      const items = AdService.getMediaItems(ad);
+      if (items.length === 0) continue;
+      const index = pickRotatedMediaIndex(ad.adId, items.length);
+      this.displayMediaByAdId.set(ad.adId, items[index]);
+    }
+  }
+
+  private getActiveMedia(adId: string): ActiveAdMedia | null {
+    return this.displayMediaByAdId.get(adId) ?? null;
   }
 
   getAd(adId: string): Observable<Ad | null> {
@@ -84,17 +129,14 @@ export class AdService {
   }
 
   hasAdMedia(adId: string): boolean {
-    const ads = this.adsSubject.value;
-    const ad = ads.find(a => a.adId === adId);
-    return ad?.enabled === true && ad?.mediaUrl !== null;
+    return this.isAdEnabled(adId) && this.getActiveMedia(adId) !== null;
   }
 
   getAdMediaUrl(adId: string): string | null {
-    const ads = this.adsSubject.value;
-    const ad = ads.find(a => a.adId === adId);
-    if (!ad || !ad.mediaUrl) return null;
-    if (ad.mediaUrl.startsWith('http')) return ad.mediaUrl;
-    return `${this.apiUrl}${ad.mediaUrl}`;
+    const active = this.getActiveMedia(adId);
+    if (!active?.mediaUrl) return null;
+    if (active.mediaUrl.startsWith('http')) return active.mediaUrl;
+    return `${this.apiUrl}${active.mediaUrl}`;
   }
 
   getAdLink(adId: string): string | null {
@@ -116,8 +158,14 @@ export class AdService {
   }
 
   getAdMediaType(adId: string): 'image' | 'video' | null {
+    const active = this.getActiveMedia(adId);
+    return active?.mediaType ?? null;
+  }
+
+  getAdMediaCount(adId: string): number {
     const ads = this.adsSubject.value;
     const ad = ads.find(a => a.adId === adId);
-    return ad?.mediaType || null;
+    if (!ad) return 0;
+    return AdService.getMediaItems(ad).length;
   }
 }
