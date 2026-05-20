@@ -29,7 +29,7 @@ import { Subscription } from 'rxjs';
         </div>
       </div>
       
-      <main>
+      <main class="max-lg:pt-3">
         @if (isLoading) {
           <div class="container mx-auto px-4 py-12">
             <div class="flex flex-col items-center justify-center min-h-[60vh]">

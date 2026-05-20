@@ -131,20 +131,20 @@ interface NavLink {
         </div>
 
       <!-- Mobile Navigation Bar -->
-      <div class="mobile-nav-wrapper lg:hidden bg-background/95 backdrop-blur-sm border-b border-border/30 relative">
+      <div class="mobile-nav-wrapper lg:hidden bg-background/95 backdrop-blur-sm border-b border-border/30 relative pb-3">
         <nav 
           #mobileNavContainer
           class="overflow-x-auto scrollbar-hide" 
           style="scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; touch-action: pan-x;"
           (scroll)="checkMobileNavScroll()">
-          <div [class]="'flex items-center gap-2 whitespace-nowrap px-4 py-1 ' + (showNavBounce ? 'nav-bounce-left' : '')">
+          <div [class]="'flex items-center gap-2 whitespace-nowrap px-4 py-1.5 ' + (showNavBounce ? 'nav-bounce-left' : '')">
             @for (link of navLinks; track link.name) {
               <a
                 [routerLink]="link.route"
                 routerLinkActive="text-primary font-bold bg-primary/15 border border-primary/30"
                 [routerLinkActiveOptions]="{exact: link.route === '/'}"
                 (click)="onNavLinkClick(link.route)"
-                class="px-2.5 py-0.75 rounded-md text-xs font-bold text-foreground hover:text-primary hover:bg-secondary/70 active:bg-secondary transition-all shrink-0 min-w-fit border border-transparent touch-manipulation">
+                class="px-2.5 py-1 rounded-md text-[15.6px] leading-tight font-bold text-foreground hover:text-primary hover:bg-secondary/70 active:bg-secondary transition-all shrink-0 min-w-fit border border-transparent touch-manipulation">
                 {{ link.name }}
               </a>
             }

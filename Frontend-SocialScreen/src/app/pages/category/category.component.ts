@@ -33,7 +33,7 @@ import { Subscription } from 'rxjs';
       <div class="lg:h-[64px]"></div>
       
       <main>
-        <section class="py-6 lg:py-8">
+        <section class="max-lg:pt-4 py-6 lg:py-8">
           <div class="container mx-auto px-4">
             <!-- Category Header -->
             <div class="mb-8">

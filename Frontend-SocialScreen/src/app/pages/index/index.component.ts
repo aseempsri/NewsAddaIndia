@@ -38,7 +38,7 @@ import { filter } from 'rxjs/operators';
       <div class="lg:h-[96px]"></div>
       
       <!-- Mobile Top Bar -->
-      <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full">
+      <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full mb-2">
         <div class="container mx-auto px-3 py-1 flex items-center justify-between text-xs gap-2">
           <span class="flex items-center gap-1 text-muted-foreground shrink-0">
             <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
