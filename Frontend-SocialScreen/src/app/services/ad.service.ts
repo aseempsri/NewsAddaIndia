@@ -105,12 +105,20 @@ export class AdService {
       const items = AdService.getMediaItems(ad);
       if (items.length === 0) continue;
       const index = pickRotatedMediaIndex(ad.adId, items.length);
-      this.displayMediaByAdId.set(ad.adId, items[index]);
+      this.displayMediaByAdId.set(ad.adId, items[index] ?? items[0]);
     }
   }
 
   private getActiveMedia(adId: string): ActiveAdMedia | null {
-    return this.displayMediaByAdId.get(adId) ?? null;
+    const cached = this.displayMediaByAdId.get(adId);
+    if (cached) return cached;
+    const ad = this.getAdRecord(adId);
+    if (!ad?.enabled) return null;
+    const items = AdService.getMediaItems(ad);
+    if (items.length === 0) return null;
+    const fallback = items[0];
+    this.displayMediaByAdId.set(adId, fallback);
+    return fallback;
   }
 
   getAd(adId: string): Observable<Ad | null> {
@@ -128,8 +136,18 @@ export class AdService {
     return ad?.enabled === true;
   }
 
+  getAdRecord(adId: string): Ad | undefined {
+    return this.adsSubject.value.find((a) => a.adId === adId);
+  }
+
   hasAdMedia(adId: string): boolean {
-    return this.isAdEnabled(adId) && this.getActiveMedia(adId) !== null;
+    const ad = this.getAdRecord(adId);
+    if (!ad?.enabled) return false;
+    return AdService.getMediaItems(ad).length > 0;
+  }
+
+  shouldDisplayAd(adId: string): boolean {
+    return this.getActiveMedia(adId) !== null;
   }
 
   getAdMediaUrl(adId: string): string | null {

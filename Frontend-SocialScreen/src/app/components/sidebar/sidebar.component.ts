@@ -19,23 +19,24 @@ import { Subscription } from 'rxjs';
   ],
   template: `
     <aside>
-      <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-weather-widget (dataLoaded)="onWidgetLoaded('weather')" />
-      </div>
-
       <app-sidebar-ad-slot adId="home-ad1" label="Ad 1" />
 
       <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-cricket-score-widget (dataLoaded)="onWidgetLoaded('cricket')" />
+        <app-weather-widget (dataLoaded)="onWidgetLoaded('weather')" />
       </div>
 
       <app-sidebar-ad-slot adId="home-ad2" label="Ad 2" />
 
       <div class="mb-4 sm:mb-5 lg:mb-6">
-        <app-panchang-widget (dataLoaded)="onWidgetLoaded('panchang')" />
+        <app-cricket-score-widget (dataLoaded)="onWidgetLoaded('cricket')" />
       </div>
 
       <app-sidebar-ad-slot adId="home-ad3" label="Ad 3" />
+
+      <div class="mb-4 sm:mb-5 lg:mb-6">
+        <app-panchang-widget (dataLoaded)="onWidgetLoaded('panchang')" />
+      </div>
+
       <app-sidebar-ad-slot adId="home-ad4" label="Ad 4" />
     </aside>
   `,

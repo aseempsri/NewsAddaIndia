@@ -4,6 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { HeaderComponent } from '../../components/header/header.component';
 import { FooterComponent } from '../../components/footer/footer.component';
+import { SectionInlineAdComponent } from '../../components/section-inline-ad/section-inline-ad.component';
+import { AdService } from '../../services/ad.service';
 import { NewsService, NewsArticle } from '../../services/news.service';
 import { LanguageService } from '../../services/language.service';
 import { HttpClient } from '@angular/common/http';
@@ -14,7 +16,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-news-detail',
   standalone: true,
-  imports: [CommonModule, HeaderComponent, FooterComponent],
+  imports: [CommonModule, HeaderComponent, FooterComponent, SectionInlineAdComponent],
   template: `
     <div class="min-h-screen bg-background">
       <app-header />
@@ -132,6 +134,14 @@ import { Subscription } from 'rxjs';
               </span>
             </div>
 
+            <div class="my-6 sm:my-8">
+              <app-section-inline-ad
+                sectionId="article"
+                [slot]="1"
+                variant="banner"
+              />
+            </div>
+
             <!-- Share Button with Dropdown -->
             <div class="sticky top-20 mb-4 flex flex-col items-center justify-center gap-3">
               <div class="relative">
@@ -209,6 +219,14 @@ import { Subscription } from 'rxjs';
             }
 
           </article>
+
+          <div class="container mx-auto px-4 lg:px-8 max-w-4xl my-6 sm:my-10">
+            <app-section-inline-ad
+              sectionId="article"
+              [slot]="2"
+              variant="banner"
+            />
+          </div>
         }
 
         @if (!isLoading && !news) {
@@ -338,6 +356,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     ? environment.apiUrl
     : (environment.production ? '' : '');
   private languageSubscription?: Subscription;
+  private adsSubscription?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
@@ -345,6 +364,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     private newsService: NewsService,
     private http: HttpClient,
     private languageService: LanguageService,
+    private adService: AdService,
     private cdr: ChangeDetectorRef,
     private meta: Meta,
     private title: Title
@@ -396,6 +416,10 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     }, 200);
 
     this.updateTranslations();
+    this.adService.loadAds();
+    this.adsSubscription = this.adService.ads$.subscribe(() => {
+      this.cdr.markForCheck();
+    });
     this.route.params.subscribe(params => {
       const param = getRouteParamForApi(params['id'] || '');
       if (param) {
@@ -427,6 +451,7 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopListen();
     this.languageSubscription?.unsubscribe();
+    this.adsSubscription?.unsubscribe();
   }
 
   @HostListener('window:scroll')

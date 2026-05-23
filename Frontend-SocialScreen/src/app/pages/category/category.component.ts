@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../components/header/header.component';
@@ -11,7 +11,7 @@ import { SectionInlineAdComponent } from '../../components/section-inline-ad/sec
 import { AdService } from '../../services/ad.service';
 import { sectionAdId } from '../../config/ad-sections';
 import { CategoryArticleCardComponent } from './category-article-card.component';
-import { buildCategoryGridBlocks, cardGridPlacement, CategoryGridBlock } from './category-grid-layout';
+import { buildCategoryGridRows, CategoryGridRow } from './category-grid-layout';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -48,10 +48,10 @@ import { Subscription } from 'rxjs';
               <p class="text-muted-foreground mt-2 ml-4">{{ t.latestUpdatesFrom }} {{ getCategoryDisplayName() }} {{ t.category }}</p>
             </div>
 
-            <!-- 2×2 cards + tall ad: card1 card2 | AD (2 rows) / card3 card4 -->
-            <div class="space-y-8 lg:space-y-10">
+            <!-- 3 cards per row, AD1–AD4 after each row -->
+            <div class="space-y-6 sm:space-y-8 lg:space-y-10">
               @if (isLoading) {
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   @for (item of [1,2,3,4,5,6,7,8,9,10,11,12]; track item) {
                     <article class="news-card group">
                       <div class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-secondary/20">
@@ -70,65 +70,32 @@ import { Subscription } from 'rxjs';
                   }
                 </div>
               } @else {
-                @for (block of gridBlocks; track block.trackId) {
-                  <!-- Mobile / tablet: cards then ad -->
-                  <div class="lg:hidden space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      @for (news of block.cards; track news.id || $index; let ci = $index) {
-                        <app-category-article-card
-                          [news]="news"
-                          [displayTitle]="getDisplayTitle(news)"
-                          [categoryName]="getCategoryName(news.category)"
-                          [categoryColor]="getCategoryColor(news.category)"
-                          [headlineColor]="getHeadlineColor(news.category)"
-                          [loadingImageLabel]="t.loadingImage"
-                          [animationDelay]="ci * 100"
-                          (articleClick)="openNewsModal($event)"
-                          (touchStart)="onCardTouchStart($event)"
-                          (touchEnd)="onCardTouchEnd($event)"
-                          (touchMove)="onTouchMove($event)"
-                        />
-                      }
-                    </div>
-                    @if (isAdVisible(block.adSlot)) {
-                      <app-section-inline-ad [sectionId]="categorySectionId" [slot]="block.adSlot" variant="banner" />
-                    }
-                  </div>
-
-                  <!-- Desktop: 3-col grid, ad spans 2 rows -->
-                  <div
-                    [class]="
-                      isAdVisible(block.adSlot)
-                        ? 'hidden lg:grid lg:grid-cols-3 lg:grid-rows-2 gap-4 lg:gap-6'
-                        : 'hidden lg:grid lg:grid-cols-2 lg:grid-rows-2 gap-4 lg:gap-6'
-                    "
-                  >
-                    @for (news of block.cards; track news.id || $index; let ci = $index) {
-                      <div [class]="cardGridPlacement(ci)">
-                        <app-category-article-card
-                          [news]="news"
-                          [displayTitle]="getDisplayTitle(news)"
-                          [categoryName]="getCategoryName(news.category)"
-                          [categoryColor]="getCategoryColor(news.category)"
-                          [headlineColor]="getHeadlineColor(news.category)"
-                          [loadingImageLabel]="t.loadingImage"
-                          [animationDelay]="ci * 100"
-                          (articleClick)="openNewsModal($event)"
-                          (touchStart)="onCardTouchStart($event)"
-                          (touchEnd)="onCardTouchEnd($event)"
-                          (touchMove)="onTouchMove($event)"
-                        />
+                @for (row of gridRows; track row.trackId) {
+                  <div class="space-y-4 sm:space-y-5 lg:space-y-6">
+                    @if (row.cards.length > 0) {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                        @for (news of row.cards; track news.id || $index; let ci = $index) {
+                          <app-category-article-card
+                            [news]="news"
+                            [displayTitle]="getDisplayTitle(news)"
+                            [categoryName]="getCategoryName(news.category)"
+                            [categoryColor]="getCategoryColor(news.category)"
+                            [headlineColor]="getHeadlineColor(news.category)"
+                            [loadingImageLabel]="t.loadingImage"
+                            [animationDelay]="ci * 100"
+                            (articleClick)="openNewsModal($event)"
+                            (touchStart)="onCardTouchStart($event)"
+                            (touchEnd)="onCardTouchEnd($event)"
+                            (touchMove)="onTouchMove($event)"
+                          />
+                        }
                       </div>
                     }
-                    @if (isAdVisible(block.adSlot)) {
-                      <div class="lg:col-start-3 lg:row-start-1 lg:row-span-2 flex items-stretch min-h-0 self-stretch">
-                        <app-section-inline-ad
-                          [sectionId]="categorySectionId"
-                          [slot]="block.adSlot"
-                          variant="tall"
-                        />
-                      </div>
-                    }
+                    <app-section-inline-ad
+                      [sectionId]="categorySectionId"
+                      [slot]="row.adSlot"
+                      variant="banner"
+                    />
                   </div>
                 }
               }
@@ -156,11 +123,11 @@ export class CategoryComponent implements OnInit, OnDestroy {
   categoryName: string = '';
   categorySectionId = '';
   filteredNews: NewsArticle[] = [];
-  gridBlocks: CategoryGridBlock[] = [];
-  cardGridPlacement = cardGridPlacement;
+  gridRows: CategoryGridRow[] = [];
   isLoading = true;
   t: any = {};
   private languageSubscription?: Subscription;
+  private adsSubscription?: Subscription;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -172,7 +139,8 @@ export class CategoryComponent implements OnInit, OnDestroy {
     private newsService: NewsService,
     private modalService: ModalService,
     private languageService: LanguageService,
-    private adService: AdService
+    private adService: AdService,
+    private cdr: ChangeDetectorRef
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -182,6 +150,10 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.updateTranslations();
+    this.adService.loadAds();
+    this.adsSubscription = this.adService.ads$.subscribe(() => {
+      this.cdr.markForCheck();
+    });
     this.route.params.subscribe(params => {
       const categoryParam = params['category'];
       // Capitalize first letter
@@ -202,6 +174,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.adsSubscription?.unsubscribe();
   }
 
   updateTranslations() {
@@ -252,13 +225,11 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   loadNews() {
     this.isLoading = true;
-    // Use fetchNewsByPage to respect the "Pages to Display" field
-    // Convert category name to lowercase page name (e.g., "National" -> "national")
-    const pageName = this.categoryName.toLowerCase();
-    this.newsService.fetchNewsByPage(pageName, 12).subscribe({
+    // Load by category so all National (etc.) stories appear — not only items tagged on a CMS "page"
+    this.newsService.fetchNewsByCategory(this.categoryName, 12).subscribe({
       next: async (news) => {
         this.filteredNews = news;
-        this.gridBlocks = buildCategoryGridBlocks(news);
+        this.gridRows = buildCategoryGridRows(news);
         // Translate titles after loading
         await this.translateNewsTitles();
         this.isLoading = false;
@@ -268,7 +239,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading news:', error);
         this.filteredNews = [];
-        this.gridBlocks = [];
+        this.gridRows = [];
         this.isLoading = false;
       }
     });
@@ -541,11 +512,6 @@ export class CategoryComponent implements OnInit, OnDestroy {
   private touchStartY: number = 0;
   private touchMoved: boolean = false;
   private touchTargetNews: NewsArticle | null = null;
-
-  isAdVisible(slot: number): boolean {
-    const adId = sectionAdId(this.categorySectionId, slot);
-    return this.adService.isAdEnabled(adId) && this.adService.hasAdMedia(adId);
-  }
 
   onCardTouchStart(payload: { event: TouchEvent; news: NewsArticle }) {
     this.onTouchStart(payload.event, payload.news);

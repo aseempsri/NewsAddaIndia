@@ -13,6 +13,8 @@ import { NewsGridComponent } from '../../components/news-grid/news-grid.componen
 import { CategorySectionComponent } from '../../components/category-section/category-section.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { FooterComponent } from '../../components/footer/footer.component';
+import { HomeInlineAdSlotComponent } from '../../components/home-inline-ad-slot/home-inline-ad-slot.component';
+import { HOME_PAGE_AD_MAP } from '../../config/ad-sections';
 import { environment } from '../../../environments/environment';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -29,7 +31,8 @@ import { filter } from 'rxjs/operators';
     NewsGridComponent,
     CategorySectionComponent,
     SidebarComponent,
-    FooterComponent
+    FooterComponent,
+    HomeInlineAdSlotComponent
   ],
   template: `
     <div class="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
@@ -76,6 +79,10 @@ import { filter } from 'rxjs/operators';
               <app-news-grid [heroDisplayedReady]="heroDisplayedReady" (imagesLoaded)="onNewsGridImagesLoaded()" />
               <!-- Category Sections come AFTER Latest Stories to prevent duplicates -->
               <app-category-section (dataLoaded)="onCategorySectionLoaded()" />
+              <app-home-inline-ad-slot
+                [adId]="homeAd6Id"
+                label="Ad 6"
+              />
             </div>
             <div class="order-first lg:order-last w-full min-w-0">
               <app-sidebar (widgetsLoaded)="onWidgetsLoaded()" />
@@ -159,6 +166,7 @@ import { filter } from 'rxjs/operators';
   `]
 })
 export class IndexComponent implements OnInit, OnDestroy {
+  readonly homeAd6Id = HOME_PAGE_AD_MAP.beforeFooter;
   private static hasAppLoaded = false; // Static flag to track first app load across component instances
   isPageLoading = false;
   heroImagesLoaded = false;

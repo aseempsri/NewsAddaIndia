@@ -4,15 +4,16 @@ const AD_SITES = ['newsadda', 'socialscreen'];
 const NEWSADDA_AD_IDS = ['ad1', 'ad2', 'ad3', 'ad4', 'ad5'];
 
 const SOCIAL_SCREEN_SECTIONS = [
-  { id: 'home', slots: 4 },
-  { id: 'national', slots: 3 },
-  { id: 'international', slots: 3 },
-  { id: 'religious', slots: 3 },
-  { id: 'politics', slots: 3 },
-  { id: 'health', slots: 3 },
-  { id: 'entertainment', slots: 3 },
-  { id: 'sports', slots: 3 },
-  { id: 'business', slots: 3 }
+  { id: 'home', slots: 6 },
+  { id: 'article', slots: 2 },
+  { id: 'national', slots: 4 },
+  { id: 'international', slots: 4 },
+  { id: 'religious', slots: 4 },
+  { id: 'politics', slots: 4 },
+  { id: 'health', slots: 4 },
+  { id: 'entertainment', slots: 4 },
+  { id: 'sports', slots: 4 },
+  { id: 'business', slots: 4 }
 ];
 
 function getSocialScreenAdIds() {

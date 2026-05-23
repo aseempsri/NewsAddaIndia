@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 declare let gtag: Function;
 
@@ -8,8 +9,7 @@ declare let gtag: Function;
   providedIn: 'root'
 })
 export class AnalyticsService {
-  // Google Analytics Measurement ID
-  private measurementId: string = 'G-FFVXQ7ZP5G';
+  private readonly measurementId = environment.googleAnalyticsId;
 
   constructor(private router: Router) {
     // Track page views on route changes

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdService } from '../../services/ad.service';
 import { isLandscapeMedia } from '../../utils/media-aspect';
@@ -9,29 +9,27 @@ import { isLandscapeMedia } from '../../utils/media-aspect';
   imports: [CommonModule],
   template: `
     <div
-      class="w-full rounded-lg overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-lg bg-white dark:bg-gray-800 flex flex-col min-h-[inherit]"
-      [ngClass]="wrapperClass"
+      class="rounded-lg overflow-hidden shadow-lg bg-white dark:bg-gray-800 flex flex-col"
+      [ngClass]="shellClass"
     >
       <a
         [href]="link || 'javascript:void(0)'"
         [target]="link ? '_blank' : '_self'"
         [rel]="link ? 'noopener noreferrer' : ''"
-        class="block w-full h-full min-h-[inherit] cursor-pointer box-border p-[8%]"
+        class="block w-full cursor-pointer box-border p-0"
       >
-        <div class="flex flex-col w-full h-full min-h-0">
+        <div class="flex flex-col w-[98%] min-h-0 min-w-0 mx-auto my-[1%]">
           <div
-            class="flex-[0_0_10%] min-h-[6px] max-h-[16px] flex items-center justify-center shrink-0"
+            class="shrink-0 h-[15px] sm:h-[17px] flex items-center justify-center"
             aria-hidden="true"
           >
             <span
-              class="text-[10px] sm:text-[10px] leading-none text-gray-400/80 dark:text-gray-500/90 font-normal tracking-wide select-none"
+              class="text-[13.5px] sm:text-[15px] leading-none text-gray-400/80 dark:text-gray-500/90 font-normal tracking-wide select-none"
             >
               Advertisement
             </span>
           </div>
-          <div
-            class="flex-[0_0_90%] min-h-0 flex-1 basis-[90%] overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 flex items-center justify-center"
-          >
+          <div [class]="mediaFrameClass" [style.aspect-ratio]="aspectRatioCss">
             @if (hasMedia) {
               @if (mediaType === 'image') {
                 <img
@@ -72,15 +70,47 @@ export class AdSlotDisplayComponent implements OnChanges {
   @Input({ required: true }) adId!: string;
   @Input() wrapperClass = '';
   @Input() placeholderLabel = '';
+  /** Resize frame to 16:10 (landscape) or 3:4 (portrait) when media loads */
+  @Input() autoAspect = true;
+  /** Keep tall category-slot ads inside the grid row height */
+  @Input() constrainToParent = false;
 
   isLandscape = false;
+  orientationKnown = false;
+  naturalWidth = 0;
+  naturalHeight = 0;
 
-  constructor(private adService: AdService) {}
+  constructor(
+    private adService: AdService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['adId']) {
       this.isLandscape = false;
+      this.orientationKnown = false;
+      this.naturalWidth = 0;
+      this.naturalHeight = 0;
     }
+  }
+
+  /** Portrait: centered narrow shell (no full-width side bars); landscape: full row */
+  get shellClass(): string {
+    const width =
+      this.autoAspect && this.orientationKnown && !this.isLandscape
+        ? 'w-full max-w-md mx-auto sm:max-w-lg'
+        : 'w-full';
+    return `${width} ${this.wrapperClass}`.trim();
+  }
+
+  get aspectRatioCss(): string | null {
+    if (!this.autoAspect) return null;
+    if (!this.orientationKnown) return '16 / 10';
+    if (this.isLandscape) return '16 / 10';
+    if (this.naturalWidth > 0 && this.naturalHeight > 0) {
+      return `${this.naturalWidth} / ${this.naturalHeight}`;
+    }
+    return '3 / 4';
   }
 
   get hasMedia(): boolean {
@@ -103,21 +133,49 @@ export class AdSlotDisplayComponent implements OnChanges {
     return this.adService.getAdAltText(this.adId);
   }
 
+  get mediaFrameClass(): string {
+    const base =
+      'overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 flex items-center justify-center';
+
+    if (!this.autoAspect) {
+      return `${base} w-full min-h-[80px] sm:min-h-[100px]`;
+    }
+
+    if (!this.orientationKnown) {
+      return `${base} w-full min-h-[72px] sm:min-h-[90px]`;
+    }
+
+    const cap = this.constrainToParent ? ' max-h-full' : '';
+    if (this.isLandscape) {
+      return `${base} w-full${cap}`;
+    }
+    return `${base} w-full max-h-[min(75vh,520px)]${cap}`;
+  }
+
   get mediaFitClass(): string {
-    return this.isLandscape
-      ? 'w-full h-full object-contain object-center'
-      : 'w-full h-full object-cover object-center';
+    return 'w-full h-full object-contain object-center';
+  }
+
+  private applyOrientation(width: number, height: number): void {
+    const nextLandscape = isLandscapeMedia(width, height);
+    const sizeChanged = this.naturalWidth !== width || this.naturalHeight !== height;
+    if (this.orientationKnown && this.isLandscape === nextLandscape && !sizeChanged) return;
+    this.naturalWidth = width;
+    this.naturalHeight = height;
+    this.isLandscape = nextLandscape;
+    this.orientationKnown = true;
+    this.cdr.markForCheck();
   }
 
   onImageLoad(event: Event) {
     const img = event.target as HTMLImageElement;
-    this.isLandscape = isLandscapeMedia(img.naturalWidth, img.naturalHeight);
+    this.applyOrientation(img.naturalWidth, img.naturalHeight);
   }
 
   onVideoMetadata(event: Event) {
     const video = event.target as HTMLVideoElement;
     if (video.videoWidth && video.videoHeight) {
-      this.isLandscape = isLandscapeMedia(video.videoWidth, video.videoHeight);
+      this.applyOrientation(video.videoWidth, video.videoHeight);
     }
   }
 
@@ -133,7 +191,7 @@ export class AdSlotDisplayComponent implements OnChanges {
     const video = event.target as HTMLVideoElement;
     if (video) {
       if (video.videoWidth && video.videoHeight) {
-        this.isLandscape = isLandscapeMedia(video.videoWidth, video.videoHeight);
+        this.applyOrientation(video.videoWidth, video.videoHeight);
       }
       video.muted = true;
       video.play().catch(() => {});

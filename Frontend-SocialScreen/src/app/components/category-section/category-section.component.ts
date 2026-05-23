@@ -6,6 +6,8 @@ import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
+import { HomeInlineAdSlotComponent } from '../home-inline-ad-slot/home-inline-ad-slot.component';
+import { HOME_PAGE_AD_MAP } from '../../config/ad-sections';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
@@ -31,7 +33,7 @@ interface Category {
 @Component({
   selector: 'app-category-section',
   standalone: true,
-  imports: [CommonModule, RouterLink, NewsDetailModalComponent],
+  imports: [CommonModule, RouterLink, NewsDetailModalComponent, HomeInlineAdSlotComponent],
   template: `
     <section class="py-12 lg:py-16 bg-gradient-to-b from-transparent via-secondary/30 to-transparent overflow-y-hidden">
       <div class="container mx-auto px-4 overflow-y-hidden">
@@ -165,6 +167,13 @@ interface Category {
                 </button>
               </div>
             </div>
+
+            @if (isHomePage && getCategoryKeyByIndex(catIndex) === 'Politics') {
+              <app-home-inline-ad-slot
+                [adId]="homeAd5Id"
+                label="Ad 5"
+              />
+            }
           }
         </div>
       </div>
@@ -551,6 +560,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   isLoading = true;
   isHomePage = false;
+  readonly homeAd5Id = HOME_PAGE_AD_MAP.betweenPoliticsHealth;
   private originalNewsItems: { [key: string]: any[] } = {};
   t: any = {};
   private languageSubscription?: Subscription;

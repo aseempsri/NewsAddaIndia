@@ -1,56 +1,30 @@
 import { Component, Input } from '@angular/core';
-
 import { AdService } from '../../services/ad.service';
-
 import { AdSlotDisplayComponent } from '../ad-slot-display/ad-slot-display.component';
 
-
-
 @Component({
-
-  selector: 'app-sidebar-ad-slot',
-
+  selector: 'app-home-inline-ad-slot',
   standalone: true,
-
   imports: [AdSlotDisplayComponent],
-
   template: `
-
     @if (isAdEnabled(adId)) {
-
-      <app-ad-slot-display
-
-        [adId]="adId"
-
-        [placeholderLabel]="label"
-
-        wrapperClass="mb-2.5 sm:mb-3 lg:mb-3 w-full"
-
-      />
-
+      <div class="w-full flex justify-center my-6 sm:my-8 lg:my-10">
+        <app-ad-slot-display
+          [adId]="adId"
+          [placeholderLabel]="label"
+          wrapperClass="w-full max-w-full"
+        />
+      </div>
     }
-
   `,
-
 })
-
-export class SidebarAdSlotComponent {
-
+export class HomeInlineAdSlotComponent {
   @Input({ required: true }) adId!: string;
-
   @Input({ required: true }) label!: string;
-
-
 
   constructor(private adService: AdService) {}
 
-
-
   isAdEnabled(adId: string): boolean {
-
     return this.adService.isAdEnabled(adId);
-
   }
-
 }
-

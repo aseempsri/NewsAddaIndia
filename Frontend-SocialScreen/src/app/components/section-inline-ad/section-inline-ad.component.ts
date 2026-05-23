@@ -10,9 +10,13 @@ export type SectionAdVariant = 'banner' | 'tall';
   standalone: true,
   imports: [AdSlotDisplayComponent],
   template: `
-    @if (enabled && hasMedia) {
+    @if (shouldShow) {
       <div [class]="containerClass">
-        <app-ad-slot-display [adId]="adId" [wrapperClass]="wrapperClass" />
+        <app-ad-slot-display
+          [adId]="adId"
+          [wrapperClass]="wrapperClass"
+          [constrainToParent]="variant === 'tall'"
+        />
       </div>
     }
   `,
@@ -33,19 +37,19 @@ export class SectionInlineAdComponent {
     return this.adService.isAdEnabled(this.adId);
   }
 
-  get hasMedia(): boolean {
-    return this.adService.hasAdMedia(this.adId);
+  get shouldShow(): boolean {
+    return this.adService.shouldDisplayAd(this.adId);
   }
 
   get containerClass(): string {
     return this.variant === 'tall'
-      ? 'w-full h-full min-h-[200px] lg:min-h-0 flex items-stretch py-0'
-      : 'w-full flex justify-center py-1 sm:py-2.5';
+      ? 'w-full h-full flex items-center justify-center py-0 min-h-0'
+      : 'w-full flex justify-center items-center py-1 sm:py-2.5';
   }
 
   get wrapperClass(): string {
     return this.variant === 'tall'
-      ? 'w-full h-full min-h-[200px] sm:min-h-[220px] lg:min-h-full max-w-none'
-      : 'w-full max-w-[26.88rem] min-h-[67px] sm:min-h-[90px] lg:min-h-[112px]';
+      ? 'w-full max-w-full h-auto max-h-full'
+      : 'w-full max-w-full';
   }
 }

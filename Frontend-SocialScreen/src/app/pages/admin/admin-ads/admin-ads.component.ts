@@ -538,12 +538,16 @@ export class AdminAdsComponent implements OnInit, OnDestroy {
     this.uploadingAdId = null;
     input.value = '';
     console.error('Error uploading media:', err);
+    const msg = err.error?.error || '';
     if (err.status === 404) {
       this.error = 'Upload API not found. Restart the backend server (port 3000) and try again.';
+    } else if (err.status === 400 && msg.toLowerCase().includes('invalid ad id')) {
+      this.error =
+        'This ad slot is not recognized by the API. Deploy/restart the backend with home slots 1–6, then try again.';
     } else {
-      this.error = err.error?.error || 'Failed to upload media';
+      this.error = msg || 'Failed to upload media';
     }
-    setTimeout(() => (this.error = ''), 5000);
+    setTimeout(() => (this.error = ''), 8000);
   }
 
   updateAd(adId: string, updateData: Partial<Ad>) {

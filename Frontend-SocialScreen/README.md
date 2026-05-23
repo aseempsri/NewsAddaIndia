@@ -7,7 +7,7 @@ Separate Angular app from `Frontend/` (NewsAddaIndia). Shares the same **backend
 - Branding: Social Screen logo and name
 - **No author/publisher** on news cards or article pages
 - Ads: `site=socialscreen` via `/api/ads?site=socialscreen`
-- Admin: **`/admin/ads` only** — nine section cards (Home + 8 categories). **Home sidebar:** Weather → AD1 → Cricket → AD2 → Panchang → AD3 → AD4
+- Admin: **`/admin/ads` only** — ten section cards (Home, Article, 8 categories). **Article detail:** AD1 above Share, AD2 above footer. **Home:** sidebar AD1–4; main **AD5** (Politics→Health), **AD6** (before footer). **Category pages:** AD1–4 (3 cards per row, ad after each row)
 - Ad IDs in DB: `home-ad1`, `national-ad1`, etc. (`site=socialscreen`)
 - Category pages (`/category/national`, etc.): after every 3 story cards, **AD1–AD3** show centered (desktop 3-column rows; mobile stacked)
 

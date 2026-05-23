@@ -6,6 +6,7 @@ export const environment = {
   adSite: 'socialscreen',
   siteName: 'Social Screen',
   siteDomain: 'socialscreen.in',
+  googleAnalyticsId: 'G-NW2PR9ZDQ1',
   socialMedia: {
     facebook: 'https://www.facebook.com/socialscreen.in',
     instagram: 'https://www.instagram.com/socialscreen.in/',
