@@ -118,7 +118,10 @@ const VIEWPORT_PAD_PX = 12;
               Advertisement
             </span>
           </div>
-          <div class="relative flex-1 min-h-0 overflow-hidden bg-gray-100 dark:bg-gray-900/80">
+          <div
+            class="relative overflow-hidden bg-gray-100 dark:bg-gray-900/80"
+            [ngStyle]="hoverPreviewMediaStyle"
+          >
             @if (mediaType === 'image') {
               <img
                 [src]="mediaUrl"
@@ -218,6 +221,7 @@ export class AdSlotDisplayComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   get hoverPreviewPanelStyle(): Record<string, string> {
+    const labelPx = 17;
     if (this.usePortraitStandardFrame) {
       const { widthPx, heightPx } = getHoverPortraitPreviewSize(
         this.naturalWidth,
@@ -225,16 +229,32 @@ export class AdSlotDisplayComponent implements OnInit, OnChanges, OnDestroy {
       );
       return {
         width: `${widthPx}px`,
-        height: `${heightPx + 17}px`,
+        height: `${heightPx + labelPx}px`,
         maxWidth: `min(${widthPx}px, calc(100vw - 24px))`,
+        display: 'flex',
+        flexDirection: 'column',
       };
     }
     const { widthPx, heightPx } = getHoverLandscapePreviewSize();
     return {
       width: `${widthPx}px`,
-      height: `${heightPx + 17}px`,
+      height: `${heightPx + labelPx}px`,
       maxWidth: `min(${widthPx}px, calc(100vw - 24px))`,
+      display: 'flex',
+      flexDirection: 'column',
     };
+  }
+
+  get hoverPreviewMediaStyle(): Record<string, string> {
+    if (this.usePortraitStandardFrame) {
+      const { heightPx } = getHoverPortraitPreviewSize(
+        this.naturalWidth,
+        this.naturalHeight
+      );
+      return { height: `${heightPx}px`, flex: '1 1 auto', minHeight: '0' };
+    }
+    const { heightPx } = getHoverLandscapePreviewSize();
+    return { height: `${heightPx}px`, flex: '1 1 auto', minHeight: '0' };
   }
 
   get hoverPreviewSize(): { width: number; height: number } {
@@ -473,11 +493,11 @@ export class AdSlotDisplayComponent implements OnInit, OnChanges, OnDestroy {
     const cap = this.constrainToParent ? ' max-h-full' : '';
 
     if (this.useLandscapeStandardFrame) {
-      return `relative w-full min-w-full aspect-[16/10] overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 shrink-0${cap}`;
+      return `relative w-full min-w-full aspect-[16/10] overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 shrink-0 flex items-center justify-center${cap}`;
     }
 
     if (this.usePortraitStandardFrame) {
-      return `relative overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 shrink-0${cap}`;
+      return `relative overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 shrink-0 flex items-center justify-center box-border${cap}`;
     }
 
     return `overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-900/80 flex items-center justify-center w-full min-h-[80px]${cap}`;
@@ -485,7 +505,7 @@ export class AdSlotDisplayComponent implements OnInit, OnChanges, OnDestroy {
 
   get mediaFitClass(): string {
     if (this.useLandscapeStandardFrame || this.usePortraitStandardFrame) {
-      return 'absolute inset-0 w-full h-full max-w-none max-h-none object-cover object-center';
+      return 'max-w-full max-h-full w-auto h-auto object-contain object-center block';
     }
     return 'w-full h-full object-contain object-center';
   }
