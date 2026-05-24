@@ -9,6 +9,9 @@ export type SectionAdVariant = 'banner' | 'tall';
   selector: 'app-section-inline-ad',
   standalone: true,
   imports: [AdSlotDisplayComponent],
+  host: {
+    class: 'block w-full min-w-0',
+  },
   template: `
     @if (shouldShow) {
       <div [class]="containerClass">
@@ -44,12 +47,10 @@ export class SectionInlineAdComponent {
   get containerClass(): string {
     return this.variant === 'tall'
       ? 'w-full h-full flex items-center justify-center py-0 min-h-0'
-      : 'w-full flex justify-center items-center py-1 sm:py-2.5';
+      : 'w-full flex justify-center py-1 sm:py-2.5';
   }
 
   get wrapperClass(): string {
-    return this.variant === 'tall'
-      ? 'w-full max-w-full h-auto max-h-full'
-      : 'w-full max-w-full';
+    return this.variant === 'tall' ? 'h-auto max-h-full' : '';
   }
 }

@@ -14,6 +14,10 @@ import { AdSlotDisplayComponent } from '../ad-slot-display/ad-slot-display.compo
 
   imports: [AdSlotDisplayComponent],
 
+  host: {
+    class: 'block w-full min-w-0',
+  },
+
   template: `
 
     @if (isAdEnabled(adId)) {

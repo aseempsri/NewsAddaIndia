@@ -6,13 +6,15 @@ import { AdSlotDisplayComponent } from '../ad-slot-display/ad-slot-display.compo
   selector: 'app-home-inline-ad-slot',
   standalone: true,
   imports: [AdSlotDisplayComponent],
+  host: {
+    class: 'block w-full min-w-0',
+  },
   template: `
     @if (isAdEnabled(adId)) {
       <div class="w-full flex justify-center my-6 sm:my-8 lg:my-10">
         <app-ad-slot-display
           [adId]="adId"
           [placeholderLabel]="label"
-          wrapperClass="w-full max-w-full"
         />
       </div>
     }
