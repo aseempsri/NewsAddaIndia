@@ -9,7 +9,8 @@ import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal
 import { HomeInlineAdSlotComponent } from '../home-inline-ad-slot/home-inline-ad-slot.component';
 import { HOME_PAGE_AD_MAP } from '../../config/ad-sections';
 import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { filter, skip } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 interface Article {
   id?: string | number; // Add ID field to preserve MongoDB _id
@@ -564,6 +565,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   private originalNewsItems: { [key: string]: any[] } = {};
   t: any = {};
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   scrollStates: { [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } } = {};
 
   constructor(
@@ -574,7 +576,8 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     private router: Router,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
-    private appRef: ApplicationRef
+    private appRef: ApplicationRef,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -626,6 +629,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.checkIfHomePage();
+    });
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.originalNewsItems = {};
+      this.isLoading = true;
+      this.loadCategoryNews();
     });
   }
 
@@ -757,6 +766,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
   }
 
   updateTranslations() {

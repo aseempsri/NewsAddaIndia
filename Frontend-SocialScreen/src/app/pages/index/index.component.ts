@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../components/header/header.component';
 import { ThemeService, Theme } from '../../services/theme.service';
@@ -19,7 +19,8 @@ import { environment } from '../../../environments/environment';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, skip } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 @Component({
   selector: 'app-index',
@@ -43,11 +44,22 @@ import { filter } from 'rxjs/operators';
       <!-- Mobile Top Bar -->
       <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full mb-2">
         <div class="container mx-auto px-3 py-1 flex items-center justify-between text-xs gap-2">
-          <span class="flex items-center gap-1 text-muted-foreground shrink-0">
-            <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span class="relative flex items-center gap-1 text-muted-foreground shrink-0">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span class="leading-tight">{{ mobileTopBarDate }}</span>
+            <button type="button" (click)="openMobileDatePicker()" class="mobile-date-btn leading-tight text-left">
+              {{ mobileTopBarDate }}
+            </button>
+            <input
+              #mobileDatePickerInput
+              type="date"
+              class="mobile-date-picker-input"
+              [max]="mobileMaxDateIso"
+              [value]="mobileSelectedDateIso"
+              (change)="onMobileDateSelected($event)"
+              tabindex="-1"
+              aria-hidden="true" />
           </span>
           <div class="flex items-center gap-2 min-w-0">
             @if (pushSupported && pushSubscribed) {
@@ -163,6 +175,27 @@ import { filter } from 'rxjs/operators';
         box-sizing: border-box !important;
       }
     }
+    .mobile-date-btn {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+    }
+    .mobile-date-picker-input {
+      position: absolute;
+      left: 0;
+      top: 100%;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .mobile-date-picker-input.mobile-date-picker-open {
+      pointer-events: auto;
+    }
   `]
 })
 export class IndexComponent implements OnInit, OnDestroy {
@@ -179,6 +212,8 @@ export class IndexComponent implements OnInit, OnDestroy {
   
   // Mobile Top Bar Data
   mobileTopBarDate = '';
+  mobileSelectedDateIso = '';
+  mobileMaxDateIso = '';
   mobileTopBarLocation = '';
   mobileTopBarTemperature: number | null = null;
   mobileTopBarReaderCount = 4320;
@@ -190,7 +225,10 @@ export class IndexComponent implements OnInit, OnDestroy {
     ? environment.apiUrl
     : (environment.production ? '' : '');
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   private weatherRefreshInterval: any;
+
+  @ViewChild('mobileDatePickerInput', { static: false }) mobileDatePickerInput?: ElementRef<HTMLInputElement>;
 
   constructor(
     private themeService: ThemeService,
@@ -200,7 +238,8 @@ export class IndexComponent implements OnInit, OnDestroy {
     private router: Router,
     private http: HttpClient,
     private pushService: PushNotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private newsDateFilter: NewsDateFilterService
   ) {}
 
   private pushSubscription?: Subscription;
@@ -272,6 +311,13 @@ export class IndexComponent implements OnInit, OnDestroy {
     // Initialize mobile top bar data
     this.initializeMobileTopBar();
 
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.displayedNewsService.clear();
+      this.heroDisplayedReady = false;
+      this.updateMobileTopBarData();
+      this.cdr.markForCheck();
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    });
   }
 
 
@@ -306,20 +352,51 @@ export class IndexComponent implements OnInit, OnDestroy {
   }
 
   updateMobileTopBarData() {
-    // Set location to "Del" for mobile
     this.mobileTopBarLocation = 'Del';
-    
-    // Format date as "Sun, 11 Jan '26"
-    const date = new Date();
+    this.mobileSelectedDateIso = this.newsDateFilter.getSelectedDateIso();
+    this.mobileMaxDateIso = this.newsDateFilter.getMaxDateIso();
+
+    const date = this.newsDateFilter.getSelectedDate();
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     const weekday = weekdays[date.getDay()];
     const day = date.getDate();
     const month = months[date.getMonth()];
-    const year = date.getFullYear().toString().slice(-2); // Get last 2 digits
-    
+    const year = date.getFullYear().toString().slice(-2);
+
     this.mobileTopBarDate = `${weekday}, ${day} ${month} '${year}`;
+  }
+
+  openMobileDatePicker() {
+    const input = this.mobileDatePickerInput?.nativeElement;
+    if (!input) return;
+    input.classList.add('mobile-date-picker-open');
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // fall through
+      }
+    }
+    input.click();
+  }
+
+  onMobileDateSelected(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    const input = this.mobileDatePickerInput?.nativeElement;
+    if (input) {
+      input.classList.remove('mobile-date-picker-open');
+    }
+    if (!value) return;
+    const [y, m, d] = value.split('-').map(Number);
+    const picked = new Date(y, m - 1, d);
+    if (picked.getTime() > this.newsDateFilter.getMaxDate().getTime()) {
+      return;
+    }
+    this.newsDateFilter.setDate(picked);
+    this.updateMobileTopBarData();
   }
 
   getFormattedReaderCount(): string {
@@ -380,6 +457,7 @@ export class IndexComponent implements OnInit, OnDestroy {
     // Cleanup subscriptions
     this.themeSubscription?.unsubscribe();
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
     this.pushSubscription?.unsubscribe();
     if (this.weatherRefreshInterval) {
       clearInterval(this.weatherRefreshInterval);

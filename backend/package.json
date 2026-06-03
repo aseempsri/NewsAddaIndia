@@ -13,6 +13,7 @@
         "seed:test-archived": "node scripts/seedTestArchivedNews.js",
         "check:pending": "node scripts/checkPendingNewsCount.js",
         "clear:news": "node scripts/clearAllNews.js",
+        "seed:date-filter": "node scripts/seedDateFilterTestData.js",
         "count:articles": "node scripts/countUniqueArticles.js",
         "push:generate-keys": "npx web-push generate-vapid-keys"
     },

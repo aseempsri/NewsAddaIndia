@@ -164,7 +164,7 @@ const sampleNews = [
 async function seedNews() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newsadda');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newsaddaindia');
     console.log('Connected to MongoDB');
 
     // Clear existing news

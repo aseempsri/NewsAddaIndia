@@ -13,6 +13,8 @@ import { sectionAdId } from '../../config/ad-sections';
 import { CategoryArticleCardComponent } from './category-article-card.component';
 import { buildCategoryGridRows, CategoryGridRow } from './category-grid-layout';
 import { Subscription } from 'rxjs';
+import { skip } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 @Component({
   selector: 'app-category',
@@ -30,7 +32,7 @@ import { Subscription } from 'rxjs';
     <div class="min-h-screen bg-background">
       <app-header />
       <!-- Spacer for fixed header on desktop - accounts for navigation bar only (~64px, reduced by 20%) -->
-      <div class="lg:h-[64px]"></div>
+      <div class="lg:h-[96px]"></div>
       
       <main>
         <section class="max-lg:pt-4 py-6 lg:py-8">
@@ -127,6 +129,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
   isLoading = true;
   t: any = {};
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   private adsSubscription?: Subscription;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
@@ -140,7 +143,8 @@ export class CategoryComponent implements OnInit, OnDestroy {
     private modalService: ModalService,
     private languageService: LanguageService,
     private adService: AdService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -170,10 +174,17 @@ export class CategoryComponent implements OnInit, OnDestroy {
         await this.translateNewsTitles();
       }
     });
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.filteredNews = [];
+      this.gridRows = [];
+      this.loadNews();
+    });
   }
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
     this.adsSubscription?.unsubscribe();
   }
 

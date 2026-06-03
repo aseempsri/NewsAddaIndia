@@ -18,9 +18,15 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=admin
 ```
 
-3. Make sure MongoDB is running on your system.
+3. Make sure MongoDB is running on your system (e.g. Compass connected to `mongodb://localhost:27017`).
 
-4. Start the server:
+4. **Optional — sample news for date-picker testing** (Social Screen / multiple days):
+```bash
+npm run seed:date-filter
+```
+This creates database `newsaddaindia` (if new) and inserts test articles for today, yesterday, and older days. Re-run safely; it only replaces articles tagged `date-filter`.
+
+5. Start the server:
 ```bash
 npm start
 ```
@@ -29,6 +35,8 @@ For development with auto-reload:
 ```bash
 npm run dev
 ```
+
+Default API: `http://localhost:3000` (proxied by Social Screen at `http://localhost:4200`).
 
 ## API Endpoints
 

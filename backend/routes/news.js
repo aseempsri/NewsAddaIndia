@@ -130,7 +130,7 @@ const handleMulterError = (err, req, res, next) => {
 // GET /api/news - Get all news (with optional filters)
 router.get('/', async (req, res) => {
   try {
-    const { category, page, limit = 20, skip = 0, published = true, breaking, featured, trending, excludeBreaking, search, searchHi } = req.query;
+    const { category, page, limit = 20, skip = 0, published = true, breaking, featured, trending, excludeBreaking, search, searchHi, date: dateFilter } = req.query;
 
     // Debug: Log all query parameters
     if (search) {
@@ -257,6 +257,27 @@ router.get('/', async (req, res) => {
     // Exclude breaking news from regular feed
     if (excludeBreaking === 'true' || excludeBreaking === true) {
       query.isBreaking = { $ne: true };
+    }
+
+    // Filter by calendar day (IST) — YYYY-MM-DD, no future dates
+    if (dateFilter && typeof dateFilter === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter.trim())) {
+      const dayStart = new Date(`${dateFilter.trim()}T00:00:00+05:30`);
+      const dayEnd = new Date(`${dateFilter.trim()}T23:59:59.999+05:30`);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      if (!Number.isNaN(dayStart.getTime()) && !Number.isNaN(dayEnd.getTime()) && dayStart.getTime() <= todayEnd.getTime()) {
+        const dateRange = {
+          $or: [
+            { createdAt: { $gte: dayStart, $lte: dayEnd } },
+            { date: { $gte: dayStart, $lte: dayEnd } }
+          ]
+        };
+        if (query.$and) {
+          query.$and.push(dateRange);
+        } else {
+          query.$and = [dateRange];
+        }
+      }
     }
 
     // Sort: breaking news first, then by date
