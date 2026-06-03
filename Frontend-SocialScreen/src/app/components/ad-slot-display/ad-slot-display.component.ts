@@ -126,7 +126,7 @@ const VIEWPORT_PAD_PX = 12;
               <img
                 [src]="mediaUrl"
                 [alt]="altText"
-                class="absolute inset-0 w-full h-full object-cover object-center"
+                class="absolute inset-0 w-full h-full object-contain object-center"
               />
             } @else if (mediaType === 'video') {
               <video
@@ -135,7 +135,7 @@ const VIEWPORT_PAD_PX = 12;
                 muted
                 loop
                 playsinline
-                class="absolute inset-0 w-full h-full object-cover object-center"
+                class="absolute inset-0 w-full h-full object-contain object-center"
               ></video>
             }
           </div>
@@ -220,53 +220,65 @@ export class AdSlotDisplayComponent implements OnInit, OnChanges, OnDestroy {
     return typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
   }
 
+  private get hoverViewportLimits(): { maxWidth: number; maxHeight: number } {
+    if (typeof window === 'undefined') {
+      return { maxWidth: 1200, maxHeight: 800 };
+    }
+    return {
+      maxWidth: window.innerWidth - VIEWPORT_PAD_PX * 2,
+      maxHeight: window.innerHeight - VIEWPORT_PAD_PX * 2,
+    };
+  }
+
+  private get hoverPreviewDimensions(): { widthPx: number; heightPx: number } {
+    const { maxWidth, maxHeight } = this.hoverViewportLimits;
+    const labelPx = 17;
+    const mediaMaxHeight = maxHeight - labelPx;
+
+    if (this.usePortraitStandardFrame) {
+      return getHoverPortraitPreviewSize(
+        this.naturalWidth,
+        this.naturalHeight,
+        maxWidth,
+        mediaMaxHeight
+      );
+    }
+    return getHoverLandscapePreviewSize(
+      this.naturalWidth,
+      this.naturalHeight,
+      maxWidth,
+      mediaMaxHeight
+    );
+  }
+
   get hoverPreviewPanelStyle(): Record<string, string> {
     const labelPx = 17;
-    if (this.usePortraitStandardFrame) {
-      const { widthPx, heightPx } = getHoverPortraitPreviewSize(
-        this.naturalWidth,
-        this.naturalHeight
-      );
-      return {
-        width: `${widthPx}px`,
-        height: `${heightPx + labelPx}px`,
-        maxWidth: `min(${widthPx}px, calc(100vw - 24px))`,
-        display: 'flex',
-        flexDirection: 'column',
-      };
-    }
-    const { widthPx, heightPx } = getHoverLandscapePreviewSize();
+    const { widthPx, heightPx } = this.hoverPreviewDimensions;
     return {
       width: `${widthPx}px`,
       height: `${heightPx + labelPx}px`,
-      maxWidth: `min(${widthPx}px, calc(100vw - 24px))`,
+      maxWidth: 'calc(100vw - 24px)',
+      maxHeight: 'calc(100vh - 24px)',
       display: 'flex',
       flexDirection: 'column',
     };
   }
 
   get hoverPreviewMediaStyle(): Record<string, string> {
-    if (this.usePortraitStandardFrame) {
-      const { heightPx } = getHoverPortraitPreviewSize(
-        this.naturalWidth,
-        this.naturalHeight
-      );
-      return { height: `${heightPx}px`, flex: '1 1 auto', minHeight: '0' };
-    }
-    const { heightPx } = getHoverLandscapePreviewSize();
-    return { height: `${heightPx}px`, flex: '1 1 auto', minHeight: '0' };
+    const { heightPx } = this.hoverPreviewDimensions;
+    return {
+      height: `${heightPx}px`,
+      flex: '1 1 auto',
+      minHeight: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
   }
 
   get hoverPreviewSize(): { width: number; height: number } {
     const label = 17;
-    if (this.usePortraitStandardFrame) {
-      const { widthPx, heightPx } = getHoverPortraitPreviewSize(
-        this.naturalWidth,
-        this.naturalHeight
-      );
-      return { width: widthPx, height: heightPx + label };
-    }
-    const { widthPx, heightPx } = getHoverLandscapePreviewSize();
+    const { widthPx, heightPx } = this.hoverPreviewDimensions;
     return { width: widthPx, height: heightPx + label };
   }
 
