@@ -130,9 +130,10 @@ interface SocialLink {
 
         <!-- Bottom Bar -->
         <div class="mt-12 pt-8 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p class="text-sm text-muted-foreground">
-            © 2025 Social Screen. {{ t.allRightsReserved }}
-          </p>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span>© 2025 Social Screen. {{ t.allRightsReserved }}</span>
+            <span>Managed by Adrika</span>
+          </div>
           <div class="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#" class="hover:text-foreground transition-colors">
               {{ t.privacy }}
@@ -145,10 +146,6 @@ interface SocialLink {
             </a>
           </div>
         </div>
-
-        <p class="mt-6 text-center text-xs text-muted-foreground/80">
-          Managed by Adrika
-        </p>
       </div>
     </footer>
   `,
