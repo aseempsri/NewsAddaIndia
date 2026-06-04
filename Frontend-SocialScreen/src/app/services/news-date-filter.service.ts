@@ -14,7 +14,7 @@ export class NewsDateFilterService {
     return this.startOfDay(this.selectedDateSubject.value);
   }
 
-  /** ISO date string (YYYY-MM-DD) in IST for API — always sent so feeds match the selected day */
+  /** ISO date string (YYYY-MM-DD) in IST — API returns news published on or before this day */
   toApiParam(): string {
     return this.toIsoDateStringIST(this.getSelectedDate());
   }

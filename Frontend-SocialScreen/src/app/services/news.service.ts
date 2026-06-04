@@ -527,9 +527,10 @@ export class NewsService {
     });
   }
 
+  /** Social Screen only: as-of filter (news on or before selected day, IST). */
   private appendDateQuery(url: string): string {
     const dateParam = this.newsDateFilter.toApiParam();
-    return `${url}&date=${encodeURIComponent(dateParam)}`;
+    return `${url}&date=${encodeURIComponent(dateParam)}&dateMode=asOf`;
   }
 
   /**
