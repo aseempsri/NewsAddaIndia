@@ -145,6 +145,10 @@ interface SocialLink {
             </a>
           </div>
         </div>
+
+        <p class="mt-6 text-center text-xs text-muted-foreground/80">
+          Managed by Adrika
+        </p>
       </div>
     </footer>
   `,
