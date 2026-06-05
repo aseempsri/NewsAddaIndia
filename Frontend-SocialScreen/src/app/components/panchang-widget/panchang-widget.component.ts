@@ -56,21 +56,21 @@ interface PanchangData {
 
           <!-- Main Panchang Info -->
           <div class="grid grid-cols-2 gap-2 sm:gap-2.5 lg:gap-3">
-            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/40 border-2 border-purple-300/50 dark:border-purple-700/50 shadow-md hover:shadow-lg transition-shadow">
-              <p class="text-sm sm:text-xs font-semibold text-purple-700 dark:text-purple-300 mb-0.5 sm:mb-1">तिथि</p>
-              <p class="text-base sm:text-sm font-bold text-purple-900 dark:text-purple-100 break-words">{{ panchangData.tithi }}</p>
+            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/40 dark:to-orange-800/40 border-2 border-orange-300/50 dark:border-orange-700/50 shadow-md hover:shadow-lg transition-shadow">
+              <p class="text-sm sm:text-xs font-semibold text-orange-700 dark:text-orange-300 mb-0.5 sm:mb-1">तिथि</p>
+              <p class="text-base sm:text-sm font-bold text-orange-900 dark:text-orange-100 break-words">{{ panchangData.tithi }}</p>
             </div>
-            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/40 border-2 border-blue-300/50 dark:border-blue-700/50 shadow-md hover:shadow-lg transition-shadow">
-              <p class="text-sm sm:text-xs font-semibold text-blue-700 dark:text-blue-300 mb-0.5 sm:mb-1">नक्षत्र</p>
-              <p class="text-base sm:text-sm font-bold text-blue-900 dark:text-blue-100 break-words">{{ panchangData.nakshatra }}</p>
+            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/40 dark:to-amber-800/40 border-2 border-amber-300/50 dark:border-amber-700/50 shadow-md hover:shadow-lg transition-shadow">
+              <p class="text-sm sm:text-xs font-semibold text-amber-700 dark:text-amber-300 mb-0.5 sm:mb-1">नक्षत्र</p>
+              <p class="text-base sm:text-sm font-bold text-amber-900 dark:text-amber-100 break-words">{{ panchangData.nakshatra }}</p>
             </div>
             <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/40 border-2 border-green-300/50 dark:border-green-700/50 shadow-md hover:shadow-lg transition-shadow">
               <p class="text-sm sm:text-xs font-semibold text-green-700 dark:text-green-300 mb-0.5 sm:mb-1">योग</p>
               <p class="text-base sm:text-sm font-bold text-green-900 dark:text-green-100 break-words">{{ panchangData.yoga }}</p>
             </div>
-            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900/40 dark:to-pink-800/40 border-2 border-pink-300/50 dark:border-pink-700/50 shadow-md hover:shadow-lg transition-shadow">
-              <p class="text-sm sm:text-xs font-semibold text-pink-700 dark:text-pink-300 mb-0.5 sm:mb-1">करण</p>
-              <p class="text-base sm:text-sm font-bold text-pink-900 dark:text-pink-100 break-words">{{ panchangData.karana }}</p>
+            <div class="p-2 sm:p-2.5 lg:p-3 rounded-lg bg-gradient-to-br from-lime-100 to-lime-200 dark:from-lime-900/40 dark:to-lime-800/40 border-2 border-lime-300/50 dark:border-lime-700/50 shadow-md hover:shadow-lg transition-shadow">
+              <p class="text-sm sm:text-xs font-semibold text-lime-700 dark:text-lime-300 mb-0.5 sm:mb-1">करण</p>
+              <p class="text-base sm:text-sm font-bold text-lime-900 dark:text-lime-100 break-words">{{ panchangData.karana }}</p>
             </div>
           </div>
 
@@ -88,17 +88,17 @@ interface PanchangData {
               </span>
               <span class="font-bold text-orange-900 dark:text-orange-100 flex-shrink-0 ml-2 text-base sm:text-sm">{{ panchangData.sunrise }}</span>
             </div>
-            <div class="flex items-center justify-between text-base sm:text-sm p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 hover:shadow-md transition-shadow gap-2">
-              <span class="text-red-700 dark:text-red-300 font-medium flex items-center gap-1 sm:gap-2 min-w-0">
+            <div class="flex items-center justify-between text-base sm:text-sm p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 hover:shadow-md transition-shadow gap-2">
+              <span class="text-orange-700 dark:text-orange-300 font-medium flex items-center gap-1 sm:gap-2 min-w-0">
                 <span class="text-xl sm:text-lg flex-shrink-0">🌇</span> <span class="truncate">सूर्यास्त</span>
               </span>
-              <span class="font-bold text-red-900 dark:text-red-100 flex-shrink-0 ml-2 text-base sm:text-sm">{{ panchangData.sunset }}</span>
+              <span class="font-bold text-orange-900 dark:text-orange-100 flex-shrink-0 ml-2 text-base sm:text-sm">{{ panchangData.sunset }}</span>
             </div>
-            <div class="flex items-center justify-between text-base sm:text-sm p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:shadow-md transition-shadow gap-2">
-              <span class="text-indigo-700 dark:text-indigo-300 font-medium flex items-center gap-1 sm:gap-2 min-w-0">
+            <div class="flex items-center justify-between text-base sm:text-sm p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:shadow-md transition-shadow gap-2">
+              <span class="text-green-700 dark:text-green-300 font-medium flex items-center gap-1 sm:gap-2 min-w-0">
                 <span class="text-xl sm:text-lg flex-shrink-0">🌙</span> <span class="truncate">चंद्रोदय</span>
               </span>
-              <span class="font-bold text-indigo-900 dark:text-indigo-100 flex-shrink-0 ml-2 text-base sm:text-sm">{{ panchangData.moonrise }}</span>
+              <span class="font-bold text-green-900 dark:text-green-100 flex-shrink-0 ml-2 text-base sm:text-sm">{{ panchangData.moonrise }}</span>
             </div>
           </div>
 
@@ -116,15 +116,15 @@ interface PanchangData {
                   </div>
                 }
                 @if (panchangData.amritKaal) {
-                  <div class="flex items-center justify-between text-sm sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-cyan-100 to-blue-100 dark:from-cyan-900/30 dark:to-blue-900/30 border border-cyan-300/50 dark:border-cyan-700/50 gap-2">
-                    <span class="text-cyan-700 dark:text-cyan-300 font-medium truncate min-w-0">अमृत काल</span>
-                    <span class="font-bold text-cyan-900 dark:text-cyan-100 flex-shrink-0 ml-2 text-sm sm:text-xs">{{ panchangData.amritKaal }}</span>
+                  <div class="flex items-center justify-between text-sm sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 border border-orange-300/50 dark:border-orange-700/50 gap-2">
+                    <span class="text-orange-700 dark:text-orange-300 font-medium truncate min-w-0">अमृत काल</span>
+                    <span class="font-bold text-orange-900 dark:text-orange-100 flex-shrink-0 ml-2 text-sm sm:text-xs">{{ panchangData.amritKaal }}</span>
                   </div>
                 }
                 @if (panchangData.brahmaMuhurat) {
-                  <div class="flex items-center justify-between text-sm sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 border border-violet-300/50 dark:border-violet-700/50 gap-2">
-                    <span class="text-violet-700 dark:text-violet-300 font-medium truncate min-w-0">ब्रह्म मुहूर्त</span>
-                    <span class="font-bold text-violet-900 dark:text-violet-100 flex-shrink-0 ml-2 text-sm sm:text-xs">{{ panchangData.brahmaMuhurat }}</span>
+                  <div class="flex items-center justify-between text-sm sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-300/50 dark:border-green-700/50 gap-2">
+                    <span class="text-green-700 dark:text-green-300 font-medium truncate min-w-0">ब्रह्म मुहूर्त</span>
+                    <span class="font-bold text-green-900 dark:text-green-100 flex-shrink-0 ml-2 text-sm sm:text-xs">{{ panchangData.brahmaMuhurat }}</span>
                   </div>
                 }
               </div>

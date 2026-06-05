@@ -67,7 +67,7 @@ interface SideNews {
               @if (!isHomePage) {
                 <div class="absolute top-5 left-5 z-20 flex gap-2 flex-wrap">
                   @if (featuredNews.isTrending) {
-                    <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                    <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
                       <svg class="w-4 h-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
                         <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                       </svg>
@@ -103,7 +103,7 @@ interface SideNews {
             <div class="p-5 pt-6 pb-6 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
               <div class="flex-1 min-w-0 mb-4 min-h-0">
                 <h2
-                  [class]="'font-display text-xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
+                  [class]="'font-display text-xl font-bold dark:font-normal leading-tight pb-1 min-h-[3.5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(featuredNews.category))"
                   (click)="openNewsModal(featuredNews)"
                   (touchstart)="onTouchStart($event, featuredNews)"
                   (touchend)="onTouchEnd($event, featuredNews)"
@@ -155,7 +155,7 @@ interface SideNews {
                   @if (!isHomePage) {
                     <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
                       @if (news.isTrending) {
-                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
                           <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
                             <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                           </svg>
@@ -191,7 +191,7 @@ interface SideNews {
                 <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1">
                   <div class="flex-1 min-w-0 mb-3">
                     <h3 
-                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
+                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(news.category))"
                       (click)="openNewsModalFromSide(news, $index)"
                       (touchstart)="onTouchStartSide($event, news, $index)"
                       (touchend)="onTouchEndSide($event, news, $index)"
@@ -243,7 +243,7 @@ interface SideNews {
                 @if (!isHomePage) {
                   <div class="absolute top-5 left-5 z-20 flex gap-2 flex-wrap">
                     @if (featuredNews.isTrending) {
-                      <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                      <span class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
                         <svg class="w-4 h-4 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));">
                           <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
@@ -279,7 +279,7 @@ interface SideNews {
               <div class="p-6 pt-7 pb-7 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1 min-h-0">
                 <div class="flex-1 min-w-0 mb-4 min-h-0">
                   <h2
-                    [class]="'font-display text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(featuredNews.category))"
+                    [class]="'font-display text-3xl font-bold dark:font-normal leading-tight pb-1 min-h-[5rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (featuredNews.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(featuredNews.category))"
                     (click)="openNewsModal(featuredNews)"
                     (touchstart)="onTouchStart($event, featuredNews)"
                     (touchend)="onTouchEnd($event, featuredNews)"
@@ -333,7 +333,7 @@ interface SideNews {
                   @if (!isHomePage) {
                     <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
                       @if (news.isTrending) {
-                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
+                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider backdrop-blur-sm" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(255,255,255,0.3); letter-spacing: 0.1em;">
                           <svg class="w-3.5 h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
                             <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                           </svg>
@@ -369,7 +369,7 @@ interface SideNews {
                 <div class="p-4 pt-5 pb-5 bg-gradient-to-br from-background to-secondary/30 border-t border-border/50 flex flex-col flex-1">
                   <div class="flex-1 min-w-0 mb-3">
                     <h3 
-                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))"
+                      [class]="'font-display text-lg font-bold dark:font-normal leading-tight line-clamp-3 pb-1 min-h-[4rem] cursor-pointer hover:opacity-80 transition-all duration-300 hover:scale-[1.01] ' + (news.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(news.category))"
                       (click)="openNewsModalFromSide(news, $index)"
                       (touchstart)="onTouchStartSide($event, news, $index)"
                       (touchend)="onTouchEndSide($event, news, $index)"
@@ -633,11 +633,11 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     const colors: Record<string, string> = {
       'Health': 'bg-green-500',
       'Sports': 'bg-orange-500',
-      'Business': 'bg-blue-500',
-      'Entertainment': 'bg-pink-500',
-      'International': 'bg-purple-500',
-      'Technology': 'bg-cyan-500',
-      'National': 'bg-blue-500',
+      'Business': 'bg-amber-500',
+      'Entertainment': 'bg-orange-400',
+      'International': 'bg-green-600',
+      'Technology': 'bg-emerald-600',
+      'National': 'bg-orange-500',
       'Politics': 'bg-red-500',
       'Religious': 'bg-indigo-500',
     };
@@ -1017,28 +1017,28 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'National': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'International': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Politics': 'bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
       'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-300',
+      'Entertainment': 'bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Technology': 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-emerald-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }
 
   getCategoryIconColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'text-blue-600',
-      'International': 'text-purple-600',
-      'Politics': 'text-red-600',
+      'National': 'text-orange-600',
+      'International': 'text-green-600',
+      'Politics': 'text-orange-700',
       'Health': 'text-green-600',
       'Sports': 'text-orange-600',
-      'Business': 'text-blue-600',
-      'Entertainment': 'text-pink-600',
-      'Technology': 'text-cyan-600',
+      'Business': 'text-amber-600',
+      'Entertainment': 'text-orange-500',
+      'Technology': 'text-emerald-600',
     };
     return colors[category] || 'text-primary';
   }

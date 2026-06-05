@@ -47,7 +47,7 @@ interface IndianCity {
             (ngModelChange)="onCityChange($event)"
             (blur)="onSelectBlur()"
             [disabled]="isLoading"
-            class="w-full px-2 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg bg-white/80 dark:bg-gray-800/80 border-2 border-blue-400/50 text-foreground focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300/50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all">
+            class="w-full px-2 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg bg-white/80 dark:bg-gray-800/80 border-2 border-orange-400/50 text-foreground focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-300/50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all">
             @for (city of indianCities; track city.name) {
               <option [value]="city.name">{{ city.name }}</option>
             }
@@ -56,7 +56,7 @@ interface IndianCity {
 
         @if (isLoading) {
           <div class="flex items-center justify-center py-2 sm:py-3">
-            <div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         } @else if (error) {
           <div class="text-center py-2">
@@ -87,13 +87,13 @@ interface IndianCity {
               
               <!-- Stats -->
               <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="flex items-center gap-1 sm:gap-1.5 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
-                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="flex items-center gap-1 sm:gap-1.5 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-lg">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 dark:text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                   </svg>
                   <div class="min-w-0">
-                    <span class="text-base sm:text-lg font-semibold block leading-tight text-blue-600 dark:text-blue-400">{{ weatherData.humidity }}%</span>
-                    <p class="text-xs sm:text-sm text-blue-500 dark:text-blue-400/80 leading-tight">Humidity</p>
+                    <span class="text-base sm:text-lg font-semibold block leading-tight text-orange-600 dark:text-orange-400">{{ weatherData.humidity }}%</span>
+                    <p class="text-xs sm:text-sm text-orange-500 dark:text-orange-400/80 leading-tight">Humidity</p>
                   </div>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-1.5 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-lg">
@@ -466,29 +466,27 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
 
   getTemperatureColor(): string {
     const isDark = this.isDarkMode();
-    if (!this.weatherData) return isDark ? '#22d3ee' : '#0e7490'; // Cyan
+    if (!this.weatherData) return isDark ? '#fb923c' : '#ea580c'; // Orange
     const temp = this.weatherData.temperature;
-    // Use cyan/purple theme for weather widget
     if (temp >= 35) return isDark ? '#fca5a5' : '#dc2626'; // Red
     if (temp >= 30) return isDark ? '#fb923c' : '#ea580c'; // Orange
     if (temp >= 25) return isDark ? '#fcd34d' : '#f59e0b'; // Amber
-    if (temp >= 20) return isDark ? '#22d3ee' : '#06b6d4'; // Cyan
-    if (temp >= 15) return isDark ? '#06b6d4' : '#0891b2'; // Darker cyan
-    if (temp >= 10) return isDark ? '#a78bfa' : '#7c3aed'; // Purple
-    return isDark ? '#818cf8' : '#6366f1'; // Indigo
+    if (temp >= 20) return isDark ? '#86efac' : '#16a34a'; // Green
+    if (temp >= 15) return isDark ? '#4ade80' : '#15803d'; // Darker green
+    if (temp >= 10) return isDark ? '#fdba74' : '#c2410c'; // Deep orange
+    return isDark ? '#bbf7d0' : '#166534'; // Deep green
   }
 
   getDescriptionColor(): string {
     const isDark = this.isDarkMode();
-    if (!this.weatherData) return isDark ? '#22d3ee' : '#0891b2'; // Cyan
+    if (!this.weatherData) return isDark ? '#fb923c' : '#ea580c'; // Orange
     const desc = this.weatherData.description.toLowerCase();
-    // Use cyan/purple theme
-    if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return isDark ? '#22d3ee' : '#0891b2'; // Cyan
-    if (desc.includes('cloud') || desc.includes('overcast')) return isDark ? '#a78bfa' : '#7c3aed'; // Purple
+    if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) return isDark ? '#4ade80' : '#16a34a'; // Green
+    if (desc.includes('cloud') || desc.includes('overcast')) return isDark ? '#fdba74' : '#c2410c'; // Orange
     if (desc.includes('clear') || desc.includes('sun')) return isDark ? '#fcd34d' : '#f59e0b'; // Amber
-    if (desc.includes('thunder') || desc.includes('storm')) return isDark ? '#818cf8' : '#6366f1'; // Indigo
-    if (desc.includes('fog')) return isDark ? '#67e8f9' : '#06b6d4'; // Light cyan
-    return isDark ? '#22d3ee' : '#0891b2'; // Default cyan
+    if (desc.includes('thunder') || desc.includes('storm')) return isDark ? '#86efac' : '#15803d'; // Green
+    if (desc.includes('fog')) return isDark ? '#bbf7d0' : '#166534'; // Light green
+    return isDark ? '#fb923c' : '#ea580c'; // Default orange
   }
 
   isDarkMode(): boolean {
@@ -499,17 +497,17 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
     const isDark = this.isDarkMode();
     if (!this.weatherData) {
       return isDark 
-        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
-        : 'linear-gradient(135deg, #ecfeff 0%, #cffafe 50%, #a5f3fc 100%)'; // Light cyan
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%)'; // Light orange
     }
     const temp = this.weatherData.temperature;
     const icon = this.weatherData.icon;
     
-    // Weather-based gradients - Cyan/Purple theme
+    // Weather-based gradients — Orange & Green theme
     if (icon === 'rain') {
       return isDark
-        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
-        : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 50%, #67e8f9 100%)'; // Light cyan
+        ? 'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)' // Dark green
+        : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #86efac 100%)'; // Light green
     }
     if (icon === 'sun') {
       return isDark
@@ -518,16 +516,16 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     if (icon === 'cloud') {
       return isDark
-        ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
-        : 'linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 50%, #fdba74 100%)'; // Light orange
     }
     if (icon === 'partly-cloudy') {
       return isDark
-        ? 'linear-gradient(135deg, #155e75 0%, #0e7490 50%, #0891b2 100%)' // Dark light cyan
-        : 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)'; // Light cyan
+        ? 'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)' // Dark green
+        : 'linear-gradient(135deg, #ecfccb 0%, #d9f99d 50%, #bbf7d0 100%)'; // Light green
     }
     
-    // Temperature-based gradients - Cyan/Purple theme
+    // Temperature-based gradients — Orange & Green theme
     if (temp >= 35) {
       return isDark
         ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%)' // Dark red
@@ -545,38 +543,38 @@ export class WeatherWidgetComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     if (temp >= 20) {
       return isDark
-        ? 'linear-gradient(135deg, #164e63 0%, #155e75 50%, #0e7490 100%)' // Dark cyan
-        : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 50%, #67e8f9 100%)'; // Light cyan
+        ? 'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)' // Dark green
+        : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #86efac 100%)'; // Light green
     }
     if (temp >= 15) {
       return isDark
-        ? 'linear-gradient(135deg, #155e75 0%, #0e7490 50%, #0891b2 100%)' // Dark light cyan
-        : 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)'; // Light cyan
+        ? 'linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%)' // Dark green
+        : 'linear-gradient(135deg, #ecfccb 0%, #d9f99d 50%, #bbf7d0 100%)'; // Light green
     }
     if (temp >= 10) {
       return isDark
-        ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
-        : 'linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
+        ? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%)' // Dark orange
+        : 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 50%, #fdba74 100%)'; // Light orange
     }
     return isDark
-      ? 'linear-gradient(135deg, #581c87 0%, #6b21a8 50%, #7c3aed 100%)' // Dark purple
-      : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)'; // Light purple
+      ? 'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)' // Dark green
+      : 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%)'; // Light green
   }
 
   getGradientOverlay(): string {
-    if (!this.weatherData) return 'radial-gradient(circle at top right, #06b6d4, transparent)'; // Cyan
+    if (!this.weatherData) return 'radial-gradient(circle at top right, #fb923c, transparent)'; // Orange
     const icon = this.weatherData.icon;
     
     if (icon === 'sun') {
       return 'radial-gradient(circle at top right, #fbbf24, transparent)'; // Yellow
     }
     if (icon === 'rain') {
-      return 'radial-gradient(circle at top right, #06b6d4, transparent)'; // Cyan
+      return 'radial-gradient(circle at top right, #22c55e, transparent)'; // Green
     }
     if (icon === 'cloud') {
-      return 'radial-gradient(circle at top right, #7c3aed, transparent)'; // Purple
+      return 'radial-gradient(circle at top right, #ea580c, transparent)'; // Orange
     }
-    return 'radial-gradient(circle at top right, #22d3ee, transparent)'; // Light cyan
+    return 'radial-gradient(circle at top right, #4ade80, transparent)'; // Light green
   }
 
 }

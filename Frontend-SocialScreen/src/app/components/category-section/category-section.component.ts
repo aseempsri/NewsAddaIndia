@@ -69,7 +69,7 @@ interface Category {
                   [class.invisible]="!canScrollLeft(getCategoryKeyByIndex(catIndex))"
                   class="scroll-arrow-left hidden lg:flex absolute left-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
                   aria-label="Scroll left">
-                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20"></div>
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-orange-500/20 to-green-500/20"></div>
                   <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[-2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
                   </svg>
@@ -83,8 +83,8 @@ interface Category {
                   style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scroll-padding: 0 16px; overflow-y: hidden !important; overflow-x: auto; scrollbar-width: none !important; -ms-overflow-style: none !important; touch-action: pan-x pan-y; overscroll-behavior-x: contain; overscroll-behavior-y: auto;"
                   (scroll)="onScroll(getCategoryKeyByIndex(catIndex), $event)">
                   @for (article of category.articles; track (article.id || $index) + ':' + (article.title || ''); let i = $index) {
-                    <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col">
-                      <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 flex-shrink-0">
+                    <article class="news-card group flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px] hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 flex flex-col">
+                      <div class="relative aspect-video overflow-hidden rounded-t-xl bg-gradient-to-br from-orange-100/25 via-amber-100/15 to-green-100/25 dark:from-orange-900/25 dark:via-amber-900/15 dark:to-green-900/25 border-2 border-transparent hover:border-orange-300/50 dark:hover:border-green-700/50 transition-all duration-300 flex-shrink-0">
                         <!-- Loading Animation - Show while image is loading -->
                         @if (article?.imageLoading || !article?.image) {
                           <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -108,7 +108,7 @@ interface Category {
                         @if (article && !isHomePage) {
                           <div class="absolute top-2 left-2 z-20 flex gap-1 flex-wrap">
                             @if (article.isTrending) {
-                              <span class="inline-flex items-center justify-center gap-1 px-2 py-1 text-[0.5rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.05em;">
+                              <span class="inline-flex items-center justify-center gap-1 px-2 py-1 text-[0.5rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.05em;">
                                 <span class="text-[0.5rem] leading-none">🔥</span>
                                 <span>TRENDING</span>
                               </span>
@@ -127,11 +127,11 @@ interface Category {
                         }
                       </div>
                       <!-- Border Line with Gradient -->
-                      <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
-                      <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1 min-h-0">
+                      <div class="h-[2px] bg-gradient-to-r from-orange-500 via-amber-400 to-green-500"></div>
+                      <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-orange-50/5 dark:via-orange-900/5 to-background rounded-b-xl border-t border-orange-200/20 dark:border-green-800/20 flex flex-col flex-1 min-h-0">
                         <div class="flex-1 min-w-0 mb-3 min-h-0">
                           <h3 
-                            [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(category.title))"
+                            [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (article?.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(category.title))"
                             (click)="openNewsModal(category.title, i)"
                             (touchstart)="onTouchStart($event, category.title, i)"
                             (touchend)="onTouchEnd($event, category.title, i)"
@@ -161,7 +161,7 @@ interface Category {
                   [class.invisible]="!canScrollRight(getCategoryKeyByIndex(catIndex))"
                   class="scroll-arrow-right hidden lg:flex absolute right-1 top-1/2 -translate-y-1/2 z-30 rounded-full bg-gradient-to-l from-primary/90 via-primary/80 to-primary/70 backdrop-blur-lg border-2 border-primary/50 shadow-xl sm:shadow-2xl items-center justify-center transition-all duration-300 hover:scale-110 sm:hover:scale-125 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] sm:hover:shadow-[0_0_30px_rgba(168,85,247,0.8)] hover:border-primary/80 active:scale-90 sm:active:scale-95 group/arrow touch-manipulation"
                   aria-label="Scroll right">
-                  <div class="absolute inset-0 rounded-full bg-gradient-to-l from-purple-500/20 to-pink-500/20"></div>
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-l from-orange-500/20 to-green-500/20"></div>
                   <svg class="arrow-icon text-white relative z-10 drop-shadow-lg group-hover/arrow:translate-x-[2px] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
                   </svg>
@@ -514,7 +514,7 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
   categories: Category[] = [
     {
       title: 'Entertainment',
-      accentColor: 'from-pink-500 to-rose-500',
+      accentColor: 'from-orange-400 to-amber-500',
       articles: [],
     },
     {
@@ -524,12 +524,12 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     },
     {
       title: 'National',
-      accentColor: 'from-blue-500 to-blue-600',
+      accentColor: 'from-orange-500 to-orange-600',
       articles: [],
     },
     {
       title: 'International',
-      accentColor: 'from-purple-500 to-purple-600',
+      accentColor: 'from-green-500 to-green-600',
       articles: [],
     },
     {
@@ -544,17 +544,17 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
     },
     {
       title: 'Business',
-      accentColor: 'from-cyan-500 to-blue-500',
+      accentColor: 'from-amber-500 to-orange-500',
       articles: [],
     },
     {
       title: 'Technology',
-      accentColor: 'from-indigo-500 to-purple-500',
+      accentColor: 'from-green-500 to-emerald-600',
       articles: [],
     },
     {
       title: 'Religious',
-      accentColor: 'from-violet-500 to-indigo-500',
+      accentColor: 'from-green-600 to-green-700',
       articles: [],
     },
   ];
@@ -1343,15 +1343,15 @@ export class CategorySectionComponent implements OnInit, OnDestroy, AfterViewIni
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'National': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'International': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Politics': 'bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
       'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Religious': 'bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-300',
+      'Entertainment': 'bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Technology': 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-emerald-300',
+      'Religious': 'bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }

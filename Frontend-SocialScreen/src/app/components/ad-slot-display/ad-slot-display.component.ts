@@ -86,7 +86,7 @@ const VIEWPORT_PAD_PX = 12;
               }
             } @else if (placeholderLabel) {
               <div [class]="placeholderClass">
-                <span class="text-purple-600 dark:text-purple-400 font-semibold text-xs sm:text-sm">{{
+                <span class="text-orange-600 dark:text-orange-400 font-semibold text-xs sm:text-sm">{{
                   placeholderLabel
                 }}</span>
               </div>

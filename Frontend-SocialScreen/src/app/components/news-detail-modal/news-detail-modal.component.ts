@@ -155,7 +155,7 @@ import { Subscription } from 'rxjs';
           <div class="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch min-h-0 lg:w-3/5 xl:w-3/5 flex flex-col" style="touch-action: pan-y;">
             <div class="p-4 sm:p-6 lg:p-8 xl:p-10 flex-1 flex flex-col">
               <!-- Title -->
-              <h1 [class]="'font-display text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 lg:mb-6 pt-3 pb-2 ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColor(news.category))">
+              <h1 [class]="'font-display text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold dark:font-normal leading-relaxed mb-4 sm:mb-5 lg:mb-6 pt-3 pb-2 ' + (news.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColor(news.category))">
                 {{ getDisplayTitle() }}
               </h1>
 
@@ -1226,30 +1226,30 @@ export class NewsDetailModalComponent implements OnInit, OnDestroy, OnChanges {
 
   getCategoryColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-blue-500 text-white',
-      'International': 'bg-purple-500 text-white',
+      'National': 'bg-orange-500 text-white',
+      'International': 'bg-green-600 text-white',
       'Sports': 'bg-orange-500 text-white',
-      'Business': 'bg-blue-500 text-white',
-      'Entertainment': 'bg-pink-500 text-white',
+      'Business': 'bg-amber-500 text-white',
+      'Entertainment': 'bg-orange-400 text-white',
       'Health': 'bg-green-500 text-white',
       'Politics': 'bg-red-500 text-white',
-      'Technology': 'bg-cyan-500 text-white',
-      'Religious': 'bg-indigo-500 text-white'
+      'Technology': 'bg-emerald-600 text-white',
+      'Religious': 'bg-green-700 text-white'
     };
     return colors[category] || 'bg-primary text-white';
   }
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'National': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'International': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Politics': 'bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
       'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-300',
+      'Entertainment': 'bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Technology': 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-emerald-300',
+      'Religious': 'bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }

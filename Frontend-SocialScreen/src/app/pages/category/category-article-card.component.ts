@@ -9,11 +9,11 @@ import { isLandscapeMedia } from '../../utils/media-aspect';
   imports: [CommonModule],
   template: `
     <article
-      class="news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col h-full"
+      class="news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 flex flex-col h-full"
       [style.animation-delay]="animationDelay + 'ms'"
     >
       <div
-        class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 flex-shrink-0 flex items-center justify-center"
+        class="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-orange-100/25 via-amber-100/15 to-green-100/25 dark:from-orange-900/25 dark:via-amber-900/15 dark:to-green-900/25 border-2 border-transparent hover:border-orange-300/50 dark:hover:border-green-700/50 transition-all duration-300 flex-shrink-0 flex items-center justify-center"
       >
         @if (news.imageLoading || !news.image) {
           <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -35,7 +35,7 @@ import { isLandscapeMedia } from '../../utils/media-aspect';
         <div class="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
           @if (news.isTrending) {
             <span
-              class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider"
+              class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border-2 border-white/50 uppercase tracking-wider"
             >
               <span>TRENDING</span>
             </span>
@@ -60,16 +60,16 @@ import { isLandscapeMedia } from '../../utils/media-aspect';
         </div>
       </div>
 
-      <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
+      <div class="h-[2px] bg-gradient-to-r from-orange-500 via-amber-400 to-green-500"></div>
 
       <div
-        class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1 min-h-0"
+        class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-orange-50/5 dark:via-orange-900/5 to-background rounded-b-xl border-t border-orange-200/20 dark:border-green-800/20 flex flex-col flex-1 min-h-0"
       >
         <div class="flex-1 min-w-0 mb-3 min-h-0">
           <h3
             [class]="
               'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' +
-              (news.isTrending ? 'text-purple-700 dark:text-purple-300' : headlineColor)
+              (news.isTrending ? 'text-orange-700 dark:text-orange-300' : headlineColor)
             "
             (click)="articleClick.emit(news)"
             (touchstart)="touchStart.emit({ event: $event, news })"

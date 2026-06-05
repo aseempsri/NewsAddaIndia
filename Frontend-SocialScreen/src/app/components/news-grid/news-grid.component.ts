@@ -56,9 +56,9 @@ import { NewsDateFilterService } from '../../services/news-date-filter.service';
           <div [class]="'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ' + (isHomePage ? 'gap-2 sm:gap-4 lg:gap-6' : 'gap-2 sm:gap-5 lg:gap-6')">
             @for (news of newsItems; track trackByNewsId($index, news); let i = $index) {
             <article
-              [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
+              [class]="'news-card group opacity-0 animate-fade-in hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 flex flex-col ' + (isHomePage ? 'home-page-card' : '')"
               [style.animation-delay]="i * 100 + 'ms'">
-            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-100/20 via-pink-100/20 to-orange-100/20 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 border-2 border-transparent hover:border-purple-300/50 dark:hover:border-purple-700/50 transition-all duration-300 ' + (isHomePage ? 'w-full sm:flex-none aspect-video' : 'w-full sm:flex-none aspect-video')">
+            <div [class]="'relative overflow-hidden rounded-t-xl bg-gradient-to-br from-orange-100/25 via-amber-100/15 to-green-100/25 dark:from-orange-900/25 dark:via-amber-900/15 dark:to-green-900/25 border-2 border-transparent hover:border-orange-300/50 dark:hover:border-green-700/50 transition-all duration-300 ' + (isHomePage ? 'w-full sm:flex-none aspect-video' : 'w-full sm:flex-none aspect-video')">
                 <!-- Loading Animation - Show while image is loading -->
                 @if (news.imageLoading || !news.image) {
                   <div class="absolute inset-0 flex items-center justify-center bg-secondary/50 z-10">
@@ -81,7 +81,7 @@ import { NewsDateFilterService } from '../../services/news-date-filter.service';
                 @if (!isHomePage) {
                   <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1 sm:gap-2 flex-wrap">
                     @if (news.isTrending) {
-                      <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
+                      <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
                         <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
                           <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
@@ -114,12 +114,12 @@ import { NewsDateFilterService } from '../../services/news-date-filter.service';
               </div>
 
               <!-- Border Line with Gradient -->
-              <div class="h-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
+              <div class="h-[2px] bg-gradient-to-r from-orange-500 via-amber-400 to-green-500"></div>
 
-              <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-purple-50/5 dark:via-purple-900/5 to-background rounded-b-xl border-t border-purple-200/20 dark:border-purple-800/20 flex flex-col flex-1">
+              <div class="p-3 pt-4 pb-4 bg-gradient-to-br from-background via-orange-50/5 dark:via-orange-900/5 to-background rounded-b-xl border-t border-orange-200/20 dark:border-green-800/20 flex flex-col flex-1">
                 <div class="flex-1 min-w-0 mb-3">
                   <h3 
-                    [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-purple-700 dark:text-purple-300' : getHeadlineColorForLatestStories(news.category, i))"
+                    [class]="'font-display text-sm sm:text-base font-bold dark:font-normal leading-tight group-hover:opacity-90 transition-all duration-300 pb-1 cursor-pointer hover:opacity-80 hover:scale-[1.02] break-words ' + (news.isTrending ? 'text-orange-700 dark:text-orange-300' : getHeadlineColorForLatestStories(news.category, i))"
                     (click)="openNewsModal(news)"
                     (touchstart)="onTouchStart($event, news)"
                     (touchend)="onTouchEnd($event, news)"
@@ -1345,13 +1345,13 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
   categoryColors: Record<string, string> = {
     Health: 'bg-green-500 text-white',
     Sports: 'bg-orange-500 text-white',
-    Business: 'bg-blue-500 text-white',
-    Entertainment: 'bg-pink-500 text-white',
-    International: 'bg-purple-500 text-white',
-    Technology: 'bg-cyan-500 text-white',
-    National: 'bg-blue-500 text-white',
+    Business: 'bg-amber-500 text-white',
+    Entertainment: 'bg-orange-400 text-white',
+    International: 'bg-green-600 text-white',
+    Technology: 'bg-emerald-600 text-white',
+    National: 'bg-orange-500 text-white',
     Politics: 'bg-red-500 text-white',
-    Religious: 'bg-indigo-500 text-white',
+    Religious: 'bg-green-700 text-white',
   };
 
   getCategoryColor(category: string): string {
@@ -1360,15 +1360,15 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'National': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'International': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Politics': 'bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
       'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-300',
+      'Entertainment': 'bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Technology': 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-emerald-300',
+      'Religious': 'bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }
@@ -1376,16 +1376,16 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
   getHeadlineColorForLatestStories(category: string, index: number): string {
     // Array of varied color gradients for Latest Stories section
     const colorPalette = [
-      'bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:bg-none dark:text-blue-400',
-      'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent dark:bg-none dark:text-purple-400',
-      'bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
+      'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
       'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-green-400',
-      'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-400',
-      'bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent dark:bg-none dark:text-violet-400',
-      'bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent dark:bg-none dark:text-rose-400',
+      'bg-gradient-to-r from-orange-500 to-green-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
       'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-400',
-      'bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-teal-400',
-      'bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-indigo-400',
+      'bg-gradient-to-r from-green-500 to-green-700 bg-clip-text text-transparent dark:bg-none dark:text-green-400',
+      'bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
+      'bg-gradient-to-r from-amber-500 to-green-500 bg-clip-text text-transparent dark:bg-none dark:text-amber-400',
+      'bg-gradient-to-r from-orange-700 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
+      'bg-gradient-to-r from-green-600 to-lime-600 bg-clip-text text-transparent dark:bg-none dark:text-green-400',
+      'bg-gradient-to-r from-orange-500 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-400',
     ];
     
     // Cycle through colors based on index

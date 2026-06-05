@@ -472,26 +472,26 @@ export class CategoryComponent implements OnInit, OnDestroy {
   ];
 
   categoryColors: Record<string, string> = {
-    National: 'bg-blue-500 text-white',
-    International: 'bg-purple-500 text-white',
+    National: 'bg-orange-500 text-white',
+    International: 'bg-green-600 text-white',
     Politics: 'bg-red-500 text-white',
     Health: 'bg-green-500 text-white',
     Sports: 'bg-orange-500 text-white',
-    Business: 'bg-blue-500 text-white',
-    Entertainment: 'bg-pink-500 text-white',
-    Technology: 'bg-cyan-500 text-white',
-    Religious: 'bg-indigo-500 text-white',
+    Business: 'bg-amber-500 text-white',
+    Entertainment: 'bg-orange-400 text-white',
+    Technology: 'bg-emerald-600 text-white',
+    Religious: 'bg-green-700 text-white',
   };
 
   categoryAccentColors: Record<string, string> = {
-    National: 'from-primary to-primary/80',
-    International: 'from-purple-500 to-purple-600',
+    National: 'from-orange-500 to-orange-600',
+    International: 'from-green-500 to-green-600',
     Politics: 'from-red-500 to-red-600',
     Health: 'from-green-500 to-green-600',
     Sports: 'from-orange-500 to-amber-500',
-    Business: 'from-blue-500 to-blue-600',
-    Entertainment: 'from-pink-500 to-rose-500',
-    Religious: 'from-indigo-500 to-indigo-600',
+    Business: 'from-amber-500 to-orange-500',
+    Entertainment: 'from-orange-400 to-amber-500',
+    Religious: 'from-green-600 to-green-700',
   };
 
   getCategoryColor(category: string): string {
@@ -504,15 +504,15 @@ export class CategoryComponent implements OnInit, OnDestroy {
 
   getHeadlineColor(category: string): string {
     const colors: Record<string, string> = {
-      'National': 'bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent dark:bg-none dark:text-blue-300',
-      'International': 'bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent dark:bg-none dark:text-purple-300',
-      'Politics': 'bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent dark:bg-none dark:text-red-300',
+      'National': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'International': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
+      'Politics': 'bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
       'Health': 'bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
-      'Sports': 'bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
-      'Business': 'bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Entertainment': 'bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent dark:bg-none dark:text-pink-300',
-      'Technology': 'bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent dark:bg-none dark:text-cyan-300',
-      'Religious': 'bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent dark:bg-none dark:text-indigo-300',
+      'Sports': 'bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Business': 'bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent dark:bg-none dark:text-amber-300',
+      'Entertainment': 'bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:bg-none dark:text-orange-300',
+      'Technology': 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent dark:bg-none dark:text-emerald-300',
+      'Religious': 'bg-gradient-to-r from-green-700 to-green-900 bg-clip-text text-transparent dark:bg-none dark:text-green-300',
     };
     return colors[category] || 'bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent dark:bg-none dark:text-primary-foreground';
   }

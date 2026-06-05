@@ -13,11 +13,11 @@ import { skip } from 'rxjs/operators';
   imports: [CommonModule, RouterModule],
   encapsulation: ViewEncapsulation.None,
   template: `
-    <div class="bg-gradient-to-r from-purple-600/30 via-pink-500/20 to-orange-500/30 border-y-2 border-purple-500/50 overflow-hidden w-full max-w-full shadow-lg">
+    <div class="bg-gradient-to-r from-orange-500/30 via-amber-400/20 to-green-500/30 border-y-2 border-orange-500/50 overflow-hidden w-full max-w-full shadow-lg">
       <div class="w-full max-w-full overflow-hidden">
         <div class="flex items-center py-1.5 md:py-3 overflow-hidden">
           <!-- Label - Minimal width on mobile for fire icon only, auto on desktop -->
-          <div class="flex items-center justify-center gap-0.5 md:gap-2 md:border-r-2 md:border-purple-400/60 shrink-0 md:bg-gradient-to-r md:from-purple-600 md:via-pink-500 md:to-fuchsia-600 px-1 md:pl-5 md:pr-6 py-0.5 md:py-2.5 md:rounded-r-lg md:rounded-r-xl md:shadow-xl w-auto md:w-auto overflow-hidden">
+          <div class="flex items-center justify-center gap-0.5 md:gap-2 md:border-r-2 md:border-orange-400/60 shrink-0 md:bg-gradient-to-r md:from-orange-500 md:via-amber-500 md:to-green-600 px-1 md:pl-5 md:pr-6 py-0.5 md:py-2.5 md:rounded-r-lg md:rounded-r-xl md:shadow-xl w-auto md:w-auto overflow-hidden">
             <!-- Lightning Bolt Icon - Hidden on mobile -->
             <svg class="hidden md:block w-2.5 h-2.5 md:w-5 md:h-5 text-white drop-shadow-lg flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
               <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -33,22 +33,22 @@ import { skip } from 'rxjs/operators';
           <!-- Scrolling News - 80% width on mobile -->
           <div class="overflow-hidden flex-1 min-w-0 py-0.5 md:py-1 md:ml-4 pr-4 md:pr-0 w-[80%] md:w-auto">
             @if (loading) {
-              <div class="text-sm md:text-sm text-purple-600 font-semibold">Loading trending news...</div>
+              <div class="text-sm md:text-sm text-orange-600 font-semibold">Loading trending news...</div>
             } @else if (scrollingNews.length === 0) {
-              <div class="text-sm md:text-sm text-purple-600 font-semibold">No trending news available</div>
+              <div class="text-sm md:text-sm text-orange-600 font-semibold">No trending news available</div>
             } @else {
               <div #tickerContainer class="ticker-scroll-container flex gap-3 md:gap-6 whitespace-nowrap items-center" style="will-change: transform;">
                 @for (news of scrollingNews; track $index) {
                   <a
                     [routerLink]="['/news', news.id]"
                     class="trending-news-box group flex-shrink-0 transition-all duration-300 hover:scale-105">
-                    <div class="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-fuchsia-500/20 dark:from-purple-600/30 dark:via-pink-600/30 dark:to-fuchsia-600/30 border-2 border-purple-400/50 dark:border-purple-500/50 backdrop-blur-sm shadow-lg hover:shadow-xl hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-300">
+                    <div class="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-gradient-to-r from-orange-500/20 via-amber-500/20 to-green-500/20 dark:from-orange-600/30 dark:via-amber-600/30 dark:to-green-600/30 border-2 border-orange-400/50 dark:border-green-500/50 backdrop-blur-sm shadow-lg hover:shadow-xl hover:border-orange-500 dark:hover:border-green-400 transition-all duration-300">
                       <!-- Animated dot indicator -->
-                      <svg class="w-2.5 h-2.5 md:w-3 md:h-3 text-pink-500 dark:text-pink-400 shrink-0 animate-pulse group-hover:animate-none" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(236,72,153,0.5));">
+                      <svg class="w-2.5 h-2.5 md:w-3 md:h-3 text-green-500 dark:text-green-400 shrink-0 animate-pulse group-hover:animate-none" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 2px rgba(34,197,94,0.5));">
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                       <!-- Trending title in box -->
-                      <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap text-purple-800 dark:text-purple-200 group-hover:text-pink-700 dark:group-hover:text-pink-300 transition-colors duration-300" style="font-family: Arial, Helvetica, sans-serif; line-height: 1.4; display: inline-block; text-shadow: 0 1px 2px rgba(255,255,255,0.5);">
+                      <span class="font-semibold md:font-extrabold dark:font-normal leading-tight whitespace-nowrap text-orange-800 dark:text-orange-200 group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors duration-300" style="font-family: Arial, Helvetica, sans-serif; line-height: 1.4; display: inline-block; text-shadow: 0 1px 2px rgba(255,255,255,0.5);">
                         {{ getDisplayTitle(news) }}
                       </span>
                     </div>

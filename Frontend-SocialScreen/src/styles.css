@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Deep Blue Primary - Professional and Trustworthy */
-    --primary: 217 91% 60%;
+    /* Social Screen — Saffron Orange primary (#FF9933) */
+    --primary: 33 100% 60%;
     --primary-foreground: 0 0% 100%;
 
     /* Soft Gray Secondary */
@@ -28,8 +28,8 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    /* Teal Accent - Modern and Fresh */
-    --accent: 173 80% 40%;
+    /* India Green accent (#138808) */
+    --accent: 116 75% 32%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -37,27 +37,27 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --ring: 33 100% 60%;
 
     --radius: 0.75rem;
 
-    /* Custom Design Tokens - Modern Gradients */
-    --glow-primary: 0 0 30px hsl(217 91% 60% / 0.3);
-    --glow-accent: 0 0 30px hsl(173 80% 40% / 0.3);
-    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 91% 60%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(240 10% 98%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(217 91% 60% / 0.1) 0%, transparent 50%);
+    /* Custom Design Tokens — Orange & Green */
+    --glow-primary: 0 0 30px hsl(33 100% 60% / 0.35);
+    --glow-accent: 0 0 30px hsl(116 75% 32% / 0.35);
+    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(33 100% 60%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(40 30% 98%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(33 100% 60% / 0.12) 0%, hsl(116 75% 32% / 0.06) 50%, transparent 100%);
     --glass-bg: hsl(0 0% 100% / 0.8);
     --glass-border: hsl(220 13% 91% / 0.8);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 33 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 33 100% 60%;
   }
 
   .dark {
@@ -71,8 +71,8 @@
     --popover: 222 47% 15%;
     --popover-foreground: 210 40% 98%;
 
-    /* Deep Blue Primary - Slightly brighter for dark mode */
-    --primary: 217 91% 65%;
+    /* Social Screen — Orange primary (dark mode) */
+    --primary: 33 95% 58%;
     --primary-foreground: 0 0% 100%;
 
     /* Dark Gray Secondary */
@@ -83,8 +83,8 @@
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    /* Teal Accent - Brighter for dark mode */
-    --accent: 173 80% 50%;
+    /* Green accent (dark mode) */
+    --accent: 116 55% 42%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -92,25 +92,25 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 65%;
+    --ring: 33 95% 58%;
 
-    /* Custom Design Tokens - Dark Mode */
-    --glow-primary: 0 0 30px hsl(217 91% 65% / 0.4);
-    --glow-accent: 0 0 30px hsl(173 80% 50% / 0.4);
-    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 91% 65%) 100%);
+    /* Custom Design Tokens — Dark Mode */
+    --glow-primary: 0 0 30px hsl(33 95% 58% / 0.4);
+    --glow-accent: 0 0 30px hsl(116 55% 42% / 0.4);
+    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(33 95% 58%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(222 47% 15%) 0%, hsl(222 47% 11%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(217 91% 65% / 0.15) 0%, transparent 50%);
+    --gradient-hero: linear-gradient(180deg, hsl(33 95% 58% / 0.15) 0%, hsl(116 55% 42% / 0.08) 50%, transparent 100%);
     --glass-bg: hsl(222 47% 15% / 0.8);
     --glass-border: hsl(217 33% 17% / 0.8);
 
     --sidebar-background: 222 47% 15%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 65%;
+    --sidebar-primary: 33 95% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 65%;
+    --sidebar-ring: 33 95% 58%;
   }
 }
 

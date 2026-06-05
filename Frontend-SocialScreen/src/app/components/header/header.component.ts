@@ -82,11 +82,11 @@ interface NavLink {
                 (click)="toggleLanguage(); $event.stopPropagation()"
                 (mousedown)="onLanguageButtonMouseDown($event)"
                 [attr.aria-label]="currentLanguage === 'en' ? 'Switch to Hindi' : 'Switch to English'"
-                [class]="'relative w-12 h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shadow-lg z-50 ' + (currentLanguage === 'en' ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/50' : 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/50')"
+                [class]="'relative w-12 h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 shadow-lg z-50 ' + (currentLanguage === 'en' ? 'bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/50' : 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/50')"
                 style="cursor: pointer; position: relative; z-index: 50;">
                 <!-- Toggle Circle -->
                 <div
-                  [class]="'absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center font-bold text-xs ' + (currentLanguage === 'hi' ? 'translate-x-[22px] text-orange-600' : 'text-blue-600')">
+                  [class]="'absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center font-bold text-xs ' + (currentLanguage === 'hi' ? 'translate-x-[22px] text-orange-600' : 'text-green-600')">
                   {{ currentLanguage === 'en' ? 'E' : 'H' }}
                 </div>
                 <!-- Language Labels -->

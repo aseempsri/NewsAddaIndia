@@ -87,7 +87,7 @@ import { Subscription } from 'rxjs';
             <!-- Floating Category Badge -->
             <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex gap-1 sm:gap-2 flex-wrap">
               @if (news.isTrending) {
-                <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
+                <span class="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-[0.525rem] sm:text-xs font-black rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-green-600 text-white shadow-xl animate-pulse border border-white/50 sm:border-2 sm:border-white/50 uppercase tracking-wider" style="font-family: 'Arial Black', 'Helvetica Neue', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255,255,255,0.3); letter-spacing: 0.07em;">
                   <svg class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));">
                     <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
                   </svg>
@@ -129,8 +129,8 @@ import { Subscription } from 'rxjs';
             <!-- Meta Information -->
             <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-sm mb-8 sm:mb-12 pb-6 border-b border-border/30">
               <span class="flex items-center gap-1.5 text-xs font-medium">
-                <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                <span class="text-blue-600 dark:text-blue-400 font-bold">{{ news.date || news.time }}</span>
+                <svg class="w-3.5 h-3.5 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span class="text-orange-600 dark:text-orange-400 font-bold">{{ news.date || news.time }}</span>
               </span>
             </div>
 
@@ -1141,11 +1141,11 @@ export class NewsDetailComponent implements OnInit, OnDestroy {
     const colors: Record<string, string> = {
       'Health': 'bg-green-500 text-white',
       'Sports': 'bg-orange-500 text-white',
-      'Business': 'bg-blue-500 text-white',
-      'Entertainment': 'bg-pink-500 text-white',
-      'International': 'bg-purple-500 text-white',
-      'Technology': 'bg-cyan-500 text-white',
-      'National': 'bg-blue-500 text-white',
+      'Business': 'bg-amber-500 text-white',
+      'Entertainment': 'bg-orange-400 text-white',
+      'International': 'bg-green-600 text-white',
+      'Technology': 'bg-emerald-600 text-white',
+      'National': 'bg-orange-500 text-white',
       'Politics': 'bg-red-500 text-white',
       'Religious': 'bg-indigo-500 text-white',
     };
