@@ -6,27 +6,27 @@
 
 @layer base {
   :root {
-    /* Modern Light Theme with Soft Background */
-    --background: 240 10% 98%;
-    --foreground: 222 47% 11%;
+    /* Light — warm cream (pairs with saffron orange) */
+    --background: 40 35% 97%;
+    --foreground: 30 20% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 40 30% 99%;
+    --card-foreground: 30 20% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 40 30% 99%;
+    --popover-foreground: 30 20% 12%;
 
     /* Social Screen — Saffron Orange primary (#FF9933) */
     --primary: 33 100% 60%;
     --primary-foreground: 0 0% 100%;
 
-    /* Soft Gray Secondary */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* Warm secondary surfaces */
+    --secondary: 40 25% 94%;
+    --secondary-foreground: 30 20% 12%;
 
     /* Muted Colors */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 40 25% 94%;
+    --muted-foreground: 35 10% 42%;
 
     /* India Green accent (#138808) */
     --accent: 116 75% 32%;
@@ -35,8 +35,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+    --border: 40 18% 88%;
+    --input: 40 18% 88%;
     --ring: 33 100% 60%;
 
     --radius: 0.75rem;
@@ -44,44 +44,44 @@
     /* Custom Design Tokens — Orange & Green */
     --glow-primary: 0 0 30px hsl(33 100% 60% / 0.35);
     --glow-accent: 0 0 30px hsl(116 75% 32% / 0.35);
-    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(33 100% 60%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(40 30% 98%) 100%);
+    --gradient-dark: linear-gradient(135deg, hsl(150 12% 9%) 0%, hsl(33 100% 60%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(40 30% 99%) 0%, hsl(40 35% 97%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(33 100% 60% / 0.12) 0%, hsl(116 75% 32% / 0.06) 50%, transparent 100%);
-    --glass-bg: hsl(0 0% 100% / 0.8);
-    --glass-border: hsl(220 13% 91% / 0.8);
+    --glass-bg: hsl(40 30% 99% / 0.85);
+    --glass-border: hsl(40 18% 88% / 0.8);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
+    --sidebar-background: 40 30% 99%;
+    --sidebar-foreground: 30 20% 12%;
     --sidebar-primary: 33 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-accent: 40 25% 94%;
+    --sidebar-accent-foreground: 30 20% 12%;
+    --sidebar-border: 40 18% 88%;
     --sidebar-ring: 33 100% 60%;
   }
 
   .dark {
-    /* Modern Dark Theme */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Dark — forest charcoal (pairs with India green) */
+    --background: 150 12% 9%;
+    --foreground: 45 15% 96%;
 
-    --card: 222 47% 15%;
-    --card-foreground: 210 40% 98%;
+    --card: 150 10% 12%;
+    --card-foreground: 45 15% 96%;
 
-    --popover: 222 47% 15%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 150 10% 12%;
+    --popover-foreground: 45 15% 96%;
 
     /* Social Screen — Orange primary (dark mode) */
     --primary: 33 95% 58%;
     --primary-foreground: 0 0% 100%;
 
-    /* Dark Gray Secondary */
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    /* Forest-tinted secondary surfaces */
+    --secondary: 150 8% 15%;
+    --secondary-foreground: 45 15% 96%;
 
     /* Muted Colors */
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 150 8% 15%;
+    --muted-foreground: 150 8% 62%;
 
     /* Green accent (dark mode) */
     --accent: 116 55% 42%;
@@ -90,26 +90,26 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 150 8% 16%;
+    --input: 150 8% 16%;
     --ring: 33 95% 58%;
 
     /* Custom Design Tokens — Dark Mode */
     --glow-primary: 0 0 30px hsl(33 95% 58% / 0.4);
     --glow-accent: 0 0 30px hsl(116 55% 42% / 0.4);
-    --gradient-dark: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(33 95% 58%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(222 47% 15%) 0%, hsl(222 47% 11%) 100%);
+    --gradient-dark: linear-gradient(135deg, hsl(150 12% 9%) 0%, hsl(33 95% 58%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(150 10% 12%) 0%, hsl(150 12% 9%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(33 95% 58% / 0.15) 0%, hsl(116 55% 42% / 0.08) 50%, transparent 100%);
-    --glass-bg: hsl(222 47% 15% / 0.8);
-    --glass-border: hsl(217 33% 17% / 0.8);
+    --glass-bg: hsl(150 10% 12% / 0.85);
+    --glass-border: hsl(150 8% 16% / 0.8);
 
-    --sidebar-background: 222 47% 15%;
-    --sidebar-foreground: 210 40% 98%;
+    --sidebar-background: 150 10% 12%;
+    --sidebar-foreground: 45 15% 96%;
     --sidebar-primary: 33 95% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
+    --sidebar-accent: 150 8% 15%;
+    --sidebar-accent-foreground: 45 15% 96%;
+    --sidebar-border: 150 8% 16%;
     --sidebar-ring: 33 95% 58%;
   }
 }
