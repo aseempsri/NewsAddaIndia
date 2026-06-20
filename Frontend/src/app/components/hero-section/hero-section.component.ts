@@ -8,8 +8,9 @@ import { LanguageService } from '../../services/language.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { AdService } from '../../services/ad.service';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { Subscription, of } from 'rxjs';
+import { filter, skip, switchMap } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 interface SideNews {
   category: string;
@@ -551,6 +552,7 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
   t: any = {};
   isHomePage = false;
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
 
   constructor(
     private newsService: NewsService,
@@ -558,7 +560,8 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     private languageService: LanguageService,
     private displayedNewsService: DisplayedNewsService,
     private router: Router,
-    private adService: AdService
+    private adService: AdService,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -594,10 +597,16 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.checkIfHomePage();
     });
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.displayedNewsService.clear();
+      this.loadNews();
+    });
   }
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
   }
 
   private checkIfHomePage() {
@@ -737,25 +746,84 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
     return colors[category] || 'bg-primary';
   }
 
+  private resetHeroLoadingState(): void {
+    this.isLoading = true;
+    this.featuredNews = {
+      category: 'National',
+      title: 'Loading latest news...',
+      titleEn: 'Loading latest news...',
+      excerpt: 'Please wait while we fetch the latest news.',
+      author: 'News Adda India',
+      date: this.newsDateFilter.formatDisplay('en-IN'),
+      image: 'assets/videos/Putin_in_India_.webp',
+      time: 'Just now',
+      imageLoading: true,
+    };
+    this.sideNews = [
+      {
+        category: 'Sports',
+        title: 'Loading...',
+        image: 'assets/videos/indianz.avif',
+        author: 'News Adda India',
+        date: this.newsDateFilter.formatDisplay('en-IN'),
+        time: 'Just now',
+        imageLoading: true,
+      },
+      {
+        category: 'Business',
+        title: 'Loading...',
+        image: 'assets/videos/indianz.avif',
+        author: 'News Adda India',
+        date: this.newsDateFilter.formatDisplay('en-IN'),
+        time: 'Just now',
+        imageLoading: true,
+      },
+    ];
+  }
+
+  private setHeroEmptyState(): void {
+    const dayLabel = this.newsDateFilter.formatDisplay('en-IN');
+    this.featuredNews = {
+      category: 'National',
+      title: `No stories for ${dayLabel}`,
+      titleEn: `No stories for ${dayLabel}`,
+      excerpt: 'Try another date or check back later.',
+      author: 'News Adda India',
+      date: dayLabel,
+      image: this.newsService.getPlaceholderImage('news'),
+      time: '',
+      imageLoading: false,
+    };
+    this.sideNews = [];
+  }
+
   loadNews() {
+    this.resetHeroLoadingState();
     const imagePromises: Promise<void>[] = [];
 
-    // Load top 3 breaking news articles for hero section
-    // All three articles will be breaking news, regardless of category
-    this.newsService.fetchBreakingNewsList(3).subscribe({
-      next: (breakingNewsList) => {
-        // Filter out already displayed articles to avoid duplicates
-        const filteredNews = this.displayedNewsService.filterDisplayed(breakingNewsList);
-        
-        if (filteredNews.length === 0) {
-          console.warn('[HeroSection] No breaking news available after filtering duplicates');
+    // Prefer breaking news for the selected day; fall back to top home stories that day
+    this.newsService.fetchBreakingNewsList(3).pipe(
+      switchMap((breakingNewsList) => {
+        if (breakingNewsList && breakingNewsList.length > 0) {
+          return of(breakingNewsList);
+        }
+        return this.newsService.fetchNewsByPage('home', 3);
+      })
+    ).subscribe({
+      next: (candidates) => {
+        const filteredNews = this.displayedNewsService.filterDisplayed(candidates);
+        const articles = filteredNews.length > 0 ? filteredNews : candidates;
+
+        if (!articles || articles.length === 0) {
+          console.warn('[HeroSection] No hero articles for selected date');
+          this.setHeroEmptyState();
           this.isLoading = false;
           this.displayedReady.emit();
           return;
         }
 
         // First article: Featured news (large article on left)
-        const featuredArticle = filteredNews[0];
+        const featuredArticle = articles[0];
         
         // Store original titles for translation
         const originalTitle = featuredArticle.title;
@@ -820,7 +888,7 @@ export class HeroSectionComponent implements OnInit, OnDestroy {
         }
 
         // Second and third articles: Side news (right side, 2 smaller articles)
-        const sideArticles = filteredNews.slice(1, 3); // Take next 2 articles
+        const sideArticles = articles.slice(1, 3); // Take next 2 articles
         
         // Register side news articles as displayed to prevent duplicates
         const sideNewsIds = sideArticles.map(n => n.id).filter(id => id !== undefined) as (string | number)[];

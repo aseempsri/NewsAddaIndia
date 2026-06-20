@@ -7,7 +7,8 @@ import { LanguageService } from '../../services/language.service';
 import { DisplayedNewsService } from '../../services/displayed-news.service';
 import { NewsDetailModalComponent } from '../news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { filter, skip } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 // Using NewsArticle from service
 
@@ -399,6 +400,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
   @Output() imagesLoaded = new EventEmitter<boolean>();
   t: any = {};
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   private loadTriggered = false;
   private heroReadyFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
   newsItems: NewsArticle[] = [];
@@ -415,7 +417,8 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
     private modalService: ModalService,
     private languageService: LanguageService,
     private displayedNewsService: DisplayedNewsService,
-    private router: Router
+    private router: Router,
+    private newsDateFilter: NewsDateFilterService
   ) {
     console.log('[NewsGrid] ⚡⚡⚡ CONSTRUCTOR CALLED - Component is being created');
     console.log('[NewsGrid] ⚡⚡⚡ newsService:', !!this.newsService);
@@ -520,6 +523,14 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
       }
     });
     console.log('[NewsGrid] Language subscription set up');
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.displayedNewsService.clear();
+      this.newsItems = [];
+      this.isLoading = true;
+      this.loadTriggered = true;
+      this.loadNews();
+    });
   }
 
   private checkIfHomePage() {
@@ -545,6 +556,7 @@ export class NewsGridComponent implements OnInit, OnDestroy, OnChanges {
       this.heroReadyFallbackTimeout = null;
     }
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
   }
 
   updateTranslations() {

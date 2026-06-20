@@ -139,7 +139,7 @@ import { filter } from 'rxjs/operators';
       <div class="lg:hidden bg-secondary/50 backdrop-blur-md border-b border-border/50 w-full">
         <div class="container mx-auto px-3 py-1 flex items-center justify-between text-xs gap-2">
           <span class="flex items-center gap-1 text-muted-foreground shrink-0">
-            <svg class="w-3 h-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span class="leading-tight">{{ mobileTopBarDate }}</span>
@@ -501,19 +501,17 @@ export class IndexComponent implements OnInit, OnDestroy {
   }
 
   updateMobileTopBarData() {
-    // Set location to "Del" for mobile
     this.mobileTopBarLocation = 'Del';
-    
-    // Format date as "Sun, 11 Jan '26"
+
     const date = new Date();
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     const weekday = weekdays[date.getDay()];
     const day = date.getDate();
     const month = months[date.getMonth()];
-    const year = date.getFullYear().toString().slice(-2); // Get last 2 digits
-    
+    const year = date.getFullYear().toString().slice(-2);
+
     this.mobileTopBarDate = `${weekday}, ${day} ${month} '${year}`;
   }
 

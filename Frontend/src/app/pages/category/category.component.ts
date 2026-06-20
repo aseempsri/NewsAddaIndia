@@ -8,6 +8,8 @@ import { ModalService } from '../../services/modal.service';
 import { LanguageService } from '../../services/language.service';
 import { NewsDetailModalComponent } from '../../components/news-detail-modal/news-detail-modal.component';
 import { Subscription } from 'rxjs';
+import { skip } from 'rxjs/operators';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 @Component({
   selector: 'app-category',
@@ -17,7 +19,7 @@ import { Subscription } from 'rxjs';
     <div class="min-h-screen bg-background">
       <app-header />
       <!-- Spacer for fixed header on desktop - accounts for navigation bar only (~64px, reduced by 20%) -->
-      <div class="lg:h-[64px]"></div>
+      <div class="lg:h-[96px]"></div>
       
       <main>
         <section class="py-6 lg:py-8">
@@ -171,6 +173,7 @@ export class CategoryComponent implements OnInit, OnDestroy {
   isLoading = true;
   t: any = {};
   private languageSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   modalState: { isOpen: boolean; news: NewsArticle | null; isBreaking?: boolean } = {
     isOpen: false,
     news: null,
@@ -181,7 +184,8 @@ export class CategoryComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private newsService: NewsService,
     private modalService: ModalService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Subscribe to modal state changes
     this.modalService.getModalState().subscribe(state => {
@@ -206,10 +210,16 @@ export class CategoryComponent implements OnInit, OnDestroy {
         await this.translateNewsTitles();
       }
     });
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.filteredNews = [];
+      this.loadNews();
+    });
   }
 
   ngOnDestroy() {
     this.languageSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
   }
 
   updateTranslations() {

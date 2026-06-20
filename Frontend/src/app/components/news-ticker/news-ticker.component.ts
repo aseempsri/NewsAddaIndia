@@ -1,8 +1,11 @@
-import { Component, OnInit, ViewEncapsulation, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NewsService } from '../../services/news.service';
 import { LanguageService } from '../../services/language.service';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
+import { Subscription } from 'rxjs';
+import { skip } from 'rxjs/operators';
 
 @Component({
   selector: 'app-news-ticker',
@@ -159,19 +162,25 @@ import { LanguageService } from '../../services/language.service';
     }
   `]
 })
-export class NewsTickerComponent implements OnInit, AfterViewInit {
+export class NewsTickerComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('tickerContainer') tickerContainer!: ElementRef<HTMLDivElement>;
   trendingNews: any[] = [];
   scrollingNews: any[] = [];
   loading = true;
+  private dateFilterSubscription?: Subscription;
 
   constructor(
     private newsService: NewsService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private newsDateFilter: NewsDateFilterService
   ) { }
 
   ngOnInit() {
     this.loadTrendingNews();
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.pipe(skip(1)).subscribe(() => {
+      this.loading = true;
+      this.loadTrendingNews();
+    });
     // Subscribe to language changes
     this.languageService.currentLanguage$.subscribe(async () => {
       // Re-translate trending news titles when language changes
@@ -301,6 +310,10 @@ export class NewsTickerComponent implements OnInit, AfterViewInit {
         this.loading = false;
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.dateFilterSubscription?.unsubscribe();
   }
 }
 

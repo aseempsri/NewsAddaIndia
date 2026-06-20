@@ -4,6 +4,7 @@ import { Observable, of, forkJoin } from 'rxjs';
 import { map, catchError, switchMap, tap, timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { LanguageService } from './language.service';
+import { NewsDateFilterService } from './news-date-filter.service';
 
 export interface NewsArticle {
   id?: number | string;
@@ -60,7 +61,8 @@ export class NewsService {
 
   constructor(
     private http: HttpClient,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Note: External APIs (NewsAPI, Pexels) are disabled - using database only
     // Keeping API key variables for potential future use, but not actively using them
@@ -525,6 +527,12 @@ export class NewsService {
     });
   }
 
+  /** News Adda India: as-of filter (news on or before selected day, IST). */
+  private appendDateQuery(url: string): string {
+    const dateParam = this.newsDateFilter.toApiParam();
+    return `${url}&date=${encodeURIComponent(dateParam)}&dateMode=asOf`;
+  }
+
   /**
    * Fetch news from backend API
    */
@@ -543,6 +551,8 @@ export class NewsService {
     if (excludeBreaking) {
       url += `&excludeBreaking=true`;
     }
+
+    url = this.appendDateQuery(url);
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(5000), // 5 second timeout
@@ -697,7 +707,7 @@ export class NewsService {
    * Fetch breaking news for hero section
    */
   fetchBreakingNews(): Observable<NewsArticle> {
-    const url = `${this.backendApiUrl}/api/news?breaking=true&limit=1&published=true`;
+    const url = this.appendDateQuery(`${this.backendApiUrl}/api/news?breaking=true&limit=1&published=true`);
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(5000),
@@ -780,7 +790,7 @@ export class NewsService {
    */
   fetchTrendingNews(limit: number = 10): Observable<NewsArticle[]> {
     // Try to fetch featured news first, then breaking, then recent
-    const url = `${this.backendApiUrl}/api/news?limit=${limit}&published=true`;
+    const url = this.appendDateQuery(`${this.backendApiUrl}/api/news?limit=${limit}&published=true`);
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(5000),
@@ -868,7 +878,7 @@ export class NewsService {
    * Fetch breaking news (top 3 latest)
    */
   fetchBreakingNewsList(limit: number = 3): Observable<NewsArticle[]> {
-    const url = `${this.backendApiUrl}/api/news?breaking=true&limit=${limit}&published=true`;
+    const url = this.appendDateQuery(`${this.backendApiUrl}/api/news?breaking=true&limit=${limit}&published=true`);
     
     return this.http.get<{ success: boolean; data: any[] }>(url).pipe(
       timeout(10000), // 10 second timeout for breaking news

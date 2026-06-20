@@ -12,6 +12,7 @@ import { PushNotificationService } from '../../services/push-notification.servic
 import { environment } from '../../../environments/environment';
 import { catchError, filter } from 'rxjs/operators';
 import { of, Subscription } from 'rxjs';
+import { NewsDateFilterService } from '../../services/news-date-filter.service';
 
 interface NavLink {
   name: string;
@@ -179,16 +180,36 @@ interface NavLink {
       </div>
     </header>
 
-    <!-- Top Bar - Fixed below navigation bar, lower z-index - Only show on home page, hide when modal is open on web view -->
-    @if (isHomePage && !(isModalOpen && isDesktop)) {
+    <!-- Top Bar - hide when modal is open on web view -->
+    @if (!(isModalOpen && isDesktop)) {
       <div class="top-bar" [class]="getTopBarClasses()" [style.top.px]="getTopBarTop()" [style.position]="getTopBarPosition()" [style.left]="'0'" [style.right]="'0'" [style.z-index]="'10001'">
         <div class="container mx-auto px-4 py-1.5 flex items-center justify-between text-sm">
           <div class="flex items-center gap-4 text-muted-foreground">
-            <span class="flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span class="relative flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {{ currentDate }}
+              @if (isDesktop) {
+                <button
+                  type="button"
+                  (click)="openDatePicker()"
+                  [attr.aria-label]="t.selectNewsDate || 'Select news date'"
+                  [class]="'date-display-btn text-left ' + (isHistoricalDate ? 'text-foreground/90' : '')">
+                  {{ currentDate }}
+                </button>
+                <input
+                  #datePickerInput
+                  type="date"
+                  class="date-picker-input"
+                  [max]="maxDateIso"
+                  [value]="selectedDateIso"
+                  (change)="onDateSelected($event)"
+                  (cancel)="closeDatePicker()"
+                  tabindex="-1"
+                  aria-hidden="true" />
+              } @else {
+                <span>{{ todayDisplayDate }}</span>
+              }
             </span>
             <span class="hidden sm:flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,6 +356,41 @@ interface NavLink {
     .mobile-nav-wrapper a.router-link-active {
       font-weight: 700 !important;
     }
+
+    .date-display-btn {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: color 0.15s ease;
+    }
+    .date-display-btn:hover {
+      color: hsl(var(--foreground) / 0.85);
+      text-decoration: underline;
+      text-decoration-color: hsl(var(--muted-foreground) / 0.35);
+      text-underline-offset: 3px;
+    }
+    .date-display-btn:focus-visible {
+      outline: 2px solid hsl(var(--primary) / 0.45);
+      outline-offset: 2px;
+    }
+    .date-picker-input {
+      position: absolute;
+      left: 0;
+      top: 100%;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .date-picker-input.date-picker-open {
+      pointer-events: auto;
+    }
   `]
 })
 export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -346,6 +402,10 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   topBarHeight = 0;
   t: any = {};
   currentDate = '';
+  todayDisplayDate = '';
+  selectedDateIso = '';
+  maxDateIso = '';
+  isHistoricalDate = false;
   currentTemperature: number | null = null;
   // Same-origin when apiUrl is empty in production
   private apiUrl = (environment.apiUrl !== undefined && environment.apiUrl !== null && String(environment.apiUrl).trim() !== '')
@@ -354,6 +414,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   private languageSubscription?: Subscription;
   private themeSubscription?: Subscription;
   private pushSubscription?: Subscription;
+  private dateFilterSubscription?: Subscription;
   private weatherRefreshInterval: any;
 
   navLinks: NavLink[] = [];
@@ -366,6 +427,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
   pushSubscribing = false;
 
   @ViewChild('mobileNavContainer', { static: false }) mobileNavContainer?: ElementRef<HTMLElement>;
+  @ViewChild('datePickerInput', { static: false }) datePickerInput?: ElementRef<HTMLInputElement>;
   showRightArrow = false;
 
   constructor(
@@ -377,7 +439,8 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private scrollRestorationService: ScrollRestorationService,
-    private pushService: PushNotificationService
+    private pushService: PushNotificationService,
+    private newsDateFilter: NewsDateFilterService
   ) {
     // Get the base href and construct the logo path
     const baseHref = this.location.prepareExternalUrl('/');
@@ -418,8 +481,12 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     // Initialize translations first - ensure language is set before loading translations
     this.updateTranslations();
     // Then update dependent data
-    this.updateDate();
+    this.syncDateDisplay();
     this.updateNavLinks();
+
+    this.dateFilterSubscription = this.newsDateFilter.selectedDate$.subscribe(() => {
+      this.syncDateDisplay();
+    });
     
     // Check initial scroll position
     this.onWindowScroll();
@@ -455,7 +522,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('[Header] Language subscription triggered, new language:', lang);
       this.currentLanguage = lang;
       this.updateTranslations();
-      this.updateDate();
+      this.syncDateDisplay();
       this.updateNavLinks();
       console.log('[Header] Header updated for language:', lang);
     });
@@ -495,6 +562,7 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     this.languageSubscription?.unsubscribe();
     this.themeSubscription?.unsubscribe();
     this.pushSubscription?.unsubscribe();
+    this.dateFilterSubscription?.unsubscribe();
     if (this.weatherRefreshInterval) {
       clearInterval(this.weatherRefreshInterval);
     }
@@ -573,14 +641,49 @@ export class HeaderComponent implements OnInit, OnDestroy, AfterViewInit {
     this.t = this.languageService.getTranslations();
   }
 
-  updateDate() {
+  syncDateDisplay() {
     const locale = this.currentLanguage === 'hi' ? 'hi-IN' : 'en-IN';
-    this.currentDate = new Date().toLocaleDateString(locale, {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    this.todayDisplayDate = this.newsDateFilter.formatTodayDisplay(locale);
+    this.currentDate = this.newsDateFilter.formatDisplay(locale);
+    this.selectedDateIso = this.newsDateFilter.getSelectedDateIso();
+    this.maxDateIso = this.newsDateFilter.getMaxDateIso();
+    this.isHistoricalDate = !this.newsDateFilter.isSelectedToday();
+    this.cdr.markForCheck();
+  }
+
+  openDatePicker() {
+    const input = this.datePickerInput?.nativeElement;
+    if (!input) return;
+    input.classList.add('date-picker-open');
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // fall through to click()
+      }
+    }
+    input.click();
+  }
+
+  onDateSelected(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.closeDatePicker();
+    if (!value) return;
+    const [y, m, d] = value.split('-').map(Number);
+    const picked = new Date(y, m - 1, d);
+    if (picked.getTime() > this.newsDateFilter.getMaxDate().getTime()) {
+      return;
+    }
+    this.newsDateFilter.setDate(picked);
+    this.syncDateDisplay();
+  }
+
+  closeDatePicker() {
+    const input = this.datePickerInput?.nativeElement;
+    if (input) {
+      input.classList.remove('date-picker-open');
+    }
   }
 
   updateNavLinks() {
